@@ -1,0 +1,8 @@
+# Ignore active issue state folders containing dynamic PRDs, blueprints, designs, etc.
+state/active_issues/issue_*.md
+state/issue_*
+state/archive/
+
+# Ignore local coordinator script execution traces or logs
+*.log
+bin/node_modules/

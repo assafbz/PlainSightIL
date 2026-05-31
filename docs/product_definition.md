@@ -1,4 +1,4 @@
-# PlainSight IL: Product Definition Document (PDD)
+# PlainSightIL: Product Definition Document (PDD)
 
 > [!NOTE]
 > **Status:** Draft / Active Review  
@@ -10,15 +10,15 @@
 
 ## 1. Executive Summary
 
-**PlainSight IL** is a high-fidelity, mobile-first web application designed to democratize public data in Israel. By extracting dry, obscure, and complex datasets from the official government portal (`data.gov.il`), PlainSight IL translates raw records into clean, interactive, and beautifully designed user interfaces. 
+**PlainSightIL** is a high-fidelity, mobile-first web application designed to democratize public data in Israel. By extracting dry, obscure, and complex datasets from the official government portal (`data.gov.il`), PlainSightIL translates raw records into clean, interactive, and beautifully designed user interfaces. 
 
-To ensure focus, quality, and momentum, the product will be built using an **incremental dataset rollout strategy**. Rather than launching a massive portal of half-baked features, PlainSight IL will introduce **one dataset at a time**, perfecting the data pipeline, translation, visualization, and mobile UX for each slice before moving to the next.
+To ensure focus, quality, and momentum, the product will be built using an **incremental dataset rollout strategy**. Rather than launching a massive portal of half-baked features, PlainSightIL will introduce **one dataset at a time**, perfecting the data pipeline, translation, visualization, and mobile UX for each slice before moving to the next.
 
 ---
 
 ## 2. Strategic Strategy: "One Dataset at a Time" (Incremental Value Delivery)
 
-The traditional approach to open-data portals results in cluttered dashboards, broken links, and overwhelming interfaces. PlainSight IL rejects this in favor of a focused, dataset-centric approach.
+The traditional approach to open-data portals results in cluttered dashboards, broken links, and overwhelming interfaces. PlainSightIL rejects this in favor of a focused, dataset-centric approach.
 
 ```mermaid
 flowchart TD
@@ -41,15 +41,13 @@ flowchart TD
 
 ## 3. Product Vision & Mission Alignment
 
-*   **Vision Alignment:** Transparent, data-empowered Israeli society with pocket-sized, frictionless public info.
-*   **Mission Alignment:** Mobile/tablet optimization, bridging the gap between raw CSVs/APIs and consumer-grade UX.
-*   **Core Pillars:** Accessibility-first (RTL/LTR switching), Absolute Neutrality, Data Provenance, and Fast Performance.
+PlainSightIL's strategic direction, vision, immediate mission, and core operating values (Accessibility, Absolute Neutrality, Trust, and Performance) are defined in the unified **[Vision & Mission Statement](vision_and_mission.md)**. All dataset integrations must align with these founding principles.
 
 ---
 
 ## 4. Key UX/UI & Technical Principles
 
-Any dataset added to PlainSight IL must conform to these strict architectural and design guidelines:
+Any dataset added to PlainSightIL must conform to these strict architectural and design guidelines:
 
 | Principle | Technical / UI Requirement | Implementation Details |
 | :--- | :--- | :--- |

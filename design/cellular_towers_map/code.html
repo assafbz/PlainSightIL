@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PlainSight IL | Cellular Towers</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#87929a",
+                    "on-primary-fixed": "#001e2c",
+                    "surface-container-low": "#181b25",
+                    "inverse-on-surface": "#2c303a",
+                    "on-secondary-fixed-variant": "#5516be",
+                    "on-tertiary-fixed": "#261a00",
+                    "inverse-surface": "#dfe2ef",
+                    "danger": "#f43f5e",
+                    "tertiary": "#ffc42f",
+                    "primary": "#8ed5ff",
+                    "glass-border": "rgba(255, 255, 255, 0.08)",
+                    "error-container": "#93000a",
+                    "glass-bg": "rgba(15, 23, 42, 0.75)",
+                    "on-secondary-fixed": "#23005c",
+                    "surface-dim": "#0f131c",
+                    "tertiary-fixed-dim": "#f9bd22",
+                    "surface-variant": "#31353f",
+                    "on-primary-fixed-variant": "#004c69",
+                    "secondary-fixed-dim": "#d0bcff",
+                    "primary-fixed": "#c4e7ff",
+                    "outline-variant": "#3e484f",
+                    "tertiary-fixed": "#ffdf9f",
+                    "surface-container-highest": "#31353f",
+                    "error": "#ffb4ab",
+                    "on-tertiary-container": "#584000",
+                    "secondary-fixed": "#e9ddff",
+                    "on-primary": "#00354a",
+                    "surface": "#0f131c",
+                    "on-surface": "#dfe2ef",
+                    "warning": "#f59e0b",
+                    "tertiary-container": "#e1a800",
+                    "on-secondary": "#3c0091",
+                    "on-surface-variant": "#bdc8d1",
+                    "success": "#34d399",
+                    "on-secondary-container": "#c4abff",
+                    "on-tertiary-fixed-variant": "#5c4300",
+                    "surface-container": "#1c1f29",
+                    "surface-bright": "#353943",
+                    "inverse-primary": "#00668a",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "background": "#0f131c",
+                    "secondary": "#d0bcff",
+                    "on-primary-container": "#004965",
+                    "surface-container-high": "#262a34",
+                    "primary-container": "#38bdf8",
+                    "glass-glow": "rgba(56, 189, 248, 0.15)",
+                    "secondary-container": "#571bc1",
+                    "info": "#0ea5e9",
+                    "primary-fixed-dim": "#7bd0ff",
+                    "surface-container-lowest": "#0a0e17",
+                    "surface-tint": "#7bd0ff",
+                    "on-tertiary": "#402d00",
+                    "on-background": "#dfe2ef"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "1rem",
+                    "touch-target": "48px",
+                    "bottom-sheet-collapsed": "72px",
+                    "header-height": "64px",
+                    "margin-mobile": "1.5rem"
+            },
+            "fontFamily": {
+                    "body-sm": ["Outfit"],
+                    "label-xs": ["Outfit"],
+                    "body-lg": ["Outfit"],
+                    "headline-lg": ["Outfit"],
+                    "headline-md": ["Outfit"]
+            },
+            "fontSize": {
+                    "body-sm": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "label-xs": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0f131c;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .map-canvas {
+            background-image: radial-gradient(circle at 2px 2px, rgba(56, 189, 248, 0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+        .pulse-glow {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        .bottom-sheet-transition {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-background h-screen flex flex-col relative">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-glass-bg backdrop-blur-md border-b border-glass-border shadow-sm">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:bg-glass-glow p-2 rounded-lg transition-colors" data-icon="menu">menu</button>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary tracking-tight">PlainSight IL</h1>
+</div>
+<button class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-label-xs text-label-xs hover:bg-primary/20 transition-all active:scale-95">HE</button>
+</header>
+<!-- Main Map Viewport -->
+<main class="flex-grow relative map-canvas">
+<!-- Mocked Leaflet Map Content -->
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-30 grayscale contrast-125" data-alt="A dark-mode satellite view of a Mediterranean urban coastline at night, with street lights forming golden webs against a deep navy and slate landscape. The aesthetic is high-fidelity and digital, emphasizing technological transparency and data visualization. Subtle cyan overlays suggest connectivity networks across the geography." data-location="Israel" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwBFSzpX1ZlN4UGLH1qVkEFX-5HZz2KzUvDPot-ZBFSdHu4FwuBQq5ZIkYhFqcDEtGIShOskXAypu7ol4WozfD9D7ascmVEm9Jxo-ZIYNj9E3zdemex9uk227T1dbj5mqeo6dZ-fgZ9wKQ_mBd030jRzcFKJN7mZA4JsCC7hY_hRJReXhLM2Qm3Z2fDYUEpGSHsJfL1UVZJFz0dDqlKxYCkNfNtWdnXkAUHjaExVIpMaN9fMXqdjRpK08ZUJ_WwuvUKJ6aFBswgrxY"/>
+</div>
+<!-- Glassmorphic Markers -->
+<!-- Marker 1 -->
+<div class="absolute top-[30%] left-[45%] z-10">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-12 h-12 bg-primary/20 rounded-full pulse-glow"></div>
+<div class="relative bg-glass-bg backdrop-blur-md border border-primary/40 rounded-full p-2 shadow-[0_0_15px_rgba(56,189,248,0.4)] flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="cell_tower">cell_tower</span>
+</div>
+<div class="absolute top-12 left-1/2 -translate-x-1/2 bg-surface-container-low/90 backdrop-blur px-2 py-1 rounded border border-glass-border whitespace-nowrap">
+<span class="font-label-xs text-label-xs text-primary">Tel Aviv Main</span>
+</div>
+</div>
+</div>
+<!-- Marker 2 -->
+<div class="absolute top-[55%] left-[52%] z-10">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-10 h-10 bg-primary/15 rounded-full pulse-glow" style="animation-delay: 0.5s"></div>
+<div class="relative bg-glass-bg backdrop-blur-md border border-primary/40 rounded-full p-2 shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="cell_tower">cell_tower</span>
+</div>
+</div>
+</div>
+<!-- Marker 3 -->
+<div class="absolute top-[42%] left-[38%] z-10">
+<div class="relative bg-glass-bg backdrop-blur-md border border-primary/40 rounded-full p-1.5 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+<span class="material-symbols-outlined text-primary text-[16px]" data-icon="cell_tower">cell_tower</span>
+</div>
+</div>
+<!-- Geolocation FAB -->
+<button class="fixed bottom-36 right-6 z-40 w-14 h-14 bg-primary text-on-primary rounded-full shadow-[0_8px_25px_rgba(56,189,248,0.4)] flex items-center justify-center transition-transform active:scale-90 hover:brightness-110">
+<span class="material-symbols-outlined text-[28px]" data-icon="my_location">my_location</span>
+</button>
+</main>
+<!-- Bottom Sheet -->
+<div class="fixed bottom-0 left-0 w-full z-50 flex flex-col bg-surface-container-low backdrop-blur-xl border-t border-glass-border rounded-t-[2rem] shadow-[0_-12px_40px_-4px_rgba(0,0,0,0.5)] bottom-sheet-transition" id="bottom-sheet" style="height: 90vh; transform: translateY(calc(90vh - 152px));">
+<!-- Handle & Collapsed Header -->
+<div class="w-full flex flex-col items-center pt-3 pb-6 cursor-pointer" onclick="toggleBottomSheet()">
+<div class="w-10 h-1 bg-outline/30 rounded-full mb-4"></div>
+<div class="w-full px-6 flex justify-between items-center">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-on-surface">Active Cellular Antennas</span>
+<span class="font-body-sm text-body-sm text-primary">9,840 records found</span>
+</div>
+<div class="material-symbols-outlined text-on-surface-variant" data-icon="keyboard_arrow_up" id="sheet-icon">keyboard_arrow_up</div>
+</div>
+</div>
+<!-- Sheet Content (Visible when expanded) -->
+<div class="flex-grow overflow-y-auto px-6 pb-24">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Bento Card 1: Stats -->
+<div class="glass-panel rounded-2xl p-5 flex flex-col justify-between border-s-4 border-s-success">
+<div class="flex justify-between items-start">
+<span class="font-label-xs text-label-xs text-on-surface-variant">OPERATIONAL UPTIME</span>
+<span class="material-symbols-outlined text-success" data-icon="bolt">bolt</span>
+</div>
+<div class="mt-4">
+<span class="text-4xl font-bold text-on-surface">99.8%</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Average network health across IL</p>
+</div>
+</div>
+<!-- Bento Card 2: Quick Search -->
+<div class="glass-panel rounded-2xl p-5 flex flex-col border-s-4 border-s-primary">
+<span class="font-label-xs text-label-xs text-on-surface-variant mb-3">QUICK LOCATOR</span>
+<div class="relative">
+<input class="w-full bg-surface-container-highest border-none rounded-xl py-3 px-10 text-on-surface font-body-sm focus:ring-2 focus:ring-primary" placeholder="Search city or tower ID..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+</div>
+</div>
+<!-- Bento Card 3: Carriers Chart -->
+<div class="glass-panel rounded-2xl p-5 md:col-span-2 border-s-4 border-s-tertiary">
+<span class="font-label-xs text-label-xs text-on-surface-variant mb-4 block">MARKET DISTRIBUTION</span>
+<div class="flex items-end justify-between h-32 gap-2 mt-2">
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary/20 rounded-t-lg relative group h-[85%]">
+<div class="absolute bottom-0 w-full bg-primary rounded-t-lg transition-all h-full"></div>
+<div class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] transition-opacity">42%</div>
+</div>
+<span class="font-label-xs text-[10px] text-on-surface-variant">Cellcom</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary/20 rounded-t-lg relative group h-[70%]">
+<div class="absolute bottom-0 w-full bg-primary/80 rounded-t-lg h-full"></div>
+</div>
+<span class="font-label-xs text-[10px] text-on-surface-variant">Partner</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary/20 rounded-t-lg relative group h-[60%]">
+<div class="absolute bottom-0 w-full bg-primary/60 rounded-t-lg h-full"></div>
+</div>
+<span class="font-label-xs text-[10px] text-on-surface-variant">Pelephone</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary/20 rounded-t-lg relative group h-[30%]">
+<div class="absolute bottom-0 w-full bg-primary/40 rounded-t-lg h-full"></div>
+</div>
+<span class="font-label-xs text-[10px] text-on-surface-variant">Other</span>
+</div>
+</div>
+</div>
+<!-- Recent Alerts -->
+<div class="md:col-span-2 mt-4">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant mb-3 px-1">RECENT PERMITS</h3>
+<div class="space-y-2">
+<div class="glass-panel p-4 rounded-xl flex items-center justify-between hover:bg-glass-glow transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center text-warning">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+</div>
+<div>
+<p class="font-body-lg text-body-lg text-on-surface">Haifa District - B22</p>
+<p class="font-label-xs text-label-xs text-on-surface-variant">Renewal Pending • 2h ago</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-[60] flex justify-around items-center px-4 pb-4 pt-2 bg-glass-bg backdrop-blur-md border-t border-glass-border shadow-lg">
+<!-- Towers (Active) -->
+<a class="flex flex-col items-center justify-center text-primary bg-glass-glow rounded-xl p-2 scale-95 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="cell_tower">cell_tower</span>
+<span class="font-label-xs text-label-xs mt-1">Towers</span>
+</a>
+<!-- Water -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="water_drop">water_drop</span>
+<span class="font-label-xs text-label-xs mt-1">Water</span>
+</a>
+<!-- Budget -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-xs text-label-xs mt-1">Budget</span>
+</a>
+<!-- Alerts -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-colors relative" href="#">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="font-label-xs text-label-xs mt-1">Alerts</span>
+<span class="absolute top-2 right-4 w-2 h-2 bg-danger rounded-full"></span>
+</a>
+</nav>
+<script>
+        let isExpanded = false;
+        const sheet = document.getElementById('bottom-sheet');
+        const sheetIcon = document.getElementById('sheet-icon');
+
+        function toggleBottomSheet() {
+            isExpanded = !isExpanded;
+            if (isExpanded) {
+                sheet.style.transform = 'translateY(0)';
+                sheetIcon.innerText = 'keyboard_arrow_down';
+                sheetIcon.setAttribute('data-icon', 'keyboard_arrow_down');
+            } else {
+                sheet.style.transform = 'translateY(calc(90vh - 152px))';
+                sheetIcon.innerText = 'keyboard_arrow_up';
+                sheetIcon.setAttribute('data-icon', 'keyboard_arrow_up');
+            }
+        }
+
+        // Lightweight atmospheric effect: Micro-drifting for map background
+        window.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 10;
+            const y = (e.clientY / window.innerHeight - 0.5) * 10;
+            document.querySelector('.map-canvas').style.backgroundPosition = `${x}px ${y}px`;
+        });
+    </script>
+</body></html>

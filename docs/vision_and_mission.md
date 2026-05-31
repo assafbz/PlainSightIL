@@ -1,7 +1,7 @@
-# PlainSight IL: Vision & Mission Statement
+# PlainSightIL: Vision & Mission Statement
 
 > [!NOTE]
-> This document serves as the strategic compass for **PlainSight IL**, defining its ultimate long-term goals, immediate mission, and core operating values.
+> This document serves as the strategic compass for **PlainSightIL**, defining its ultimate long-term goals, immediate mission, and core operating values.
 
 ---
 
@@ -15,13 +15,13 @@ We envision a future where public datasets are no longer locked behind complex i
 ## 🚀 The Mission
 To translate the Israeli government's open data into clean, visual, and highly accessible utilities optimized for mobile and tablet devices.
 
-By bridging the gap between raw government databases (`data.gov.il`) and consumer-grade user experiences, **PlainSight IL** empowers citizens to search active cellular towers, track local real estate transactions, monitor environmental metrics, and analyze public spending—all in a bilingual, high-performance, and responsive application.
+By bridging the gap between raw government databases (`data.gov.il`) and consumer-grade user experiences, **PlainSightIL** empowers citizens to search active cellular towers, track local real estate transactions, monitor environmental metrics, and analyze public spending—all in a bilingual, high-performance, and responsive application.
 
 ---
 
 ## 💎 Core Values
 
-| Value | Principle | Action in PlainSight IL |
+| Value | Principle | Action in PlainSightIL |
 | :--- | :--- | :--- |
 | **Accessibility First** | Information is useless if it cannot be easily reached or understood. | We design specifically for mobile and tablet viewports with intuitive RTL/LTR switching and high-contrast typography. |
 | **Absolute Neutrality** | Data must speak for itself without political or ideological bias. | We present raw, verified government datasets as-is, letting the numbers and geographic pins tell the objective story. |
@@ -34,7 +34,7 @@ By bridging the gap between raw government databases (`data.gov.il`) and consume
 
 ```mermaid
 graph TD
-    A[PlainSight IL Users] --> B[Homeowners & Buyers]
+    A[PlainSightIL Users] --> B[Homeowners & Buyers]
     A --> C[Daily Commuters & Consumers]
     A --> D[Health & Eco-Conscious Citizens]
     A --> E[Civic Advocates & Researchers]
@@ -53,7 +53,7 @@ graph TD
 Raw CSVs and CKAN APIs are converted into clear charts, maps, and responsive search fields. We focus on visual storytelling—such as showing the Kinneret's water level as an animated liquid card, or cell towers as map coordinates.
 
 ### 2. High-Fidelity Mobile Experience
-Unlike government portals designed for desktop monitors, PlainSight IL is optimized for thumbs. We design for responsive touch interactions, bottom navigation, and fluid viewport scaling.
+Unlike government portals designed for desktop monitors, PlainSightIL is optimized for thumbs. We design for responsive touch interactions, bottom navigation, and fluid viewport scaling.
 
 ### 3. Localization & Inclusivity
 We support Hebrew and English, including full RTL (Right-to-Left) formatting. Every citizen—regardless of native language or physical ability—deserves a seamless experience.

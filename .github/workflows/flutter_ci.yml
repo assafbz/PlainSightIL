@@ -1,0 +1,43 @@
+name: Flutter Quality CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  validate:
+    name: Flutter Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+        working-directory: client
+
+      - name: Check Code Formatting
+        run: dart format --set-exit-if-changed .
+        working-directory: client
+
+      - name: Static Analysis
+        run: flutter analyze
+        working-directory: client
+
+      - name: Run Unit & Widget Tests
+        run: flutter test
+        working-directory: client

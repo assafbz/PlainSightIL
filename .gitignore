@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+
+# Flutter / Dart / Pub local artifacts (usually handled by client/.gitignore, but good to have)
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/pubspec.lock
+# We DO want to commit client/pubspec.lock so dependency versions are locked, but ignore temporary build files.
+**/build/

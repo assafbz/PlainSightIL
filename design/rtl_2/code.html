@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="he"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>מפלס הכנרת | PlainSight IL</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(25%); } /* Adjusted for RTL */
+            100% { transform: translateX(0); }
+        }
+        .animate-wave {
+            animation: wave 15s ease-in-out infinite;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline": "#87929a",
+                      "on-primary-fixed": "#001e2c",
+                      "surface-container-low": "#181b25",
+                      "inverse-on-surface": "#2c303a",
+                      "on-secondary-fixed-variant": "#5516be",
+                      "on-tertiary-fixed": "#261a00",
+                      "inverse-surface": "#dfe2ef",
+                      "danger": "#f43f5e",
+                      "tertiary": "#ffc42f",
+                      "primary": "#8ed5ff",
+                      "glass-border": "rgba(255, 255, 255, 0.08)",
+                      "error-container": "#93000a",
+                      "glass-bg": "rgba(15, 23, 42, 0.75)",
+                      "on-secondary-fixed": "#23005c",
+                      "surface-dim": "#0f131c",
+                      "tertiary-fixed-dim": "#f9bd22",
+                      "surface-variant": "#31353f",
+                      "on-primary-fixed-variant": "#004c69",
+                      "secondary-fixed-dim": "#d0bcff",
+                      "primary-fixed": "#c4e7ff",
+                      "outline-variant": "#3e484f",
+                      "tertiary-fixed": "#ffdf9f",
+                      "surface-container-highest": "#31353f",
+                      "error": "#ffb4ab",
+                      "on-tertiary-container": "#584000",
+                      "secondary-fixed": "#e9ddff",
+                      "on-primary": "#00354a",
+                      "surface": "#0f131c",
+                      "on-surface": "#dfe2ef",
+                      "warning": "#f59e0b",
+                      "tertiary-container": "#e1a800",
+                      "on-secondary": "#3c0091",
+                      "on-surface-variant": "#bdc8d1",
+                      "success": "#34d399",
+                      "on-secondary-container": "#c4abff",
+                      "on-tertiary-fixed-variant": "#5c4300",
+                      "surface-container": "#1c1f29",
+                      "surface-bright": "#353943",
+                      "inverse-primary": "#00668a",
+                      "on-error-container": "#ffdad6",
+                      "on-error": "#690005",
+                      "background": "#0f131c",
+                      "secondary": "#d0bcff",
+                      "on-primary-container": "#004965",
+                      "surface-container-high": "#262a34",
+                      "primary-container": "#38bdf8",
+                      "glass-glow": "rgba(56, 189, 248, 0.15)",
+                      "secondary-container": "#571bc1",
+                      "info": "#0ea5e9",
+                      "primary-fixed-dim": "#7bd0ff",
+                      "surface-container-lowest": "#0a0e17",
+                      "surface-tint": "#7bd0ff",
+                      "on-tertiary": "#402d00",
+                      "on-background": "#dfe2ef"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "1rem",
+                      "touch-target": "48px",
+                      "bottom-sheet-collapsed": "72px",
+                      "header-height": "64px",
+                      "margin-mobile": "1.5rem"
+              },
+              "fontFamily": {
+                      "body-sm": ["Assistant"],
+                      "label-xs": ["Assistant"],
+                      "body-lg": ["Assistant"],
+                      "headline-lg": ["Assistant"],
+                      "headline-md": ["Assistant"]
+              },
+              "fontSize": {
+                      "body-sm": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "label-xs": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+                      "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-lg min-h-screen selection:bg-primary/30">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-header-height bg-glass-bg backdrop-blur-md border-b border-glass-border shadow-sm">
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-primary p-2 hover:bg-glass-glow rounded-full transition-all">menu</button>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">PlainSight IL</h1>
+</div>
+<button class="font-headline-md text-headline-md text-primary px-4 py-1 hover:bg-glass-glow rounded-lg transition-transform active:scale-95">EN</button>
+</header>
+<!-- Main Content Area -->
+<main class="pt-20 pb-32 px-4 md:px-8 max-w-5xl mx-auto space-y-6">
+<!-- Header Section -->
+<section class="flex flex-col gap-1">
+<span class="text-primary font-label-xs uppercase tracking-widest">סטטוס מאגר חי</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">ים כנרת</h2>
+</section>
+<!-- Liquid Visualizer Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Hero Liquid Display -->
+<div class="lg:col-span-7 bg-surface-container-low rounded-3xl overflow-hidden border border-glass-border relative h-[400px] shadow-2xl">
+<!-- Background Image -->
+<div class="absolute inset-0 z-0">
+<img alt="Kinneret view" class="w-full h-full object-cover opacity-30 grayscale brightness-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8i9jjO8PYyGBrLI-npeMXN-tv9yrsKSKdvto3J2nk023rUzKfqTiCrPzYjXxlDX4IFqQzfbA25tUrNHGf96k0bkwKbizPCHhCd_yM2Q17YzY5YkgQZHBs_ExzRD7FQf76eEJdFQ4yYuHVIFBfcbWk8DdSgC8uzmIKFKTcprQGsI49ZYPpYWFzQnjU7FewVdN9QCnyat-CLUHyeolgb11LYowxaCiu0EIiJB8wGrHaypgy4kdH8tE5AQskKzQGGW9_6OA78QLh-Fc0"/>
+</div>
+<!-- Animated Water -->
+<div class="absolute inset-0 z-10 flex flex-col justify-end">
+<div class="relative w-full h-[68%] transition-all duration-1000 ease-out" id="water-container">
+<svg class="absolute -top-12 right-0 w-[200%] h-24 animate-wave fill-primary/40 backdrop-blur-[2px]" preserveaspectratio="none" viewbox="0 0 1000 100">
+<path d="M0,50 C150,100 350,0 500,50 C650,100 850,0 1000,50 L1000,100 L0,100 Z"></path>
+</svg>
+<div class="w-full h-full bg-gradient-to-b from-primary/30 to-on-primary-container/80 backdrop-blur-md"></div>
+<!-- Floating Level Label -->
+<div class="absolute -top-16 left-6 flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-lg">
+<span class="material-symbols-outlined">water_drop</span>
+<span dir="ltr">-209.42m</span>
+</div>
+</div>
+</div>
+<!-- Red Lines Indicators -->
+<div class="absolute inset-0 z-20 p-8 flex flex-col justify-between pointer-events-none">
+<div class="border-t-2 border-dashed border-danger/50 flex justify-between items-start pt-2">
+<span class="bg-danger/10 text-danger text-xs font-bold px-2 py-0.5 rounded border border-danger/20 backdrop-blur-sm">קו אדום עליון: -208.80m</span>
+</div>
+<div class="h-1/3"></div>
+<div class="border-t-2 border-dashed border-warning/50 flex justify-between items-start pt-2">
+<span class="bg-warning/10 text-warning text-xs font-bold px-2 py-0.5 rounded border border-warning/20 backdrop-blur-sm">קו אדום תחתון: -213.00m</span>
+</div>
+<div class="border-t-2 border-danger flex justify-between items-start pt-2">
+<span class="bg-danger text-on-error text-xs font-bold px-2 py-0.5 rounded">קו שחור: -214.87m</span>
+</div>
+</div>
+</div>
+<!-- Stats & Metrics Column -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<!-- Current Level Card -->
+<div class="glass-panel rounded-3xl p-6 flex flex-col justify-center items-center text-center space-y-2 flex-grow border-is-4 border-is-primary">
+<span class="text-on-surface-variant font-label-xs uppercase">רום נוכחי</span>
+<div class="flex items-baseline gap-2" dir="ltr">
+<span class="font-headline-lg text-6xl text-primary font-extrabold">-209.42</span>
+<span class="text-primary/70 font-headline-md">meters</span>
+</div>
+<div class="flex items-center gap-1 text-success bg-success/10 px-3 py-1 rounded-full text-sm font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+2.4 ס״מ היום</span>
+</div>
+</div>
+<!-- Gap to Upper Line Card -->
+<div class="glass-panel rounded-3xl p-6 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-xs uppercase">לקיבולת מלאה</span>
+<span class="font-headline-md text-on-surface">נותרו 62 ס״מ</span>
+</div>
+<div class="w-16 h-16 relative">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-variant" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="6"></circle>
+<!-- Progress is same direction visually -->
+<circle class="text-primary" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="40" stroke-width="6"></circle>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold">78%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Trend Chart Section -->
+<section class="glass-panel rounded-3xl p-8 space-y-6">
+<div class="flex justify-between items-center">
+<div class="flex flex-col">
+<h3 class="font-headline-md text-on-surface">מגמת מפלס שנתית</h3>
+<p class="text-on-surface-variant text-sm">אוקטובר 2023 - אוקטובר 2024</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-variant text-on-surface px-4 py-2 rounded-xl font-label-xs hover:bg-primary hover:text-on-primary transition-colors">1ש</button>
+<button class="bg-surface-variant/40 text-on-surface-variant px-4 py-2 rounded-xl font-label-xs">5ש</button>
+<button class="bg-surface-variant/40 text-on-surface-variant px-4 py-2 rounded-xl font-label-xs">MAX</button>
+</div>
+</div>
+<!-- SVG Area Chart (Mirrored for RTL) -->
+<div class="w-full h-64 relative group">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 1000 200">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#8ed5ff" stop-opacity="0.5"></stop>
+<stop offset="100%" stop-color="#8ed5ff" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="1000" y1="0" y2="0"></line>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="1000" y1="50" y2="50"></line>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="1000" y1="100" y2="100"></line>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="1000" y1="150" y2="150"></line>
+<!-- Area Path (Points mirrored for RTL logic if we assume time flows right-to-left) -->
+<!-- Here we keep standard left-to-right time flow for charts often used in RTL markets, 
+                         but adjust the hover state if needed. Reversing the path points for true RTL: -->
+<path d="M1000,180 L900,170 L800,175 L700,160 L600,120 L500,80 L400,60 L300,55 L200,85 L100,110 L0,130 L0,200 L1000,200 Z" fill="url(#chartGradient)"></path>
+<path d="M1000,180 L900,170 L800,175 L700,160 L600,120 L500,80 L400,60 L300,55 L200,85 L100,110 L0,130" fill="none" stroke="#8ed5ff" stroke-linecap="round" stroke-width="3"></path>
+<circle class="cursor-pointer" cx="400" cy="60" fill="#8ed5ff" r="6">
+<animate attributename="r" dur="2s" repeatcount="indefinite" values="6;8;6"></animate>
+</circle>
+</svg>
+<!-- Tooltip (Position adjusted) -->
+<div class="absolute top-4 right-[58%] glass-panel px-3 py-2 rounded-xl text-xs pointer-events-none group-hover:opacity-100 transition-opacity">
+<div class="font-bold text-primary">15 מאי, 2024</div>
+<div class="text-on-surface" dir="ltr">-209.12m</div>
+</div>
+</div>
+<div class="flex justify-between text-on-surface-variant font-label-xs px-2">
+<span>אוק׳ 23</span>
+<span>ינו׳ 24</span>
+<span>אפר׳ 24</span>
+<span>יול׳ 24</span>
+<span>אוק׳ 24</span>
+</div>
+</section>
+<!-- Dynamic Bottom Sheet -->
+<div class="fixed bottom-[88px] left-1/2 -translate-x-1/2 w-full max-w-xl z-40">
+<div class="glass-panel rounded-t-3xl border-b-0 shadow-2xl p-4 flex flex-col items-center gap-4">
+<div class="w-10 h-1.5 bg-outline-variant rounded-full mb-2"></div>
+<div class="flex items-center gap-4 w-full">
+<div class="relative flex-grow">
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-highest border-none rounded-2xl py-3 pr-12 pl-4 text-on-surface placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary" placeholder="חיפוש מאגרים נוספים..." type="text"/>
+</div>
+<button class="w-12 h-12 bg-primary text-on-primary rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-glass-bg backdrop-blur-md border-t border-glass-border shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined">cell_tower</span>
+<span class="font-label-xs text-label-xs">אנטנות</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary bg-glass-glow rounded-xl p-2 transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+<span class="font-label-xs text-label-xs">מים</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-xs text-label-xs">תקציב</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-label-xs text-label-xs">התראות</span>
+</a>
+</nav>
+<!-- NavigationDrawer -->
+<aside class="fixed inset-y-0 right-0 z-[60] flex flex-col h-full w-80 rounded-s-xl bg-surface-container-low backdrop-blur-xl border-s border-glass-border shadow-2xl transition-transform translate-x-full" id="drawer">
+<div class="p-6 flex flex-col gap-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<h4 class="font-headline-md text-primary">PlainSight Explorer</h4>
+<p class="text-xs text-on-surface-variant">פעיל שקיפות נתונים</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 p-3 rounded-lg text-on-surface hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span>שכבות מפה</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-lg text-on-surface hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<span>תצוגות שמורות</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-lg text-primary bg-primary-container/20" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>תובנות נתונים</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-lg text-on-surface hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>הגדרות</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-lg text-on-surface hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">info</span>
+<span>אודות</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-glass-border text-xs text-on-surface-variant text-center">
+                v1.0.4
+            </div>
+</div>
+</aside>
+<script>
+        const drawer = document.getElementById('drawer');
+        
+        document.querySelectorAll('button').forEach(btn => {
+            if(btn.innerText.includes('menu')) {
+                btn.addEventListener('click', () => {
+                    drawer.classList.toggle('translate-x-full');
+                });
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (drawer && !drawer.contains(e.target) && !e.target.closest('button')) {
+                drawer.classList.add('translate-x-full');
+            }
+        }, true);
+
+        const waterContainer = document.getElementById('water-container');
+        if(waterContainer) {
+            setTimeout(() => {
+                setInterval(() => {
+                    const variance = Math.sin(Date.now() / 2000) * 0.5;
+                    waterContainer.style.height = (68 + variance) + '%';
+                }, 100);
+            }, 1000);
+        }
+    </script>
+</body></html>

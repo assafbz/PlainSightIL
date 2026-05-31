@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline": "#87929a",
+            "on-primary-fixed": "#001e2c",
+            "surface-container-low": "#181b25",
+            "inverse-on-surface": "#2c303a",
+            "on-secondary-fixed-variant": "#5516be",
+            "on-tertiary-fixed": "#261a00",
+            "inverse-surface": "#dfe2ef",
+            "danger": "#f43f5e",
+            "tertiary": "#ffc42f",
+            "primary": "#8ed5ff",
+            "glass-border": "rgba(255, 255, 255, 0.08)",
+            "error-container": "#93000a",
+            "glass-bg": "rgba(15, 23, 42, 0.75)",
+            "on-secondary-fixed": "#23005c",
+            "surface-dim": "#0f131c",
+            "tertiary-fixed-dim": "#f9bd22",
+            "surface-variant": "#31353f",
+            "on-primary-fixed-variant": "#004c69",
+            "secondary-fixed-dim": "#d0bcff",
+            "primary-fixed": "#c4e7ff",
+            "outline-variant": "#3e484f",
+            "tertiary-fixed": "#ffdf9f",
+            "surface-container-highest": "#31353f",
+            "error": "#ffb4ab",
+            "on-tertiary-container": "#584000",
+            "secondary-fixed": "#e9ddff",
+            "on-primary": "#00354a",
+            "surface": "#0f131c",
+            "on-surface": "#dfe2ef",
+            "warning": "#f59e0b",
+            "tertiary-container": "#e1a800",
+            "on-secondary": "#3c0091",
+            "on-surface-variant": "#bdc8d1",
+            "success": "#34d399",
+            "on-secondary-container": "#c4abff",
+            "on-tertiary-fixed-variant": "#5c4300",
+            "surface-container": "#1c1f29",
+            "surface-bright": "#353943",
+            "inverse-primary": "#00668a",
+            "on-error-container": "#ffdad6",
+            "on-error": "#690005",
+            "background": "#0f131c",
+            "secondary": "#d0bcff",
+            "on-primary-container": "#004965",
+            "surface-container-high": "#262a34",
+            "primary-container": "#38bdf8",
+            "glass-glow": "rgba(56, 189, 248, 0.15)",
+            "secondary-container": "#571bc1",
+            "info": "#0ea5e9",
+            "primary-fixed-dim": "#7bd0ff",
+            "surface-container-lowest": "#0a0e17",
+            "surface-tint": "#7bd0ff",
+            "on-tertiary": "#402d00",
+            "on-background": "#dfe2ef"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter": "1rem",
+            "touch-target": "48px",
+            "bottom-sheet-collapsed": "72px",
+            "header-height": "64px",
+            "margin-mobile": "1.5rem"
+          },
+          "fontFamily": {
+            "body-sm": ["Outfit"],
+            "label-xs": ["Outfit"],
+            "body-lg": ["Outfit"],
+            "headline-lg": ["Outfit"],
+            "headline-md": ["Outfit"]
+          },
+          "fontSize": {
+            "body-sm": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+            "label-xs": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+            "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Outfit', sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-effect {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.05); }
+    }
+    .animate-glow { animation: pulse-glow 3s ease-in-out infinite; }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen overflow-hidden">
+<!-- Background Map Layer -->
+<div class="fixed inset-0 z-0">
+<img class="w-full h-full object-cover grayscale brightness-50 blur-[4px]" data-alt="A sophisticated dark-mode satellite map of a dense urban environment at night. The map features deep slate and charcoal tones with glowing cyan outlines for streets and infrastructure. Small, vibrant blue icons indicate cellular tower locations across the grid, creating a high-tech, surveillance-style aesthetic. The entire view is slightly out of focus to provide a depth-of-field effect that prioritizes the foreground interface." data-location="Tel Aviv" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpbEzNq4e3t-spmtEo9FBmbpHqdCwALG7RTIvHMi8BpjURXlGdDHRUM7jUmxaL8yX9S-AYpWONuW1uztqvlPLmd9ENbqj8Bs89xpBLh1RCBEwywxd_SPeu1o1mVPwGgbaeDRb6HzjYfPTYDDkRZdk-2-qhF78uO5METIXdcq19OIRCEmN7qjhCLc7z1efofZW4Iviil2xMtNZo8Iy0sQJIdT_zj1j2rbM6ol_z5v3UEyxNx7ihY-mQ0rPwSUA6USA7wZdXD-WHniSS"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
+</div>
+<!-- Shared TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-header-height bg-glass-bg backdrop-blur-md border-b border-glass-border shadow-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary cursor-pointer active:scale-95 transition-transform" data-icon="menu">menu</span>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary tracking-tight">PlainSight IL</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-glass-glow text-primary font-label-xs text-label-xs px-3 py-1 rounded-full border border-glass-border hover:bg-primary/20 transition-colors">HE</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-glass-border overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User profile avatar showing a modern, professional persona in a clean, minimalist style. The color palette of the portrait is neutral with soft shadows, fitting perfectly within the high-fidelity fintech and data-transparency dashboard aesthetic of the overall application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7s-uHS_9-o70A9AtdMo6FBohbseYPsEYbR1Jr-P3PE34tLntGR2QZmvmjkcYakm5PjrDA45wvgzwDQKQh4NZuuzbsTxxRqGyrVpHKLwn9_bwXwmFs288NhLW1MtRxaFFHfE8qS2jAPxtSC3RDtZY34RDXWgdZ47IHT9-ngTfGhujOZRa2S_966y4_zxDdxWFx5qA7Rd4Y79opKHaUH5y2nE_Hu10m8jkF6S5L4kxR0PKeK81lTzQUan2jSu3Ra2XsGyCVaeCHKBOR"/>
+</div>
+</div>
+</header>
+<!-- Main Viewport Canvas (Spacer for header) -->
+<main class="h-screen pt-header-height"></main>
+<!-- Expanded Bottom Sheet (90% Height) -->
+<section class="fixed bottom-0 left-0 w-full h-[795px] z-40 bg-surface-container-low backdrop-blur-xl rounded-t-[32px] border-t border-glass-border shadow-2xl flex flex-col overflow-hidden transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)">
+<!-- Drag Handle & Sticky Header -->
+<div class="flex flex-col items-center pt-3 pb-6 shrink-0 bg-surface-container-low/80 sticky top-0 z-10">
+<div class="w-10 h-1.5 bg-outline-variant rounded-full mb-6"></div>
+<div class="w-full px-margin-mobile flex justify-between items-start">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="text-primary-container font-headline-lg text-headline-lg tracking-tight">CELL-TLV-7842</span>
+<span class="px-2 py-0.5 bg-success/20 text-success rounded text-[10px] font-bold uppercase tracking-widest border border-success/30">Active</span>
+</div>
+<p class="text-on-surface-variant font-body-sm text-body-sm">Rothschild Blvd 45, Tel Aviv-Yafo</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<div class="h-10 w-24 bg-white/5 rounded-lg border border-glass-border flex items-center justify-center overflow-hidden p-2">
+<!-- Simulated Operator Logo -->
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-3 rounded-full bg-primary-container"></div>
+<span class="text-white font-bold text-[10px] tracking-tighter">PARTNER</span>
+</div>
+</div>
+<div class="bg-surface-container-highest px-3 py-1 rounded-full border border-glass-border flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-tertiary" data-icon="verified">verified</span>
+<span class="text-[10px] font-semibold text-on-surface-variant tracking-wide">MOH CERTIFIED</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto px-margin-mobile pb-24 no-scrollbar">
+<!-- Metrics Grid -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="glass-effect rounded-2xl p-4 flex flex-col justify-between aspect-square">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary" data-icon="waves">waves</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase">Avg Frequency</span>
+</div>
+<div class="mt-4">
+<span class="font-headline-lg text-[32px] text-primary">3.4</span>
+<span class="text-on-surface-variant font-label-xs ml-1">GHz</span>
+</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]" data-icon="trending_down">trending_down</span>
+<span>2.4% vs last week</span>
+</div>
+</div>
+<div class="glass-effect rounded-2xl p-4 flex flex-col justify-between aspect-square">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-tertiary" data-icon="bolt">bolt</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase">Max Power</span>
+</div>
+<div class="mt-4">
+<span class="font-headline-lg text-[32px] text-tertiary">14.2</span>
+<span class="text-on-surface-variant font-label-xs ml-1">mW/cm²</span>
+</div>
+<div class="text-[10px] text-on-surface-variant flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]" data-icon="history">history</span>
+<span>Within safety limits</span>
+</div>
+</div>
+</div>
+<!-- Frequency Chart Section -->
+<div class="mb-8">
+<div class="flex justify-between items-end mb-4">
+<h3 class="font-headline-md text-headline-md text-on-surface">Radiation Profile</h3>
+<div class="flex gap-2 bg-surface-container-highest p-1 rounded-lg">
+<button class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[10px] font-bold">24H</button>
+<button class="px-2 py-0.5 text-on-surface-variant rounded text-[10px] font-bold">7D</button>
+</div>
+</div>
+<div class="glass-effect rounded-2xl p-6 relative overflow-hidden h-48">
+<div class="absolute inset-0 flex items-end px-4 pb-8 pointer-events-none">
+<!-- Simplified SVG Line Chart -->
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 400 100">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="rgba(142, 213, 255, 0.4)"></stop>
+<stop offset="100%" stop-color="rgba(142, 213, 255, 0)"></stop>
+</lineargradient>
+</defs>
+<path d="M0,80 Q50,70 100,50 T200,60 T300,30 T400,45 L400,100 L0,100 Z" fill="url(#chartGradient)"></path>
+<path d="M0,80 Q50,70 100,50 T200,60 T300,30 T400,45" fill="none" stroke="#8ed5ff" stroke-linecap="round" stroke-width="3"></path>
+<!-- Animated Point -->
+<circle cx="300" cy="30" fill="#8ed5ff" r="4">
+<animate attributename="r" dur="2s" repeatcount="indefinite" values="4;6;4"></animate>
+</circle>
+</svg>
+</div>
+<div class="absolute top-4 right-4 flex flex-col items-end">
+<span class="text-primary font-bold text-lg">30.4%</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-widest">Cap Utilization</span>
+</div>
+<div class="absolute bottom-4 left-6 right-6 flex justify-between text-[8px] text-outline font-bold">
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>00:00</span>
+</div>
+</div>
+</div>
+<!-- Data Source Badge -->
+<div class="flex items-center gap-3 bg-primary-container/10 border border-primary-container/20 rounded-xl p-3 mb-8">
+<span class="material-symbols-outlined text-primary-container" data-icon="cloud_done">cloud_done</span>
+<div class="flex-1">
+<p class="text-on-primary-container font-label-xs text-label-xs">Environmental Protection Ministry</p>
+<p class="text-[10px] text-on-surface-variant">Verified live sync • Updated 2h ago</p>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="open_in_new">open_in_new</span>
+</div>
+<!-- Detailed Testing Log -->
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-4">Inspection History</h3>
+<div class="space-y-3">
+<!-- Log Item 1 -->
+<div class="glass-effect p-4 rounded-xl flex items-center gap-4 hover:translate-x-1 transition-transform cursor-pointer border-s-4 border-s-success">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="event_note">event_note</span>
+</div>
+<div class="flex-1">
+<h4 class="text-on-surface font-bold text-sm">Annual Safety Audit</h4>
+<p class="text-[11px] text-on-surface-variant">Conducted by GreenWay Inspect Ltd.</p>
+</div>
+<div class="text-right">
+<p class="text-on-surface font-bold text-xs uppercase tracking-tight">12 OCT 23</p>
+<p class="text-[10px] text-success font-bold">PASSED</p>
+</div>
+</div>
+<!-- Log Item 2 -->
+<div class="glass-effect p-4 rounded-xl flex items-center gap-4 hover:translate-x-1 transition-transform cursor-pointer border-s-4 border-s-warning">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="build">build</span>
+</div>
+<div class="flex-1">
+<h4 class="text-on-surface font-bold text-sm">Hardware Maintenance</h4>
+<p class="text-[11px] text-on-surface-variant">Antenna array calibration</p>
+</div>
+<div class="text-right">
+<p class="text-on-surface font-bold text-xs uppercase tracking-tight">04 JUL 23</p>
+<p class="text-[10px] text-warning font-bold">SERVICED</p>
+</div>
+</div>
+<!-- Log Item 3 -->
+<div class="glass-effect p-4 rounded-xl flex items-center gap-4 hover:translate-x-1 transition-transform cursor-pointer border-s-4 border-s-primary">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="cell_tower">cell_tower</span>
+</div>
+<div class="flex-1">
+<h4 class="text-on-surface font-bold text-sm">Deployment Phase</h4>
+<p class="text-[11px] text-on-surface-variant">Initial activation &amp; testing</p>
+</div>
+<div class="text-right">
+<p class="text-on-surface font-bold text-xs uppercase tracking-tight">15 JAN 23</p>
+<p class="text-[10px] text-primary font-bold">LAUNCH</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Navigation Layer -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-glass-bg backdrop-blur-md border-t border-glass-border shadow-lg rounded-t-xl">
+<div class="flex flex-col items-center justify-center text-primary bg-glass-glow rounded-xl p-2 scale-95 transition-all duration-300">
+<span class="material-symbols-outlined" data-icon="cell_tower">cell_tower</span>
+<span class="font-label-xs text-label-xs mt-1">Towers</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="water_drop">water_drop</span>
+<span class="font-label-xs text-label-xs mt-1">Water</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-xs text-label-xs mt-1">Budget</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="font-label-xs text-label-xs mt-1">Alerts</span>
+</div>
+</nav>
+<!-- Interactive Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const sheet = document.querySelector('section');
+      
+      // Micro-interaction for cards
+      const cards = document.querySelectorAll('.glass-effect');
+      cards.forEach(card => {
+        card.addEventListener('touchstart', () => {
+          card.style.transform = 'scale(0.98)';
+        });
+        card.addEventListener('touchend', () => {
+          card.style.transform = 'scale(1)';
+        });
+      });
+
+      // Simple parallax on scroll for the sheet
+      const content = document.querySelector('.overflow-y-auto');
+      content.addEventListener('scroll', () => {
+        const scrolled = content.scrollTop;
+        if(scrolled > 50) {
+            document.querySelector('.sticky').classList.add('shadow-xl');
+            document.querySelector('.sticky').style.backgroundColor = 'rgba(24, 27, 37, 0.95)';
+        } else {
+            document.querySelector('.sticky').classList.remove('shadow-xl');
+            document.querySelector('.sticky').style.backgroundColor = 'rgba(24, 27, 37, 0.8)';
+        }
+      });
+    });
+  </script>
+</body></html>
