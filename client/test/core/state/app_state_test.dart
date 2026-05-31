@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:plainsight/app_state.dart';
-import 'package:plainsight/design_system.dart';
+import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/theme/design_system.dart';
 
 void main() {
   group('AppStateNotifier Tests', () {

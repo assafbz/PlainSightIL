@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'app_state.dart';
-import 'dashboard_screen.dart';
-import 'design_system.dart';
+import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/theme/design_system.dart';
+import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 
 void main() {
   runApp(const MyApp());

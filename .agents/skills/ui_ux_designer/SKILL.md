@@ -41,15 +41,15 @@ Represent the visual nesting of elements:
 - **Mobile breakpoint (<600px)**: Column stacking, compact spacing, touch target sizes of at least 48px.
 - **Tablet/Desktop breakpoint (>600px)**: Grid side-by-side components, expanded margins.
 
-## 4. Typography Systems
-- Font Family: (e.g. Outfit, Inter)
-- Font Scale rules (sizes, weights, and letter-spacing).
+## 4. UI/UX Interface Specs
+- Design details: Flutter Widget hierarchy, layout attributes, responsive constraints.
+- Explicit guidelines for premium looks (e.g. Google Fonts, backdrop-filters, glassmorphic card borders).
 
 ## 5. Micro-Animations & Interaction States
-Specify CSS transition durations and curves for:
+Specify animation durations and curves for:
 - Hover / Active button states.
 - Card expansion/collapse transitions.
-- Tooltip hover triggers.
+- Tooltip triggers.
 ```
 
 ### 3. State Update

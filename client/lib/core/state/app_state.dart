@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'design_system.dart';
+import '../theme/design_system.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   String _locale = 'en';

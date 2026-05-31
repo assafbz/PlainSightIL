@@ -1,5 +1,13 @@
 # PlainSightIL: Global UI/UX Design System & Styleguide
 
+> [!NOTE]
+> **Stitch Design Sync:**
+> *   **Stitch Project Title:** Israel Open Data Explorer
+> *   **Stitch Project ID:** `projects/10303868738682079846`
+> *   **Stitch Web App:** [stitch.withgoogle.com](https://stitch.withgoogle.com)
+> 
+> The UI/UX style guide is defined and maintained inside Stitch. Changes to the design tokens, themes, or components should be updated in the Stitch project and synced.
+
 This document defines the core design principles, typography, HSL color tokens, glassmorphism specs, bidirectional (RTL/LTR) layouts, and micro-interactions for the PlainSightIL application shell and visualization components, supporting both **Web CSS** and **Flutter/Dart** environments.
 
 ---

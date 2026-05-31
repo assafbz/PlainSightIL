@@ -32,8 +32,8 @@ Specify files that will be modified, created, or deleted:
 - Document any state management hooks or state fields.
 
 ## 4. UI/UX Interface Specs
-- Design details: HTML layout structure, CSS classes to apply, responsive breakpoint overrides.
-- Explicit guidelines for premium looks (e.g. typography, backdrop-filters, custom scrollbar styles).
+- Design details: Flutter Widget structure, styling parameters, responsive breakpoints.
+- Explicit guidelines for premium looks (e.g. Google Fonts, backdrop-filters, custom glassmorphic aesthetics).
 
 ## 5. Potential Performance & Security Impacts
 Assess any CPU or UI thread bottlenecks. Outline clean-up routines.

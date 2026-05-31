@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_state.dart';
-import 'design_system.dart';
+import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/theme/design_system.dart';
 
 class DashboardScreen extends StatelessWidget {
   final AppStateNotifier appState;

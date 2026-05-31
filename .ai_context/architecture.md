@@ -1,5 +1,13 @@
 # PlainSightIL: High-Level Architecture & System Boundaries
 
+> [!NOTE]
+> **Stitch Integration:**
+> *   **Stitch Project Title:** Israel Open Data Explorer
+> *   **Stitch Project ID:** `projects/10303868738682079846`
+> *   **Stitch Web App:** [stitch.withgoogle.com](https://stitch.withgoogle.com)
+> 
+> The application design system and screen wireframes are defined and synchronized via Stitch. Developers and automated agents should reference these project resources for UI/UX specifications.
+
 This document establishes the technical architecture, component design, data serialization patterns, and domain isolation boundaries for the PlainSightIL application. It serves as the primary ground-truth configuration for automated agents and developers.
 
 ---

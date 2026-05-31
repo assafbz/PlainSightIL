@@ -15,6 +15,9 @@ framework:
   playbook_directory: ".agents/skills/"
   git_branch_prefix: "agents/"
   default_target_milestone: "PlainSightIL v1.0"
+  stitch:
+    project_id: "10303868738682079846"
+    project_title: "Israel Open Data Explorer"
 ```
 
 ---
