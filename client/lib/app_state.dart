@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'design_system.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   String _locale = 'en';
   int _activeTab = 0;
+  bool _isDarkMode = true;
 
   String get locale => _locale;
   int get activeTab => _activeTab;
+  bool get isDarkMode => _isDarkMode;
 
   TextDirection get textDirection =>
       _locale == 'he' ? TextDirection.rtl : TextDirection.ltr;
@@ -27,6 +30,12 @@ class AppStateNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
+    AppColors.setDarkMode(_isDarkMode);
+    notifyListeners();
+  }
+
   // Bilingual string resource maps
   static const Map<String, Map<String, String>> _localizedStrings = {
     'en': {
@@ -38,6 +47,8 @@ class AppStateNotifier extends ChangeNotifier {
       'towers_title': 'Cellular Antennas',
       'towers_desc': 'Active towers & radiation permits by location.',
       'towers_count': '9,840 records',
+      'towers_roadmap_title': 'Cellular Antennas Coming Soon',
+      'towers_roadmap_desc': 'This dataset screen is under construction. Future integrations will include live data and interactive maps.',
       'water_title': 'Kinneret Water Level',
       'water_desc': 'Real-time water levels and seasonal metrics.',
       'water_count': 'Daily updates',
@@ -55,9 +66,20 @@ class AppStateNotifier extends ChangeNotifier {
       'toggle_lang': 'HE',
       'welcome_back': 'Welcome Back',
       'explore_cta': 'Select a dataset below to begin visualization',
+      'badge_active': 'Active',
+      'badge_roadmap': 'Roadmap',
+      'badge_phase2': 'Phase 2 Roadmap',
+      'back_button': 'Back to Home',
+      'attribution_prefix': 'Data Source: ',
+      'water_roadmap_title': 'Kinneret Telemetry Coming Soon',
+      'water_roadmap_desc': 'This dataset is part of the Phase 2 roadmap. We plan to integrate the official Water Authority API from data.gov.il to provide interactive water line charts, historical levels, and seasonal trend analysis.',
+      'budget_roadmap_title': 'Budget Analysis Coming Soon',
+      'budget_roadmap_desc': 'This dataset is part of the Phase 2 roadmap. We plan to integrate the Ministry of Finance budget datasets from data.gov.il to provide interactive visualizations of public budget allocation, spending speed, and market distribution.',
+      'alerts_roadmap_title': 'Alert Telemetry Coming Soon',
+      'alerts_roadmap_desc': 'This dataset is part of the Phase 2 roadmap. We plan to integrate real-time alert data from data.gov.il and environmental agencies to provide notifications, compliance warnings, and historical radiation/pollution alerts.',
     },
     'he': {
-      'app_title': 'PlainSight IL',
+      'app_title': 'בגובה העיניים',
       'mission_title': 'הנגשת מידע ממשלתי לציבור',
       'mission_subtitle':
           'נתונים ממשלתיים יבשים ומורכבים מתורגמים לממשקים נקיים, אינטראקטיביים ומותאמים לנייד.',
@@ -65,6 +87,8 @@ class AppStateNotifier extends ChangeNotifier {
       'towers_title': 'אנטנות סלולריות',
       'towers_desc': 'אנטנות פעילות והיתרי קרינה לפי מיקום.',
       'towers_count': '9,840 רשומות',
+      'towers_roadmap_title': 'אנטנות סלולריות - בקרוב',
+      'towers_roadmap_desc': 'מסך מאגר נתונים זה נמצא בבנייה. שילובים עתידיים יכללו נתונים חיים ומפות אינטראקטיביות.',
       'water_title': 'מפלס הכנרת',
       'water_desc': 'מדדי מפלס מים בזמן אמת ומדדים עונתיים.',
       'water_count': 'עדכון יומי',
@@ -82,6 +106,17 @@ class AppStateNotifier extends ChangeNotifier {
       'toggle_lang': 'EN',
       'welcome_back': 'ברוכים הבאים',
       'explore_cta': 'בחר מאגר נתונים למטה כדי להתחיל בהדמיה',
+      'badge_active': 'פעיל',
+      'badge_roadmap': 'בקרוב',
+      'badge_phase2': 'מפת דרכים שלב 2',
+      'back_button': 'חזור לבית',
+      'attribution_prefix': 'מקור מידע: ',
+      'water_roadmap_title': 'מפלס הכנרת - בקרוב',
+      'water_roadmap_desc': 'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב את ה-API הרשמי של רשות המים מ-data.gov.il כדי לספק גרפים אינטראקטיביים של מפלס המים, רמות היסטוריות וניתוח מגמות עונתיות.',
+      'budget_roadmap_title': 'תקציב המדינה - בקרוב',
+      'budget_roadmap_desc': 'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב את מאגרי התקציב של משרד האוצר מ-data.gov.il כדי לספק הדמיות אינטראקטיביות של הקצאת התקציב הציבורי, מהירות ההוצאה וחלוקת השוק.',
+      'alerts_roadmap_title': 'התראות אחרונות - בקרוב',
+      'alerts_roadmap_desc': 'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב נתוני התראות בזמן אמת מ-data.gov.il ומסוכנויות לאיכות הסביבה כדי לספק התראות, אזהרות תאימות והתראות קרינה/זיהום היסטוריות.',
     }
   };
 

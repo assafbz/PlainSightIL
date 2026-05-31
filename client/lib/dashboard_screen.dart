@@ -39,7 +39,7 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.insights,
                           color: AppColors.primary,
                           size: 24,
@@ -195,7 +195,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             // Chevron end indicator
-            const Icon(
+            Icon(
               Icons.chevron_right,
               color: AppColors.textTertiary,
               size: 20,

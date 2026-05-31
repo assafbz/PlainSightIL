@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/app_state.dart';
+import 'package:plainsight/design_system.dart';
 
 void main() {
   group('AppStateNotifier Tests', () {
@@ -14,6 +15,28 @@ void main() {
       expect(appState.locale, 'en');
       expect(appState.activeTab, 0);
       expect(appState.textDirection, TextDirection.ltr);
+      expect(appState.isDarkMode, true);
+    });
+
+    test('toggleTheme toggles theme mode and notifies listeners', () {
+      var listenerCalled = false;
+      appState.addListener(() {
+        listenerCalled = true;
+      });
+
+      expect(appState.isDarkMode, true);
+      expect(AppColors.isDark, true);
+
+      appState.toggleTheme();
+
+      expect(appState.isDarkMode, false);
+      expect(AppColors.isDark, false);
+      expect(listenerCalled, true);
+
+      appState.toggleTheme();
+
+      expect(appState.isDarkMode, true);
+      expect(AppColors.isDark, true);
     });
 
     test('setLocale updates locale and notifies listeners', () {
@@ -77,12 +100,16 @@ void main() {
       expect(appState.translate('app_title'), 'PlainSight IL');
       expect(appState.translate('welcome_back'), 'Welcome Back');
       expect(appState.translate('nav_home'), 'Home');
+      expect(appState.translate('badge_active'), 'Active');
+      expect(appState.translate('badge_roadmap'), 'Roadmap');
 
       // Change locale to Hebrew and check translation
       appState.setLocale('he');
-      expect(appState.translate('app_title'), 'PlainSight IL');
+      expect(appState.translate('app_title'), 'בגובה העיניים');
       expect(appState.translate('welcome_back'), 'ברוכים הבאים');
       expect(appState.translate('nav_home'), 'בית');
+      expect(appState.translate('badge_active'), 'פעיל');
+      expect(appState.translate('badge_roadmap'), 'בקרוב');
     });
 
     test('translate returns the key itself if no translation is found', () {

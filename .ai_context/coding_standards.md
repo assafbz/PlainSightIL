@@ -89,3 +89,20 @@ class ServerFailure extends Failure {
 *   **Production Environment**:
     *   **Client**: Route uncaught errors and repository failures to **Firebase Crashlytics** via the Crashlytics SDK wrapper.
     *   **Backend Cloud Functions**: Log errors via `firebase-functions/logger`. Never use raw `console.log` for errors; use `logger.error` to retain metadata and stack traces.
+
+---
+
+## 4. SDLC Compliance & Multi-Agent Workflow
+
+Every new development task—including new features, bug fixes, and code refactoring—must strictly adhere to the Multi-Agent SDLC Orchestration framework defined in [AGENTS.md](file:///Users/abenzaken/Dev/PlainSightIL/.agents/AGENTS.md). Direct updates or bypasses of these quality gates are prohibited.
+
+### 4.1 Enforced Lifecycle Sequences
+No development changes may bypass their respective lifecycle stages:
+- **Features**: `triage` -> `discovery` (output: `PRD.md`) -> `ui_ux_design` (output: `DESIGN.md`) -> `architecture_design` (output: `TDD.md`) -> `security_audit` (output: `SECURITY.md`) -> `blueprinting` (output: `BLUEPRINT.md`) -> `implementation` -> `qa_validation` (output: `QA_REPORT.md`) -> `merge_approval`.
+- **Bugs**: `triage` -> `qa_reproduction` (output: `QA_REPRODUCTION_REPORT.md`) -> `blueprinting` -> `implementation` -> `qa_validation` -> `merge_approval`.
+- **Refactors**: `triage` -> `architecture_design` (output: `TDD.md`) -> `blueprinting` -> `implementation` -> `qa_validation` -> `merge_approval`.
+
+### 4.2 Gate Review Controls
+- Artifacts must be generated and linked in the active issue file under `.agents/state/active_issues/` before moving to subsequent phases.
+- Phases designated with a Human-in-the-Loop (HITL) gate require review and manual sign-off by updating the `hitl_approved_by` field with the reviewer's username prior to transition.
+

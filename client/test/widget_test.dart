@@ -97,4 +97,48 @@ void main() {
     // Verify Kinneret Water Level placeholder screen is shown
     expect(find.byIcon(Icons.water_drop), findsNWidgets(2)); // Nav bar icon + screen icon
   });
+
+  testWidgets('Drawer opens and theme and language can be toggled',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    // Verify drawer is not open
+    expect(find.byType(NavigationDrawerWidget), findsNothing);
+
+    // Tap on the Menu icon in the Header
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+
+    // Verify drawer is now open
+    expect(find.byType(NavigationDrawerWidget), findsOneWidget);
+
+    // Verify language toggle button in drawer works and translates content
+    final toggleFinder = find.byKey(const ValueKey('drawer_language_toggle'));
+    expect(toggleFinder, findsOneWidget);
+    await tester.tap(toggleFinder);
+    await tester.pumpAndSettle();
+
+    // The locale should change to Hebrew and translate text
+    expect(find.descendant(
+      of: find.byType(NavigationDrawerWidget),
+      matching: find.text('בית'),
+    ), findsOneWidget);
+    expect(find.descendant(
+      of: find.byType(NavigationDrawerWidget),
+      matching: find.text('אנטנות סלולריות'),
+    ), findsOneWidget);
+
+    // Verify theme toggle button works
+    expect(find.byKey(const ValueKey('drawer_theme_toggle')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('drawer_theme_toggle')));
+    await tester.pumpAndSettle();
+
+    // Dark mode should switch to light mode and display wb_sunny
+    expect(find.byIcon(Icons.wb_sunny), findsOneWidget);
+
+    // Tap attribution link
+    await tester.tap(find.text('data.gov.il'));
+    await tester.pumpAndSettle();
+  });
 }

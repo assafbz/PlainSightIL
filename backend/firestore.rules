@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /cellular_antennas/{document} {
+      allow read: if true;
+      allow write: if false; // Only written via Cloud Functions Admin SDK
+    }
+  }
+}

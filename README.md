@@ -12,5 +12,15 @@ To understand the core values, strategic direction, and goals of this project, p
 *   **[Product Definition Document](docs/product_definition.md)**: The execution strategy, dataset roadmap, UX/UI requirements, and prioritization framework.
 *   **[UI/UX Design Specification & Styleguide](docs/design.md)**: The visual design system, HSL color palettes, typography scales, glassmorphism, responsive geometry, and micro-animation specifications.
 *   **[High-Level Architecture & Technical Design](.ai_context/architecture.md)**: Proposes Flutter/Dart stack, clean directory design, data sync caches, state management, RTL localization, and HSL style guides.
+*   **[Quality Gates Specification](.ai_context/quality_gates.md)**: Defines the criteria that code, designs, and documentation must satisfy before transitioning between SDLC phases or before code is merged.
+
+## 🔄 SDLC & Development Workflow
+
+To maintain absolute quality and traceability, every new development task (including features, bug fixes, and code refactoring) must go through the structured Multi-Agent SDLC Orchestration process. 
+
+Detailed workflow phases, agent roles (Product Manager, Architect, UI/UX Designer, Tech Lead, Developer, Security, QA), and approval gates are defined in:
+*   **[Multi-Agent Orchestration Framework (AGENTS.md)](.agents/AGENTS.md)**
+*   **[Coding Standards & Quality Guardrails (coding_standards.md)](.ai_context/coding_standards.md#4-sdlc-compliance--multi-agent-workflow)**
+
 
 

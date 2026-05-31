@@ -18,4 +18,7 @@ Thumbs.db
 **/.flutter-plugins-dependencies
 **/pubspec.lock
 # We DO want to commit client/pubspec.lock so dependency versions are locked, but ignore temporary build files.
+# Build & dependency directories
+**/node_modules/
+backend/functions/lib/
 **/build/
