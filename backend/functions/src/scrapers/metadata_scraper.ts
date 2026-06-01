@@ -18,6 +18,7 @@ export interface CKANPackage {
 
 export interface DatasetMetadata {
   id: string;
+  datasetId: string;
   name: string;
   title: string;
   notes: string;
@@ -103,6 +104,7 @@ export async function scrapeAndSyncDatasetMetadata(
 
       parsedDatasets.push({
         id,
+        datasetId: pkg.id.trim(),
         name,
         title,
         notes,

@@ -4,7 +4,7 @@ import {
   getTranslatedStatus,
   parseLiquidationRecord,
   scrapeAndSyncCompaniesLiquidation,
-} from "../src/scrapers/companies_liquidation_scraper";
+} from "../src/scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -113,7 +113,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "companies_liquidation") {
+      if (id === "d8715392-287f-49b7-9ae3-f21ec5bf55f3") {
         return {
           set: mockMetadataSet,
         };
@@ -189,7 +189,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     expect(written.createdAt).toBeDefined();
     expect(written.lastUpdated).toBeDefined();
 
-    expect(mockDoc).toHaveBeenCalledWith("companies_liquidation");
+    expect(mockDoc).toHaveBeenCalledWith("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
         activeCollection: "companies_liquidation",

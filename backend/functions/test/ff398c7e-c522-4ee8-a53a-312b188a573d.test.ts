@@ -7,7 +7,7 @@ import {
   getTranslatedOperator,
   parsePermitRecord,
   scrapeAndSyncPermitApplications,
-} from "../src/scrapers/permit_applications_scraper";
+} from "../src/scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({

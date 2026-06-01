@@ -125,7 +125,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
   resourceId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3",
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "companies_liquidation";
+  const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
