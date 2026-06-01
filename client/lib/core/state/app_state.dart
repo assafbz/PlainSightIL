@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import '../theme/design_system.dart';
 
@@ -25,6 +26,15 @@ class AppStateNotifier extends ChangeNotifier {
   bool get isLoadingPermits => _isLoadingPermits;
   String get permitSyncStatus => _permitSyncStatus;
 
+  /// Check if Firebase is initialized
+  bool get isFirebaseInitialized {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Initialize metadata listener for cellular permits
   void initPermitMetadataListener() {
     if (isTesting) {
@@ -47,34 +57,50 @@ class AppStateNotifier extends ChangeNotifier {
       return;
     }
 
-    FirebaseFirestore.instance
-        .collection('dataset_metadata')
-        .doc('cellular_permit_applications')
-        .snapshots()
-        .listen(
-          (metaSnapshot) {
-            if (metaSnapshot.exists && metaSnapshot.data() != null) {
-              final data = metaSnapshot.data()!;
-              final newActive = data['activeCollection'] as String? ?? '';
-              _permitSyncStatus = data['status'] as String? ?? 'idle';
+    if (!isFirebaseInitialized) {
+      _permitSyncStatus = 'error';
+      _isLoadingPermits = false;
+      notifyListeners();
+      debugPrint('Firebase is not initialized. Skipping permit metadata listener.');
+      return;
+    }
 
-              if (newActive.isNotEmpty &&
-                  newActive != _activePermitCollection) {
-                _bindActivePermitCollection(newActive);
+    try {
+      FirebaseFirestore.instance
+          .collection('dataset_metadata')
+          .doc('cellular_permit_applications')
+          .snapshots()
+          .listen(
+            (metaSnapshot) {
+              if (metaSnapshot.exists && metaSnapshot.data() != null) {
+                final data = metaSnapshot.data()!;
+                final newActive = data['activeCollection'] as String? ?? '';
+                _permitSyncStatus = data['status'] as String? ?? 'idle';
+
+                if (newActive.isNotEmpty &&
+                    newActive != _activePermitCollection) {
+                  _bindActivePermitCollection(newActive);
+                } else {
+                  notifyListeners();
+                }
               } else {
+                _isLoadingPermits = false;
                 notifyListeners();
               }
-            } else {
+            },
+            onError: (Object err) {
               _isLoadingPermits = false;
+              _permitSyncStatus = 'error';
               notifyListeners();
-            }
-          },
-          onError: (err) {
-            _isLoadingPermits = false;
-            _permitSyncStatus = 'error';
-            notifyListeners();
-          },
-        );
+              debugPrint('Firestore permit metadata listener error: $err');
+            },
+          );
+    } catch (e) {
+      _isLoadingPermits = false;
+      _permitSyncStatus = 'error';
+      notifyListeners();
+      debugPrint('Failed to bind Firestore metadata: $e');
+    }
   }
 
   void _bindActivePermitCollection(String newCollection) {
@@ -83,22 +109,37 @@ class AppStateNotifier extends ChangeNotifier {
     notifyListeners();
 
     _permitSubscription?.cancel();
-    _permitSubscription = FirebaseFirestore.instance
-        .collection(newCollection)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            // Swap only when data resolves to prevent flickering
-            _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
-            _isLoadingPermits = false;
-            notifyListeners();
-          },
-          onError: (err) {
-            _isLoadingPermits = false;
-            _permitSyncStatus = 'error';
-            notifyListeners();
-          },
-        );
+    if (!isFirebaseInitialized) {
+      _isLoadingPermits = false;
+      _permitSyncStatus = 'error';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      _permitSubscription = FirebaseFirestore.instance
+          .collection(newCollection)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              // Swap only when data resolves to prevent flickering
+              _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
+              _isLoadingPermits = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingPermits = false;
+              _permitSyncStatus = 'error';
+              notifyListeners();
+              debugPrint('Firestore permit collection listener error: $err');
+            },
+          );
+    } catch (e) {
+      _isLoadingPermits = false;
+      _permitSyncStatus = 'error';
+      notifyListeners();
+      debugPrint('Failed to bind Firestore collection $newCollection: $e');
+    }
   }
 
   TextDirection get textDirection =>

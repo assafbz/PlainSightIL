@@ -282,6 +282,9 @@ class _TowersScreenState extends State<TowersScreen>
         );
       }
       // Active Antennas Stream Builder query
+      if (!appState.isFirebaseInitialized) {
+        return _buildEmptyState(context);
+      }
       return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('cellular_antennas')

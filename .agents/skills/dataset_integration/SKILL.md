@@ -273,6 +273,7 @@ Purge target collections prior to loading to avoid dirty/partial leftovers, and 
 
 ```typescript
 import * as admin from "firebase-admin";
+import { GeoPoint } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { encodeGeohash } from "../utils/geohash";
 
@@ -329,7 +330,7 @@ export async function scrapeAndSyncDataset(db: admin.firestore.Firestore): Promi
         const geohash = encodeGeohash(lat, lng);
         const docData = {
           id: normalizedId,
-          coordinates: new admin.firestore.GeoPoint(lat, lng),
+          coordinates: new GeoPoint(lat, lng),
           geohash,
           lastUpdated: new Date().toISOString(),
           company: getTranslatedField("חברה", record.company),
@@ -411,9 +412,12 @@ AppState buffers dynamic switches inside the notifier:
 ```dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppStateNotifier extends ChangeNotifier {
+  static bool isTesting = false;
+
   String _activeCollectionName = '';
   List<DocumentSnapshot> _cachedRecords = [];
   StreamSubscription<QuerySnapshot>? _activeSubscription;
@@ -424,23 +428,58 @@ class AppStateNotifier extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get syncStatus => _syncStatus;
 
+  bool get isFirebaseInitialized {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void initMetadataListener() {
-    FirebaseFirestore.instance
-        .collection('dataset_metadata')
-        .doc('cellular_permit_applications')
-        .snapshots()
-        .listen((metaSnapshot) {
-      if (metaSnapshot.exists && metaSnapshot.data() != null) {
-        final newActive = metaSnapshot.data()!['activeCollection'] as String;
-        _syncStatus = metaSnapshot.data()!['status'] as String? ?? 'idle';
-        
-        if (newActive != _activeCollectionName) {
-          _bindActiveCollection(newActive);
-        } else {
-          notifyListeners();
+    if (isTesting) {
+      _isLoading = false;
+      _syncStatus = 'idle';
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) {
+      _syncStatus = 'error';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint("Firebase is not initialized. Skipping Firestore listener.");
+      return;
+    }
+
+    try {
+      FirebaseFirestore.instance
+          .collection('dataset_metadata')
+          .doc('cellular_permit_applications')
+          .snapshots()
+          .listen((metaSnapshot) {
+        if (metaSnapshot.exists && metaSnapshot.data() != null) {
+          final newActive = metaSnapshot.data()!['activeCollection'] as String;
+          _syncStatus = metaSnapshot.data()!['status'] as String? ?? 'idle';
+          
+          if (newActive != _activeCollectionName) {
+            _bindActiveCollection(newActive);
+          } else {
+            notifyListeners();
+          }
         }
-      }
-    });
+      }, onError: (err) {
+        _syncStatus = 'error';
+        _isLoading = false;
+        notifyListeners();
+        debugPrint("Firestore metadata listener error: $err");
+      });
+    } catch (e) {
+      _syncStatus = 'error';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint("Failed to bind Firestore metadata: $e");
+    }
   }
 
   void _bindActiveCollection(String newCollection) {
