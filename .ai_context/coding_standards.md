@@ -106,3 +106,64 @@ No development changes may bypass their respective lifecycle stages:
 - Artifacts must be generated and linked in the active issue file under `.agents/state/active_issues/` before moving to subsequent phases.
 - Phases designated with a Human-in-the-Loop (HITL) gate require review and manual sign-off by updating the `hitl_approved_by` field with the reviewer's username prior to transition.
 
+---
+
+## 5. In-Code Documentation Standards
+
+To ensure code remains highly readable and self-documenting for both developers and AI agents, all contributors must strictly adhere to the following inline commenting rules:
+
+### 5.1 Client-Side (Dart / Flutter)
+*   **API Documentation**: Document all public classes, methods, fields, constructors, and extensions using three-slash documentation comments (`///`). Markdown formatting is supported.
+*   **Parameter & Return Info**: Clearly explain any non-obvious parameters, preconditions, return values, or side effects inside the doc comment.
+*   **Complex Math & Painting**: For custom widgets, `CustomPainter` canvas drawings, animations, or layout calculations, include explicit inline comments explaining the formula, coordinate systems, or pixel transformations used.
+
+```dart
+/// A custom painter that draws a radar scan layout.
+///
+/// Maps coordinates relative to [centerPoint] using a max radius of [maxRadius].
+class RadarGridPainter extends CustomPainter {
+  /// The center point of the radar grid in screen space.
+  final Offset centerPoint;
+  
+  /// The maximum scanning radius.
+  final double maxRadius;
+  
+  const RadarGridPainter({required this.centerPoint, required this.maxRadius});
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Calculate relative scale delta based on canvas dimensions to prevent overflow
+    final double scale = size.width / (maxRadius * 2);
+    // ...
+  }
+}
+```
+
+### 5.2 Backend-Side (TypeScript / Node.js)
+*   **JSDoc Standards**: Document all exported functions, interfaces, modules, and parameters using block-level JSDoc comments (`/** ... */`).
+*   **Types vs Descriptions**: Avoid redundancy in JSDoc parameters where TypeScript types already specify the signature. Focus descriptions on the semantic meaning of the values.
+
+```typescript
+/**
+ * Synchronizes gov cellular antennas API records with the target Firestore buffer.
+ * @param db Firestore database instance.
+ * @param resourceId Official resource identifier from data.gov.il.
+ * @returns Object containing the synchronization outcome status and processed count.
+ * @throws AxiosError if the government endpoint is unreachable.
+ */
+export async function scrapeAndSyncAntennas(
+  db: admin.firestore.Firestore,
+  resourceId: string,
+): Promise<{ success: boolean; count: number }> {
+  // ...
+}
+```
+
+### 5.3 Commenting Best Practices (Common)
+*   **Explain "Why", Not "What"**: Comments should focus on explaining *why* a particular workaround, optimization, or logic branch was implemented, not *what* the code does (the code should read clearly by itself).
+*   **TODO Format**: Tag remaining tasks or technical debt with structured TODO comments that include issue or ticket context:
+    ```
+    // TODO: (Issue #104) Optimize geohash length mapping to radius ranges.
+    ```
+
+
