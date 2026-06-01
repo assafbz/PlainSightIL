@@ -5,8 +5,25 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "demo-api-key",
+        appId: "demo-app-id",
+        messagingSenderId: "demo-sender-id",
+        projectId: "demo-plainsightil",
+      ),
+    );
+    // Connect to local Firestore emulator
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
+  } catch (e) {
+    debugPrint("Firebase initialization warning: $e");
+  }
   runApp(const MyApp());
 }
 

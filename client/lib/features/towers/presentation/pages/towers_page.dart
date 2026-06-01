@@ -14,7 +14,7 @@ class TowersScreen extends StatefulWidget {
 }
 
 class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderStateMixin {
-  int _selectedFilterIndex = 1; // 0: Active, 1: Construction Permits (Default)
+  int _selectedFilterIndex = 0; // 0: Construction Permits (Default), 1: Active Towers
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _radarController;
@@ -72,7 +72,7 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
               animation: _radarController,
               builder: (context, _) {
                 // Dynamically pull coordinate dots from active collection
-                final records = _selectedFilterIndex == 1
+                final records = _selectedFilterIndex == 0
                     ? appState.permitRecords
                     : <Map<String, dynamic>>[];
                 return CustomPaint(
@@ -122,12 +122,12 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                       _buildSegmentItem(
                         context,
                         index: 0,
-                        label: appState.translate('towers_active_label'),
+                        label: appState.translate('towers_permit_label'),
                       ),
                       _buildSegmentItem(
                         context,
                         index: 1,
-                        label: appState.translate('towers_permit_label'),
+                        label: appState.translate('towers_active_label'),
                       ),
                     ],
                   ),
@@ -242,7 +242,7 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
   Widget _buildRecordsList(BuildContext context) {
     final appState = widget.appState;
 
-    if (_selectedFilterIndex == 0) {
+    if (_selectedFilterIndex == 1) {
       if (AppStateNotifier.isTesting) {
         final filtered = _filterRecords([
           {
