@@ -5,5 +5,19 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false; // Only written via Cloud Functions Admin SDK
     }
+    match /dataset_metadata/{datasetId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /permit_apps_blue/{docId} {
+      allow read: if true;
+      allow write: if false;
+      allow list: if request.query.limit <= 100;
+    }
+    match /permit_apps_green/{docId} {
+      allow read: if true;
+      allow write: if false;
+      allow list: if request.query.limit <= 100;
+    }
   }
 }
