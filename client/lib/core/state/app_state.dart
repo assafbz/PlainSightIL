@@ -7,11 +7,81 @@ import '../theme/design_system.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 
 class AppStateNotifier extends ChangeNotifier {
-  static bool isTesting = true;
+  static bool isTesting = false;
 
   String _locale = 'en';
   int _activeTab = 0;
   bool _isDarkMode = true;
+
+  // Authentication states
+  User? _currentUser;
+  bool _isGuestMode = false;
+  bool _isMockAuthenticated = false;
+
+  AppStateNotifier() {
+    _isMockAuthenticated = isTesting;
+    _initAuthListener();
+  }
+
+  void _initAuthListener() {
+    if (isTesting || !isFirebaseInitialized) return;
+    try {
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        _currentUser = user;
+        notifyListeners();
+      });
+    } catch (e) {
+      debugPrint('Auth listener init error: $e');
+    }
+  }
+
+  User? get currentUser => _currentUser;
+  bool get isAuthenticated => _currentUser != null || _isMockAuthenticated;
+  bool get isGuestMode => _isGuestMode;
+
+  Map<String, String>? get mockUser => _isMockAuthenticated
+      ? {
+          'name': 'Assaf Benzaken',
+          'email': 'assaf@plainsight.il',
+        }
+      : null;
+
+  Future<void> signInWithGoogle() async {
+    if (isTesting || !isFirebaseInitialized) {
+      _isMockAuthenticated = true;
+      _isGuestMode = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final provider = GoogleAuthProvider();
+      await FirebaseAuth.instance.signInWithPopup(provider);
+      _isGuestMode = false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Google Sign-In Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> signOut() async {
+    _isMockAuthenticated = false;
+    _isGuestMode = false;
+    if (isFirebaseInitialized) {
+      try {
+        await FirebaseAuth.instance.signOut();
+      } catch (e) {
+        debugPrint('Firebase Sign-Out Error: $e');
+      }
+    }
+    notifyListeners();
+  }
+
+  void setGuestMode(bool enabled) {
+    _isGuestMode = enabled;
+    notifyListeners();
+  }
 
   // Double-buffered Firestore subscriptions for permit applications
   String _activePermitCollection = '';
@@ -559,6 +629,21 @@ class AppStateNotifier extends ChangeNotifier {
       'alerts_roadmap_title': 'Alert Telemetry Coming Soon',
       'alerts_roadmap_desc':
           'This dataset is part of the Phase 2 roadmap. We plan to integrate real-time alert data from data.gov.il and environmental agencies to provide notifications, compliance warnings, and historical radiation/pollution alerts.',
+      'secure_auth': 'Secure Authentication',
+      'sign_in_google': 'Sign in with Google',
+      'sign_up_google': 'Sign up with Google',
+      'create_account_title': 'Create Account',
+      'create_account_desc': 'Create an account to save your favorite views, customize alerts, and track permits',
+      'login_desc': 'Unlock the transparency of civic data',
+      'already_have_account': 'Already have an account?',
+      'dont_have_account': 'Don’t have an account?',
+      'login_label': 'Log in',
+      'signup_label': 'Sign up',
+      'continue_guest': 'Continue as Guest',
+      'ssl_protection': 'PROTECTED BY SSL',
+      'login_info_text': 'Access detailed visualizations of government spending and civic permits instantly.',
+      'terms_disclaimer': 'By continuing, you agree to PlainSight IL\'s Terms of Service and Privacy Policy.',
+      'logout_label': 'Log out',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -627,6 +712,21 @@ class AppStateNotifier extends ChangeNotifier {
       'alerts_roadmap_title': 'התראות אחרונות - בקרוב',
       'alerts_roadmap_desc':
           'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב נתוני התראות בזמן אמת מ-data.gov.il ומסוכנויות לאיכות הסביבה כדי לספק התראות, אזהרות תאימות והתראות קרינה/זיהום היסטוריות.',
+      'secure_auth': 'אימות מאובטח',
+      'sign_in_google': 'התחברות באמצעות Google',
+      'sign_up_google': 'הרשמה באמצעות Google',
+      'create_account_title': 'הרשמה',
+      'create_account_desc': 'צור חשבון כדי לשמור תצוגות מועדפות, להתאים התראות ולעקוב אחר היתרים',
+      'login_desc': 'חשפו את השקיפות של הנתונים האזרחיים',
+      'already_have_account': 'כבר יש לך חשבון?',
+      'dont_have_account': 'אין לך חשבון?',
+      'login_label': 'התחברות',
+      'signup_label': 'הרשמה',
+      'continue_guest': 'המשך כאורח',
+      'ssl_protection': 'מאובטח באמצעות SSL',
+      'login_info_text': 'קבלו גישה מיידית לפירוט הוצאות ממשלתיות והיתרים אזרחיים.',
+      'terms_disclaimer': 'בהמשך השימוש, הינך מסכים לתנאי השירות ומדיניות הפרטיות של בגובה העיניים.',
+      'logout_label': 'התנתקות',
     },
   };
 

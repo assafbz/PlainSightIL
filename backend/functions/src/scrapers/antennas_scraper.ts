@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { GeoPoint } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import axios from "axios";
 import proj4 from "proj4";
@@ -66,7 +67,7 @@ export interface CellularAntenna {
   id: string;
   antennaId: string;
   siteNumber: string;
-  coordinates: admin.firestore.GeoPoint;
+  coordinates: GeoPoint;
   geohash: string;
   operatorName: string;
   company: { he: string; en: string };
@@ -183,7 +184,7 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
     id,
     antennaId,
     siteNumber,
-    coordinates: new admin.firestore.GeoPoint(latitude, longitude),
+    coordinates: new GeoPoint(latitude, longitude),
     geohash,
     operatorName,
     company,

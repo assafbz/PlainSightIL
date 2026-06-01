@@ -162,4 +162,30 @@ void main() {
     await tester.tap(find.text('data.gov.il'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('App redirects to LoginPage when unauthenticated', (
+    WidgetTester tester,
+  ) async {
+    AppStateNotifier.isTesting = false;
+
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    // Verify it shows LoginPage components and not Dashboard
+    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Continue as Guest'), findsOneWidget);
+    expect(find.text('Democratizing Civic Data'), findsNothing);
+
+    // Scroll to the button to make sure it's visible in 800x600 test window
+    await tester.ensureVisible(find.text('Continue as Guest'));
+    await tester.pumpAndSettle();
+
+    // Tap Continue as Guest
+    await tester.tap(find.text('Continue as Guest'));
+    await tester.pumpAndSettle();
+
+    // Verify it transitions to Dashboard
+    expect(find.text('Democratizing Civic Data'), findsOneWidget);
+  });
 }

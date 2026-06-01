@@ -22,5 +22,26 @@ Detailed workflow phases, agent roles (Product Manager, Architect, UI/UX Designe
 *   **[Multi-Agent Orchestration Framework (AGENTS.md)](.agents/AGENTS.md)**
 *   **[Coding Standards & Quality Guardrails (coding_standards.md)](.ai_context/coding_standards.md#4-sdlc-compliance--multi-agent-workflow)**
 
+---
 
+## 🚀 Running the Project
 
+To run both the backend (Firebase emulators) and client (Flutter web app) in parallel, run:
+
+```bash
+npm start
+```
+
+This will:
+1. Compile the backend Cloud Functions (`tsc`).
+2. Add the Homebrew OpenJDK path to the execution context on macOS to avoid Java discovery issues.
+3. Start the Firebase emulator suite (Firestore and Functions).
+4. Launch the Flutter client inside Google Chrome on port `8080`.
+
+### 🛑 Terminating the Project
+
+To shut down all services and clean up any orphaned emulator or web client processes running on ports `8081`, `5002`, `4001`, or `8080`, run:
+
+```bash
+npm run kill
+```

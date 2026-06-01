@@ -21,6 +21,8 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
   - High-end aesthetics (harmony colors, no pure dark/light backgrounds, standard clean shadows, smooth micro-transitions on hover/active states).
   - **Visual Component & CustomPainter Robustness**: When writing custom drawing code (e.g. `CustomPainter`), always implement null-checks and safe defaults for missing parameters or empty data states. Ensure division-by-zero or infinite scaling is prevented (e.g., check that max delta/dimensions are greater than zero before scaling).
   - **Testing Mock Schema Alignment**: Ensure mock records used in testing are structurally synchronized with production Firestore schemas (e.g., matching coordinates structure, datatypes, and key naming conventions).
+  - **Avoid Deprecated APIs**: Always verify deprecation warnings on the target Flutter framework version (e.g., using `Color.withValues(alpha: ...)` instead of `Color.withOpacity(...)` to prevent static analysis issues).
+  - **Test Viewport Constraints**: Wrap scrollable pages and utilize `tester.ensureVisible` for interactive components during widget testing to prevent hit-test misses in the default 800x600 test viewport.
   - Use `replace_file_content` or `multi_replace_file_content` for existing files.
   - Create new files using `write_to_file` if designated by the blueprint.
 

@@ -1,0 +1,16 @@
+{
+  "name": "plainsightil-root",
+  "version": "1.0.0",
+  "description": "Root workspace management scripts for PlainSightIL",
+  "private": true,
+  "scripts": {
+    "backend:build": "npm run --prefix backend/functions build",
+    "backend:start": "PATH=\"/opt/homebrew/opt/openjdk/bin:$PATH\" npx firebase-tools emulators:start --project demo-plainsightil --only firestore,functions",
+    "client:start": "flutter run -d chrome --web-port 8080",
+    "start": "node scripts/run.js",
+    "kill": "node scripts/kill.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -6,6 +6,7 @@ import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
+import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -70,7 +71,9 @@ class _MyAppState extends State<MyApp> {
           ),
           home: Directionality(
             textDirection: _appState.textDirection,
-            child: AppShell(appState: _appState),
+            child: (!_appState.isAuthenticated && !_appState.isGuestMode)
+                ? LoginPage(appState: _appState)
+                : AppShell(appState: _appState),
           ),
         );
       },
@@ -419,6 +422,9 @@ class NavigationDrawerWidget extends StatelessWidget {
                   // 1. Header Zone
                   _buildHeader(context),
 
+                  // User Profile info
+                  _buildUserProfile(context),
+
                   // 2. Scrollable Body
                   Expanded(
                     child: RepaintBoundary(
@@ -485,6 +491,102 @@ class NavigationDrawerWidget extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserProfile(BuildContext context) {
+    if (!appState.isAuthenticated) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.glassGlow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+              child: Icon(Icons.person_outline, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appState.locale == 'he' ? 'משתמש אורח' : 'Guest User',
+                    style: AppTypography.bodySm(context, color: AppColors.textPrimary)
+                        .copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop(); // Close drawer
+                      appState.setGuestMode(false); // redirects to Login
+                    },
+                    child: Text(
+                      appState.translate('login_label'),
+                      style: AppTypography.labelXs(context, color: AppColors.primary)
+                          .copyWith(decoration: TextDecoration.underline),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final displayName = appState.currentUser?.displayName ?? appState.mockUser?['name'] ?? 'User';
+    final email = appState.currentUser?.email ?? appState.mockUser?['email'] ?? '';
+    final photoUrl = appState.currentUser?.photoURL;
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.glassGlow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
+            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+            child: photoUrl == null
+                ? Text(initial, style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold))
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  style: AppTypography.bodySm(context, color: AppColors.textPrimary)
+                      .copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (email.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    email,
+                    style: AppTypography.labelXs(context, color: AppColors.textSecondary)
+                        .copyWith(fontSize: 10),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -681,6 +783,43 @@ class NavigationDrawerWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (appState.isAuthenticated) ...[
+            Semantics(
+              label: 'Log out from the application',
+              button: true,
+              child: GestureDetector(
+                key: const ValueKey('drawer_logout_button'),
+                onTap: () {
+                  Navigator.of(context).pop(); // Close drawer
+                  appState.signOut();
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.logout, color: AppColors.danger, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          appState.translate('logout_label'),
+                          style: AppTypography.bodySm(context, color: AppColors.danger)
+                              .copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

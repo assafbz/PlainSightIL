@@ -255,3 +255,29 @@ feedback_loops:
       Re-assign issue to the product_manager.
       Set status to 'prd-revision'.
 ```
+
+---
+
+## 5. Workspace Execution Commands for Agents
+
+To run local verification and manual validation during the development and QA lifecycle, agents can utilize the following pre-configured root `npm` scripts:
+
+### 🚀 Running both Backend and Client
+```bash
+npm start
+```
+- **Description**: Spawns the Firebase local emulator suite (port `8081` for Firestore, port `5002` for Cloud Functions) and compiles the Flutter web client (port `8080` in Chrome) in parallel.
+- **Agent Usage**: Developer and QA agents should invoke this command when running manual visual validations, layout verification, or local API integration checks.
+
+### 🛑 Killing all Running Processes
+```bash
+npm run kill
+```
+- **Description**: Scans for and immediately terminates any orphaned processes bound to ports `8081`, `5002`, `4001`, or `8080`.
+- **Agent Usage**: Agents should run this clean-up utility at the end of their task cycles or before starting a new run to ensure no port conflicts block execution.
+
+### 📦 Individual Service Control
+- **Compile Backend Functions**: `npm run backend:build`
+- **Start Backend Emulators**: `npm run backend:start`
+- **Start Flutter Client**: `npm run client:start`
+

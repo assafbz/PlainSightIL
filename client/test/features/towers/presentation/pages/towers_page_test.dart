@@ -47,19 +47,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Initially shows RadarView (uses CustomPaint) and NOT TowersMapView
-      expect(find.byType(CustomPaint), findsWidgets);
-      expect(find.byType(TowersMapView), findsNothing);
-
-      // Tap on the Map toggle option
-      final mapToggleFinder = find.text('Map');
-      expect(mapToggleFinder, findsOneWidget);
-      await tester.tap(mapToggleFinder);
-      await tester.pumpAndSettle();
-
-      // Now it should show TowersMapView and NOT CustomPaint for radar
+      // Initially shows TowersMapView and NOT RadarView (CustomPaint)
       expect(find.byType(TowersMapView), findsOneWidget);
       expect(find.byKey(const ValueKey('radar_view')), findsNothing);
+
+      // Tap on the Radar toggle option
+      final radarToggleFinder = find.text('Radar');
+      expect(radarToggleFinder, findsOneWidget);
+      await tester.tap(radarToggleFinder);
+      await tester.pumpAndSettle();
+
+      // Now it should show RadarView (uses CustomPaint) and NOT TowersMapView
+      expect(find.byType(CustomPaint), findsWidgets);
+      expect(find.byType(TowersMapView), findsNothing);
     });
 
     testWidgets('TowersMapView discards invalid coordinates', (
@@ -117,9 +117,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Switch to Map view
-      await tester.tap(find.text('Map'));
-      await tester.pumpAndSettle();
+
 
       // Tap on the Recenter button
       final recenterButtonFinder = find.byTooltip('Recenter on Location');
@@ -154,9 +152,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Switch to Map view
-      await tester.tap(find.text('Map'));
-      await tester.pumpAndSettle();
+
 
       // Tap on the Recenter button
       await tester.tap(find.byTooltip('Recenter on Location'));

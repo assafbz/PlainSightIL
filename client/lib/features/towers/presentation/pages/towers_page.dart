@@ -22,13 +22,13 @@ class TowersScreen extends StatefulWidget {
 class _TowersScreenState extends State<TowersScreen>
     with TickerProviderStateMixin {
   int _selectedFilterIndex =
-      0; // 0: Construction Permits (Default), 1: Active Towers
+      0; // 0: Active Towers (Default), 1: Construction Permits
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _radarController;
 
   // Map and sync state
-  bool _showMap = false;
+  bool _showMap = true;
   String? _selectedRecordId;
   final MapController _mapController = MapController();
   final ItemScrollController _itemScrollController = ItemScrollController();
@@ -80,7 +80,7 @@ class _TowersScreenState extends State<TowersScreen>
 
   List<Map<String, dynamic>> _getFilteredRecords() {
     final appState = widget.appState;
-    if (_selectedFilterIndex == 1) {
+    if (_selectedFilterIndex == 0) {
       return _filterRecords(appState.antennaRecords);
     } else {
       return _filterRecords(appState.permitRecords);
@@ -348,14 +348,14 @@ class _TowersScreenState extends State<TowersScreen>
                       selectedRecordId: _selectedRecordId,
                       mapController: _mapController,
                       onMarkerTap: _onMarkerTap,
-                      showAntennas: _selectedFilterIndex == 1,
+                      showAntennas: _selectedFilterIndex == 0,
                     )
                   : AnimatedBuilder(
                       key: const ValueKey('radar_view'),
                       animation: _radarController,
                       builder: (context, _) {
                         // Dynamically pull coordinate dots from active collection
-                        final records = _selectedFilterIndex == 0
+                        final records = _selectedFilterIndex == 1
                             ? appState.permitRecords
                             : appState.antennaRecords;
                         return CustomPaint(
@@ -408,22 +408,22 @@ class _TowersScreenState extends State<TowersScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildToggleOption(
-                    icon: Icons.radar,
-                    label: widget.appState.locale == 'he' ? 'רדאר' : 'Radar',
-                    isSelected: !_showMap,
-                    onTap: () {
-                      setState(() {
-                        _showMap = false;
-                      });
-                    },
-                  ),
-                  _buildToggleOption(
                     icon: Icons.map,
                     label: widget.appState.locale == 'he' ? 'מפה' : 'Map',
                     isSelected: _showMap,
                     onTap: () {
                       setState(() {
                         _showMap = true;
+                      });
+                    },
+                  ),
+                  _buildToggleOption(
+                    icon: Icons.radar,
+                    label: widget.appState.locale == 'he' ? 'רדאר' : 'Radar',
+                    isSelected: !_showMap,
+                    onTap: () {
+                      setState(() {
+                        _showMap = false;
                       });
                     },
                   ),
@@ -435,6 +435,7 @@ class _TowersScreenState extends State<TowersScreen>
 
         // 2. Interactive Bottom Sheet Content Area
         Positioned.fill(
+          key: const ValueKey('bottom_sheet_content'),
           top: MediaQuery.of(context).size.height * 0.32,
           child: Column(
             children: [
@@ -464,12 +465,12 @@ class _TowersScreenState extends State<TowersScreen>
                       _buildSegmentItem(
                         context,
                         index: 0,
-                        label: appState.translate('towers_permit_label'),
+                        label: appState.translate('towers_active_label'),
                       ),
                       _buildSegmentItem(
                         context,
                         index: 1,
-                        label: appState.translate('towers_active_label'),
+                        label: appState.translate('towers_permit_label'),
                       ),
                     ],
                   ),
@@ -601,7 +602,7 @@ class _TowersScreenState extends State<TowersScreen>
     final appState = widget.appState;
     final filtered = _getFilteredRecords();
 
-    if (_selectedFilterIndex == 1) {
+    if (_selectedFilterIndex == 0) {
       if (!AppStateNotifier.isTesting &&
           appState.isLoadingAntennas &&
           appState.antennaRecords.isEmpty) {
@@ -618,6 +619,7 @@ class _TowersScreenState extends State<TowersScreen>
     }
 
     return ScrollablePositionedList.builder(
+      key: const ValueKey('towers_scrollable_list'),
       itemScrollController: _itemScrollController,
       itemPositionsListener: _itemPositionsListener,
       physics: const BouncingScrollPhysics(),
@@ -625,7 +627,7 @@ class _TowersScreenState extends State<TowersScreen>
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final item = filtered[index];
-        return _selectedFilterIndex == 1
+        return _selectedFilterIndex == 0
             ? _buildActiveAntennaCard(context, item)
             : _buildPermitCard(context, item);
       },
