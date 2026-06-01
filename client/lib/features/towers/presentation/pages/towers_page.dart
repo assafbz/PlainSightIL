@@ -13,8 +13,10 @@ class TowersScreen extends StatefulWidget {
   State<TowersScreen> createState() => _TowersScreenState();
 }
 
-class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderStateMixin {
-  int _selectedFilterIndex = 0; // 0: Construction Permits (Default), 1: Active Towers
+class _TowersScreenState extends State<TowersScreen>
+    with SingleTickerProviderStateMixin {
+  int _selectedFilterIndex =
+      0; // 0: Construction Permits (Default), 1: Active Towers
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _radarController;
@@ -38,12 +40,15 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _filterRecords(List<Map<String, dynamic>> records) {
+  List<Map<String, dynamic>> _filterRecords(
+    List<Map<String, dynamic>> records,
+  ) {
     if (_searchQuery.isEmpty) return records;
     final query = _searchQuery.toLowerCase();
     return records.where((rec) {
       final locality = (rec['locality'] as String? ?? '').toLowerCase();
-      final id = (rec['id'] as String? ?? rec['siteNumber'] as String? ?? '').toLowerCase();
+      final id = (rec['id'] as String? ?? rec['siteNumber'] as String? ?? '')
+          .toLowerCase();
       final ref = (rec['referenceNumber']?.toString() ?? '').toLowerCase();
       final operatorHe = (rec['company']?['he'] as String? ?? '').toLowerCase();
       final operatorEn = (rec['company']?['en'] as String? ?? '').toLowerCase();
@@ -112,10 +117,7 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                   decoration: BoxDecoration(
                     color: AppColors.surfaceLow.withAlpha(150),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.glassBorder,
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppColors.glassBorder, width: 1),
                   ),
                   child: Row(
                     children: [
@@ -143,16 +145,17 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                   decoration: BoxDecoration(
                     color: AppColors.surfaceLow.withAlpha(100),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.glassBorder,
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppColors.glassBorder, width: 1),
                   ),
                   child: Row(
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                        child: Icon(
+                          Icons.search,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
                       ),
                       Expanded(
                         child: TextField(
@@ -162,10 +165,18 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                               _searchQuery = val;
                             });
                           },
-                          style: AppTypography.bodySm(context, color: AppColors.textPrimary),
+                          style: AppTypography.bodySm(
+                            context,
+                            color: AppColors.textPrimary,
+                          ),
                           decoration: InputDecoration(
-                            hintText: appState.translate('towers_search_placeholder'),
-                            hintStyle: AppTypography.bodySm(context, color: AppColors.textTertiary),
+                            hintText: appState.translate(
+                              'towers_search_placeholder',
+                            ),
+                            hintStyle: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textTertiary,
+                            ),
                             border: InputBorder.none,
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
@@ -175,7 +186,11 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                       if (_searchQuery.isNotEmpty)
                         IconButton(
                           padding: EdgeInsets.zero,
-                          icon: Icon(Icons.close, color: AppColors.textSecondary, size: 18),
+                          icon: Icon(
+                            Icons.close,
+                            color: AppColors.textSecondary,
+                            size: 18,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {
@@ -190,9 +205,7 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
               const SizedBox(height: 16),
 
               // Scrollable Records List View
-              Expanded(
-                child: _buildRecordsList(context),
-              ),
+              Expanded(child: _buildRecordsList(context)),
             ],
           ),
         ),
@@ -200,7 +213,11 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildSegmentItem(BuildContext context, {required int index, required String label}) {
+  Widget _buildSegmentItem(
+    BuildContext context, {
+    required int index,
+    required String label,
+  }) {
     final isSelected = _selectedFilterIndex == index;
     final color = isSelected ? AppColors.textPrimary : AppColors.textSecondary;
 
@@ -251,7 +268,7 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
             'addressEnglish': 'Dizengoff 50, Tel Aviv',
             'operatorName': 'Pelephone',
             'radiationFrequency': 1800,
-          }
+          },
         ]);
         if (filtered.isEmpty) return _buildEmptyState(context);
         return ListView.builder(
@@ -266,7 +283,9 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
       }
       // Active Antennas Stream Builder query
       return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('cellular_antennas').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('cellular_antennas')
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const GlassmorphicCardSkeletonList();
@@ -277,7 +296,9 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
             return _buildEmptyState(context);
           }
 
-          final records = docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          final records = docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
           final filtered = _filterRecords(records);
 
           if (filtered.isEmpty) {
@@ -328,17 +349,23 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
           const SizedBox(height: 12),
           Text(
             widget.appState.translate('no_results'),
-            style: AppTypography.bodyLg(context, color: AppColors.textSecondary),
+            style: AppTypography.bodyLg(
+              context,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActiveAntennaCard(BuildContext context, Map<String, dynamic> item) {
+  Widget _buildActiveAntennaCard(
+    BuildContext context,
+    Map<String, dynamic> item,
+  ) {
     final appState = widget.appState;
-    final address = appState.locale == 'he' 
-        ? (item['addressHebrew'] as String? ?? 'לא ידוע') 
+    final address = appState.locale == 'he'
+        ? (item['addressHebrew'] as String? ?? 'לא ידוע')
         : (item['addressEnglish'] as String? ?? 'Unknown');
     final operatorName = item['operatorName'] as String? ?? 'Unknown';
 
@@ -358,19 +385,29 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       "ID: ${item['antennaId']}",
-                      style: AppTypography.headlineMd(context, color: AppColors.textPrimary)
-                          .copyWith(fontSize: 15, fontWeight: FontWeight.bold),
+                      style: AppTypography.headlineMd(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.success.withAlpha(30),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.success.withAlpha(80)),
+                        border: Border.all(
+                          color: AppColors.success.withAlpha(80),
+                        ),
                       ),
                       child: Text(
                         appState.translate('badge_active'),
-                        style: AppTypography.labelXs(context, color: AppColors.success),
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.success,
+                        ),
                       ),
                     ),
                   ],
@@ -378,7 +415,10 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                 const SizedBox(height: 8),
                 Text(
                   address,
-                  style: AppTypography.bodySm(context, color: AppColors.textPrimary),
+                  style: AppTypography.bodySm(
+                    context,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -386,11 +426,17 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       "${appState.translate('permit_operator')}$operatorName",
-                      style: AppTypography.labelXs(context, color: AppColors.textSecondary),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     Text(
                       "${item['radiationFrequency']} MHz",
-                      style: AppTypography.labelXs(context, color: AppColors.textTertiary),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.textTertiary,
+                      ),
                     ),
                   ],
                 ),
@@ -406,8 +452,8 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
     final appState = widget.appState;
     final isApproved = (item['permitType'] as String? ?? '').contains('הקמה');
     final accentColor = isApproved ? AppColors.info : AppColors.warning;
-    final badgeText = isApproved 
-        ? appState.translate('permit_badge_approved') 
+    final badgeText = isApproved
+        ? appState.translate('permit_badge_approved')
         : appState.translate('permit_badge_pending');
 
     final operator = appState.locale == 'he'
@@ -416,7 +462,9 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
 
     final description = item['addressDescription'] as String? ?? '';
     final locality = item['locality'] as String? ?? '';
-    final addressText = description.isNotEmpty ? '$locality - $description' : locality;
+    final addressText = description.isNotEmpty
+        ? '$locality - $description'
+        : locality;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -434,11 +482,16 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       "${appState.translate('permit_ref_prefix')}${item['referenceNumber']}",
-                      style: AppTypography.headlineMd(context, color: AppColors.textPrimary)
-                          .copyWith(fontSize: 15, fontWeight: FontWeight.bold),
+                      style: AppTypography.headlineMd(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: accentColor.withAlpha(30),
                         borderRadius: BorderRadius.circular(8),
@@ -446,7 +499,10 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                       ),
                       child: Text(
                         badgeText,
-                        style: AppTypography.labelXs(context, color: accentColor),
+                        style: AppTypography.labelXs(
+                          context,
+                          color: accentColor,
+                        ),
                       ),
                     ),
                   ],
@@ -454,7 +510,10 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                 const SizedBox(height: 8),
                 Text(
                   addressText,
-                  style: AppTypography.bodySm(context, color: AppColors.textPrimary),
+                  style: AppTypography.bodySm(
+                    context,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -462,11 +521,17 @@ class _TowersScreenState extends State<TowersScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       "${appState.translate('permit_operator')}$operator",
-                      style: AppTypography.labelXs(context, color: AppColors.textSecondary),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     Text(
                       "${appState.translate('permit_type')}${item['focalPointType']}",
-                      style: AppTypography.labelXs(context, color: AppColors.textTertiary),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.textTertiary,
+                      ),
                     ),
                   ],
                 ),
@@ -485,7 +550,11 @@ class RadarGridPainter extends CustomPainter {
   final List<Map<String, dynamic>> records;
   final bool isDark;
 
-  RadarGridPainter({required this.angle, required this.records, required this.isDark});
+  RadarGridPainter({
+    required this.angle,
+    required this.records,
+    required this.isDark,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -503,8 +572,16 @@ class RadarGridPainter extends CustomPainter {
     }
 
     // Draw crosshair axes
-    canvas.drawLine(Offset(center.dx - maxRadius, center.dy), Offset(center.dx + maxRadius, center.dy), paintGrid);
-    canvas.drawLine(Offset(center.dx, center.dy - maxRadius), Offset(center.dx, center.dy + maxRadius), paintGrid);
+    canvas.drawLine(
+      Offset(center.dx - maxRadius, center.dy),
+      Offset(center.dx + maxRadius, center.dy),
+      paintGrid,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - maxRadius),
+      Offset(center.dx, center.dy + maxRadius),
+      paintGrid,
+    );
 
     // Draw radar sweep beam
     final sweepPaint = Paint()
@@ -549,7 +626,11 @@ class RadarGridPainter extends CustomPainter {
 
       pinPaint.color = AppColors.primary.withAlpha((intensity * 255).round());
       canvas.drawCircle(offset, 6.0, pinPaint);
-      canvas.drawCircle(offset, 6.0, pinOutline..color = Colors.white.withAlpha((intensity * 255).round()));
+      canvas.drawCircle(
+        offset,
+        6.0,
+        pinOutline..color = Colors.white.withAlpha((intensity * 255).round()),
+      );
     }
   }
 
@@ -584,16 +665,36 @@ class GlassmorphicCardSkeletonList extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(width: 100, height: 16, color: AppColors.surfaceHigh),
-                      Container(width: 80, height: 16, color: AppColors.surfaceHigh),
+                      Container(
+                        width: 100,
+                        height: 16,
+                        color: AppColors.surfaceHigh,
+                      ),
+                      Container(
+                        width: 80,
+                        height: 16,
+                        color: AppColors.surfaceHigh,
+                      ),
                     ],
                   ),
-                  Container(width: double.infinity, height: 14, color: AppColors.surfaceHigh),
+                  Container(
+                    width: double.infinity,
+                    height: 14,
+                    color: AppColors.surfaceHigh,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(width: 120, height: 12, color: AppColors.surfaceHigh),
-                      Container(width: 60, height: 12, color: AppColors.surfaceHigh),
+                      Container(
+                        width: 120,
+                        height: 12,
+                        color: AppColors.surfaceHigh,
+                      ),
+                      Container(
+                        width: 60,
+                        height: 12,
+                        color: AppColors.surfaceHigh,
+                      ),
                     ],
                   ),
                 ],

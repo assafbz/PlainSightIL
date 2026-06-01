@@ -8,8 +8,9 @@ void main() {
     AppStateNotifier.isTesting = true;
   });
 
-  testWidgets('App loads on dashboard and shows initial English content',
-      (WidgetTester tester) async {
+  testWidgets('App loads on dashboard and shows initial English content', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
@@ -25,54 +26,61 @@ void main() {
     expect(find.text('Government Budget'), findsOneWidget);
   });
 
-  testWidgets('Bilingual toggle updates locale, directionality, and translates text',
-      (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'Bilingual toggle updates locale, directionality, and translates text',
+    (WidgetTester tester) async {
+      // Build our app and trigger a frame.
+      await tester.pumpWidget(const MyApp());
+      await tester.pumpAndSettle();
 
-    // Verify directionality is LTR initially
-    Directionality dirLtr = tester.widget<Directionality>(
-        find.ancestor(
-          of: find.text('Democratizing Civic Data'),
-          matching: find.byType(Directionality),
-        ).first
-    );
-    expect(dirLtr.textDirection, TextDirection.ltr);
+      // Verify directionality is LTR initially
+      Directionality dirLtr = tester.widget<Directionality>(
+        find
+            .ancestor(
+              of: find.text('Democratizing Civic Data'),
+              matching: find.byType(Directionality),
+            )
+            .first,
+      );
+      expect(dirLtr.textDirection, TextDirection.ltr);
 
-    // Tap the bilingual language toggle to switch to Hebrew
-    await tester.tap(find.text('HE'));
-    await tester.pumpAndSettle();
+      // Tap the bilingual language toggle to switch to Hebrew
+      await tester.tap(find.text('HE'));
+      await tester.pumpAndSettle();
 
-    // Verify text is now translated to Hebrew
-    expect(find.text('הנגשת מידע ממשלתי לציבור'), findsOneWidget);
-    expect(find.text('אנטנות סלולריות'), findsOneWidget);
-    expect(find.text('מפלס הכנרת'), findsOneWidget);
-    expect(find.text('תקציב המדינה'), findsOneWidget);
+      // Verify text is now translated to Hebrew
+      expect(find.text('הנגשת מידע ממשלתי לציבור'), findsOneWidget);
+      expect(find.text('אנטנות סלולריות'), findsOneWidget);
+      expect(find.text('מפלס הכנרת'), findsOneWidget);
+      expect(find.text('תקציב המדינה'), findsOneWidget);
 
-    // Verify toggle button now displays 'EN'
-    expect(find.text('EN'), findsOneWidget);
+      // Verify toggle button now displays 'EN'
+      expect(find.text('EN'), findsOneWidget);
 
-    // Verify directionality is now RTL
-    Directionality dirRtl = tester.widget<Directionality>(
-        find.ancestor(
-          of: find.text('הנגשת מידע ממשלתי לציבור'),
-          matching: find.byType(Directionality),
-        ).first
-    );
-    expect(dirRtl.textDirection, TextDirection.rtl);
+      // Verify directionality is now RTL
+      Directionality dirRtl = tester.widget<Directionality>(
+        find
+            .ancestor(
+              of: find.text('הנגשת מידע ממשלתי לציבור'),
+              matching: find.byType(Directionality),
+            )
+            .first,
+      );
+      expect(dirRtl.textDirection, TextDirection.rtl);
 
-    // Tap language toggle again to return to English
-    await tester.tap(find.text('EN'));
-    await tester.pumpAndSettle();
+      // Tap language toggle again to return to English
+      await tester.tap(find.text('EN'));
+      await tester.pumpAndSettle();
 
-    // Verify text goes back to English
-    expect(find.text('Democratizing Civic Data'), findsOneWidget);
-    expect(find.text('HE'), findsOneWidget);
-  });
+      // Verify text goes back to English
+      expect(find.text('Democratizing Civic Data'), findsOneWidget);
+      expect(find.text('HE'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Tapping dataset cards or nav items navigates correctly',
-      (WidgetTester tester) async {
+  testWidgets('Tapping dataset cards or nav items navigates correctly', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
@@ -98,11 +106,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify Kinneret Water Level placeholder screen is shown
-    expect(find.byIcon(Icons.water_drop), findsNWidgets(2)); // Nav bar icon + screen icon
+    expect(
+      find.byIcon(Icons.water_drop),
+      findsNWidgets(2),
+    ); // Nav bar icon + screen icon
   });
 
-  testWidgets('Drawer opens and theme and language can be toggled',
-      (WidgetTester tester) async {
+  testWidgets('Drawer opens and theme and language can be toggled', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
 
@@ -123,14 +135,20 @@ void main() {
     await tester.pumpAndSettle();
 
     // The locale should change to Hebrew and translate text
-    expect(find.descendant(
-      of: find.byType(NavigationDrawerWidget),
-      matching: find.text('בית'),
-    ), findsOneWidget);
-    expect(find.descendant(
-      of: find.byType(NavigationDrawerWidget),
-      matching: find.text('אנטנות סלולריות'),
-    ), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(NavigationDrawerWidget),
+        matching: find.text('בית'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(NavigationDrawerWidget),
+        matching: find.text('אנטנות סלולריות'),
+      ),
+      findsOneWidget,
+    );
 
     // Verify theme toggle button works
     expect(find.byKey(const ValueKey('drawer_theme_toggle')), findsOneWidget);

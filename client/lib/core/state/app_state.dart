@@ -40,7 +40,7 @@ class AppStateNotifier extends ChangeNotifier {
           'addressDescription': 'קיבוץ אפיקים',
           'focalPointType': 'קרקעי',
           'jurisdiction': 'עמק הירדן',
-        }
+        },
       ];
       _isLoadingPermits = false;
       notifyListeners();
@@ -51,26 +51,30 @@ class AppStateNotifier extends ChangeNotifier {
         .collection('dataset_metadata')
         .doc('cellular_permit_applications')
         .snapshots()
-        .listen((metaSnapshot) {
-      if (metaSnapshot.exists && metaSnapshot.data() != null) {
-        final data = metaSnapshot.data()!;
-        final newActive = data['activeCollection'] as String? ?? '';
-        _permitSyncStatus = data['status'] as String? ?? 'idle';
+        .listen(
+          (metaSnapshot) {
+            if (metaSnapshot.exists && metaSnapshot.data() != null) {
+              final data = metaSnapshot.data()!;
+              final newActive = data['activeCollection'] as String? ?? '';
+              _permitSyncStatus = data['status'] as String? ?? 'idle';
 
-        if (newActive.isNotEmpty && newActive != _activePermitCollection) {
-          _bindActivePermitCollection(newActive);
-        } else {
-          notifyListeners();
-        }
-      } else {
-        _isLoadingPermits = false;
-        notifyListeners();
-      }
-    }, onError: (err) {
-      _isLoadingPermits = false;
-      _permitSyncStatus = 'error';
-      notifyListeners();
-    });
+              if (newActive.isNotEmpty &&
+                  newActive != _activePermitCollection) {
+                _bindActivePermitCollection(newActive);
+              } else {
+                notifyListeners();
+              }
+            } else {
+              _isLoadingPermits = false;
+              notifyListeners();
+            }
+          },
+          onError: (err) {
+            _isLoadingPermits = false;
+            _permitSyncStatus = 'error';
+            notifyListeners();
+          },
+        );
   }
 
   void _bindActivePermitCollection(String newCollection) {
@@ -82,18 +86,19 @@ class AppStateNotifier extends ChangeNotifier {
     _permitSubscription = FirebaseFirestore.instance
         .collection(newCollection)
         .snapshots()
-        .listen((snapshot) {
-      // Swap only when data resolves to prevent flickering
-      _permitRecords = snapshot.docs
-          .map((doc) => doc.data())
-          .toList();
-      _isLoadingPermits = false;
-      notifyListeners();
-    }, onError: (err) {
-      _isLoadingPermits = false;
-      _permitSyncStatus = 'error';
-      notifyListeners();
-    });
+        .listen(
+          (snapshot) {
+            // Swap only when data resolves to prevent flickering
+            _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
+            _isLoadingPermits = false;
+            notifyListeners();
+          },
+          onError: (err) {
+            _isLoadingPermits = false;
+            _permitSyncStatus = 'error';
+            notifyListeners();
+          },
+        );
   }
 
   TextDirection get textDirection =>
@@ -140,7 +145,8 @@ class AppStateNotifier extends ChangeNotifier {
       'towers_desc': 'Active towers & radiation permits by location.',
       'towers_count': '9,840 records',
       'towers_roadmap_title': 'Cellular Antennas Coming Soon',
-      'towers_roadmap_desc': 'This dataset screen is under construction. Future integrations will include live data and interactive maps.',
+      'towers_roadmap_desc':
+          'This dataset screen is under construction. Future integrations will include live data and interactive maps.',
       'towers_active_label': 'Active Towers',
       'towers_permit_label': 'Construction Permits',
       'towers_search_placeholder': 'Search by Locality or Site ID',
@@ -175,11 +181,14 @@ class AppStateNotifier extends ChangeNotifier {
       'back_button': 'Back to Home',
       'attribution_prefix': 'Data Source: ',
       'water_roadmap_title': 'Kinneret Telemetry Coming Soon',
-      'water_roadmap_desc': 'This dataset is part of the Phase 2 roadmap. We plan to integrate the official Water Authority API from data.gov.il to provide interactive water line charts, historical levels, and seasonal trend analysis.',
+      'water_roadmap_desc':
+          'This dataset is part of the Phase 2 roadmap. We plan to integrate the official Water Authority API from data.gov.il to provide interactive water line charts, historical levels, and seasonal trend analysis.',
       'budget_roadmap_title': 'Budget Analysis Coming Soon',
-      'budget_roadmap_desc': 'This dataset is part of the Phase 2 roadmap. We plan to integrate the Ministry of Finance budget datasets from data.gov.il to provide interactive visualizations of public budget allocation, spending speed, and market distribution.',
+      'budget_roadmap_desc':
+          'This dataset is part of the Phase 2 roadmap. We plan to integrate the Ministry of Finance budget datasets from data.gov.il to provide interactive visualizations of public budget allocation, spending speed, and market distribution.',
       'alerts_roadmap_title': 'Alert Telemetry Coming Soon',
-      'alerts_roadmap_desc': 'This dataset is part of the Phase 2 roadmap. We plan to integrate real-time alert data from data.gov.il and environmental agencies to provide notifications, compliance warnings, and historical radiation/pollution alerts.',
+      'alerts_roadmap_desc':
+          'This dataset is part of the Phase 2 roadmap. We plan to integrate real-time alert data from data.gov.il and environmental agencies to provide notifications, compliance warnings, and historical radiation/pollution alerts.',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -191,7 +200,8 @@ class AppStateNotifier extends ChangeNotifier {
       'towers_desc': 'אנטנות פעילות והיתרי קרינה לפי מיקום.',
       'towers_count': '9,840 רשומות',
       'towers_roadmap_title': 'אנטנות סלולריות - בקרוב',
-      'towers_roadmap_desc': 'מסך מאגר נתונים זה נמצא בבנייה. שילובים עתידיים יכללו נתונים חיים ומפות אינטראקטיביות.',
+      'towers_roadmap_desc':
+          'מסך מאגר נתונים זה נמצא בבנייה. שילובים עתידיים יכללו נתונים חיים ומפות אינטראקטיביות.',
       'towers_active_label': 'אנטנות פעילות',
       'towers_permit_label': 'היתרי הקמה',
       'towers_search_placeholder': 'חפש לפי יישוב או מספר אתר',
@@ -226,12 +236,15 @@ class AppStateNotifier extends ChangeNotifier {
       'back_button': 'חזור לבית',
       'attribution_prefix': 'מקור מידע: ',
       'water_roadmap_title': 'מפלס הכנרת - בקרוב',
-      'water_roadmap_desc': 'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב את ה-API הרשמי של רשות המים מ-data.gov.il כדי לספק גרפים אינטראקטיביים של מפלס המים, רמות היסטוריות וניתוח מגמות עונתיות.',
+      'water_roadmap_desc':
+          'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב את ה-API הרשמי של רשות המים מ-data.gov.il כדי לספק גרפים אינטראקטיביים של מפלס המים, רמות היסטוריות וניתוח מגמות עונתיות.',
       'budget_roadmap_title': 'תקציב המדינה - בקרוב',
-      'budget_roadmap_desc': 'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב את מאגרי התקציב של משרד האוצר מ-data.gov.il כדי לספק הדמיות אינטראקטיביות של הקצאת התקציב הציבורי, מהירות ההוצאה וחלוקת השוק.',
+      'budget_roadmap_desc':
+          'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב את מאגרי התקציב של משרד האוצר מ-data.gov.il כדי לספק הדמיות אינטראקטיביות של הקצאת התקציב הציבורי, מהירות ההוצאה וחלוקת השוק.',
       'alerts_roadmap_title': 'התראות אחרונות - בקרוב',
-      'alerts_roadmap_desc': 'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב נתוני התראות בזמן אמת מ-data.gov.il ומסוכנויות לאיכות הסביבה כדי לספק התראות, אזהרות תאימות והתראות קרינה/זיהום היסטוריות.',
-    }
+      'alerts_roadmap_desc':
+          'מאגר נתונים זה הוא חלק ממפת הדרכים לשלב 2. אנו מתכננים לשלב נתוני התראות בזמן אמת מ-data.gov.il ומסוכנויות לאיכות הסביבה כדי לספק התראות, אזהרות תאימות והתראות קרינה/זיהום היסטוריות.',
+    },
   };
 
   /// Translate a key using the current locale

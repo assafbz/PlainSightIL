@@ -25,7 +25,10 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               appState.translate('app_title'),
-              style: AppTypography.headlineLg(context, color: AppColors.textPrimary),
+              style: AppTypography.headlineLg(
+                context,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -47,16 +50,20 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           appState.translate('mission_title'),
-                          style: AppTypography.headlineMd(context,
-                              color: AppColors.textPrimary),
+                          style: AppTypography.headlineMd(
+                            context,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Text(
                       appState.translate('mission_subtitle'),
-                      style: AppTypography.bodyLg(context,
-                          color: AppColors.textSecondary),
+                      style: AppTypography.bodyLg(
+                        context,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -68,12 +75,18 @@ class DashboardScreen extends StatelessWidget {
             // Section Header
             Text(
               appState.translate('explore_datasets'),
-              style: AppTypography.headlineMd(context, color: AppColors.textPrimary),
+              style: AppTypography.headlineMd(
+                context,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               appState.translate('explore_cta'),
-              style: AppTypography.bodySm(context, color: AppColors.textSecondary),
+              style: AppTypography.bodySm(
+                context,
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -139,11 +152,7 @@ class DashboardScreen extends StatelessWidget {
                 color: accentColor.withAlpha(25),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: accentColor,
-                size: 24,
-              ),
+              child: Icon(icon, color: accentColor, size: 24),
             ),
             const SizedBox(width: 16),
             // Text Details
@@ -156,16 +165,19 @@ class DashboardScreen extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: AppTypography.bodyLg(context,
-                              color: AppColors.textPrimary)
-                              .copyWith(fontWeight: FontWeight.bold),
+                          style: AppTypography.bodyLg(
+                            context,
+                            color: AppColors.textPrimary,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 8),
                       // Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceHigh,
                           borderRadius: BorderRadius.circular(12),
@@ -176,8 +188,10 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         child: Text(
                           badge,
-                          style: AppTypography.labelXs(context,
-                              color: AppColors.primary),
+                          style: AppTypography.labelXs(
+                            context,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -185,8 +199,10 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     desc,
-                    style: AppTypography.bodySm(context,
-                        color: AppColors.textSecondary),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textSecondary,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -195,11 +211,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             // Chevron end indicator
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.textTertiary,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 20),
           ],
         ),
       ),

@@ -149,10 +149,7 @@ class AppShell extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0x33000000),
         border: Border(
-          bottom: BorderSide(
-            color: AppColors.glassBorder,
-            width: 1,
-          ),
+          bottom: BorderSide(color: AppColors.glassBorder, width: 1),
         ),
       ),
       child: Row(
@@ -173,8 +170,10 @@ class AppShell extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 appState.translate('app_title'),
-                style: AppTypography.headlineLg(context, color: AppColors.primary)
-                    .copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.headlineLg(
+                  context,
+                  color: AppColors.primary,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -252,11 +251,36 @@ class AppShell extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem(context, index: 0, icon: Icons.home, label: appState.translate('nav_home')),
-            _buildNavItem(context, index: 1, icon: Icons.cell_tower, label: appState.translate('nav_towers')),
-            _buildNavItem(context, index: 2, icon: Icons.water_drop, label: appState.translate('nav_water')),
-            _buildNavItem(context, index: 3, icon: Icons.payments, label: appState.translate('nav_budget')),
-            _buildNavItem(context, index: 4, icon: Icons.notifications, label: appState.translate('nav_alerts')),
+            _buildNavItem(
+              context,
+              index: 0,
+              icon: Icons.home,
+              label: appState.translate('nav_home'),
+            ),
+            _buildNavItem(
+              context,
+              index: 1,
+              icon: Icons.cell_tower,
+              label: appState.translate('nav_towers'),
+            ),
+            _buildNavItem(
+              context,
+              index: 2,
+              icon: Icons.water_drop,
+              label: appState.translate('nav_water'),
+            ),
+            _buildNavItem(
+              context,
+              index: 3,
+              icon: Icons.payments,
+              label: appState.translate('nav_budget'),
+            ),
+            _buildNavItem(
+              context,
+              index: 4,
+              icon: Icons.notifications,
+              label: appState.translate('nav_alerts'),
+            ),
           ],
         ),
       ),
@@ -309,7 +333,9 @@ class AppShell extends StatelessWidget {
 
 class AppStateColors {
   static Color glowColor(String locale) {
-    return locale == 'en' ? AppColors.secondary.withAlpha(102) : AppColors.primary.withAlpha(102);
+    return locale == 'en'
+        ? AppColors.secondary.withAlpha(102)
+        : AppColors.primary.withAlpha(102);
   }
 }
 
@@ -321,7 +347,7 @@ class NavigationDrawerWidget extends StatelessWidget {
   Future<void> _launchDataGovUrl(BuildContext context) async {
     const urlString = 'https://data.gov.il';
     final uri = Uri.parse(urlString);
-    
+
     // Security check: must use HTTPS and have data.gov.il host
     if (uri.scheme == 'https' && uri.host == 'data.gov.il') {
       try {
@@ -338,16 +364,16 @@ class NavigationDrawerWidget extends StatelessWidget {
         }
       }
     } else {
-      _showErrorSnackBar(context, 'Security check failed: Invalid URL scheme or host.');
+      _showErrorSnackBar(
+        context,
+        'Security check failed: Invalid URL scheme or host.',
+      );
     }
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.danger,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.danger),
     );
   }
 
@@ -355,7 +381,9 @@ class NavigationDrawerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final screenWidth = MediaQuery.of(context).size.width;
-    final drawerWidth = screenWidth < 600 ? (screenWidth * 0.85).clamp(0.0, 304.0) : 304.0;
+    final drawerWidth = screenWidth < 600
+        ? (screenWidth * 0.85).clamp(0.0, 304.0)
+        : 304.0;
 
     return Drawer(
       width: drawerWidth,
@@ -364,10 +392,7 @@ class NavigationDrawerWidget extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.glassBg,
-          border: Border.all(
-            color: AppColors.glassBorder,
-            width: 1.0,
-          ),
+          border: Border.all(color: AppColors.glassBorder, width: 1.0),
           boxShadow: [
             BoxShadow(
               color: const Color.fromRGBO(0, 0, 0, 0.35),
@@ -456,10 +481,7 @@ class NavigationDrawerWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: AppColors.glassBorder,
-            width: 1,
-          ),
+          bottom: BorderSide(color: AppColors.glassBorder, width: 1),
         ),
       ),
       child: Row(
@@ -487,12 +509,17 @@ class NavigationDrawerWidget extends StatelessWidget {
               appState.toggleLocale();
             },
             child: Semantics(
-              label: appState.locale == 'en' ? 'החלף לעברית' : 'Switch to English',
+              label: appState.locale == 'en'
+                  ? 'החלף לעברית'
+                  : 'Switch to English',
               button: true,
               child: Container(
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withAlpha(25),
                   borderRadius: BorderRadius.circular(20),
@@ -503,7 +530,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                 ),
                 child: Text(
                   appState.translate('toggle_lang'),
-                  style: AppTypography.labelXs(context, color: AppColors.primary),
+                  style: AppTypography.labelXs(
+                    context,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
@@ -537,7 +567,8 @@ class NavigationDrawerWidget extends StatelessWidget {
     );
 
     return Semantics(
-      label: 'Navigate to $title, Status: ${isRoadmap ? "Roadmap" : (isActive ? "Active" : "Inactive")}',
+      label:
+          'Navigate to $title, Status: ${isRoadmap ? "Roadmap" : (isActive ? "Active" : "Inactive")}',
       button: true,
       selected: isActive,
       child: MouseRegion(
@@ -570,15 +601,13 @@ class NavigationDrawerWidget extends StatelessWidget {
                 ],
                 Icon(icon, color: labelColor, size: 24),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: itemTextStyle,
-                  ),
-                ),
+                Expanded(child: Text(title, style: itemTextStyle)),
                 if (isRoadmap)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.roadmapBg,
                       borderRadius: BorderRadius.circular(8),
@@ -599,7 +628,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                   )
                 else if (isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.activeBg,
                       borderRadius: BorderRadius.circular(8),
@@ -630,12 +662,7 @@ class NavigationDrawerWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: AppColors.glassBorder,
-            width: 1,
-          ),
-        ),
+        border: Border(top: BorderSide(color: AppColors.glassBorder, width: 1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -665,7 +692,9 @@ class NavigationDrawerWidget extends StatelessWidget {
                         turns: appState.isDarkMode ? 0.0 : 0.5,
                         duration: const Duration(milliseconds: 250),
                         child: Icon(
-                          appState.isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+                          appState.isDarkMode
+                              ? Icons.nightlight_round
+                              : Icons.wb_sunny,
                           color: AppColors.primary,
                         ),
                       ),
@@ -762,13 +791,19 @@ class ComingSoonScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     title,
-                    style: AppTypography.headlineMd(context, color: AppColors.textPrimary),
+                    style: AppTypography.headlineMd(
+                      context,
+                      color: AppColors.textPrimary,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   // Amber status badge reflecting "Phase 2 Roadmap"
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.roadmapBg,
                       borderRadius: BorderRadius.circular(12),
@@ -779,27 +814,38 @@ class ComingSoonScreen extends StatelessWidget {
                     ),
                     child: Text(
                       appState.translate('badge_phase2'),
-                      style: AppTypography.labelXs(context, color: AppColors.roadmapText),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.roadmapText,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     description,
-                    style: AppTypography.bodySm(context, color: AppColors.textSecondary),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textSecondary,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   // Back to home button
                   ElevatedButton.icon(
                     onPressed: () {
-                      appState.setActiveTab(0); // Set active tab back to Home (0)
+                      appState.setActiveTab(
+                        0,
+                      ); // Set active tab back to Home (0)
                     },
                     icon: const Icon(Icons.arrow_back),
                     label: Text(appState.translate('back_button')),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: AppColors.onPrimary,
                       backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
