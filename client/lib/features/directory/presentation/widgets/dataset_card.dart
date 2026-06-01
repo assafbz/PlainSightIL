@@ -9,6 +9,8 @@ class DatasetCard extends StatefulWidget {
   final bool isRequesting;
   final String currentLocale;
   final String Function(String) translate;
+  final bool isFavorite;
+  final VoidCallback? onFavoriteToggle;
 
   const DatasetCard({
     super.key,
@@ -18,6 +20,8 @@ class DatasetCard extends StatefulWidget {
     required this.currentLocale,
     required this.translate,
     this.isRequesting = false,
+    this.isFavorite = false,
+    this.onFavoriteToggle,
   });
 
   @override
@@ -100,39 +104,57 @@ class _DatasetCardState extends State<DatasetCard> {
                         ),
                       ),
                     ),
-                    // Status indicators
-                    if (isSupported)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.activeBg,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          widget.translate('badge_active'),
-                          style: AppTypography.labelXs(
-                            context,
-                            color: AppColors.activeText,
-                          ),
-                        ),
-                      )
-                    else if (totalRequests > 0)
-                      Row(
-                        children: [
-                          Icon(Icons.bolt, size: 14, color: AppColors.info),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${widget.translate('requests_label')}$totalRequests',
-                            style: AppTypography.labelXs(
-                              context,
-                              color: AppColors.info,
+                    Row(
+                      children: [
+                        if (widget.onFavoriteToggle != null)
+                          IconButton(
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            icon: Icon(
+                              widget.isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: widget.isFavorite
+                                  ? AppColors.danger
+                                  : AppColors.textSecondary,
+                              size: 20,
                             ),
+                            onPressed: widget.onFavoriteToggle,
                           ),
-                        ],
-                      ),
+                        if (isSupported)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.activeBg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              widget.translate('badge_active'),
+                              style: AppTypography.labelXs(
+                                context,
+                                color: AppColors.activeText,
+                              ),
+                            ),
+                          )
+                        else if (totalRequests > 0)
+                          Row(
+                            children: [
+                              Icon(Icons.bolt, size: 14, color: AppColors.info),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${widget.translate('requests_label')}$totalRequests',
+                                style: AppTypography.labelXs(
+                                  context,
+                                  color: AppColors.info,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),

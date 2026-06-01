@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
+import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
+import 'package:plainsight/features/directory/presentation/pages/liquidation_page.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
@@ -16,7 +18,7 @@ class DatasetDirectoryScreen extends StatefulWidget {
 class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  int _selectedFilterIndex = 0; // 0: All, 1: Supported, 2: Requests/Inactive
+  int _selectedFilterIndex = 0; // 0: Supported, 1: Requests
   final Set<String> _requestingIds = {};
 
   @override
@@ -31,8 +33,6 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
     // Apply tab filter first
     List<DatasetMetadataModel> filtered = [];
     if (_selectedFilterIndex == 0) {
-      filtered = List.from(allRecords);
-    } else if (_selectedFilterIndex == 1) {
       filtered = allRecords.where((d) => d.isSupported).toList();
     } else {
       filtered = allRecords.where((d) => !d.isSupported).toList();
@@ -107,13 +107,19 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
   }
 
   void _handleDeepLink(DatasetMetadataModel dataset) {
-    // Navigate based on dataset ID
     if (dataset.id == '8935c8e5-ec77-421f-af86-d970583195f8' ||
         dataset.id == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
-      // Index 1 represents Cellular Antennas screen in navigation
-      widget.appState.setActiveTab(1);
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => TowersScreen(appState: widget.appState),
+        ),
+      );
     } else if (dataset.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
-      widget.appState.setActiveTab(2);
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => LiquidationScreen(appState: widget.appState),
+        ),
+      );
     }
   }
 
@@ -200,11 +206,10 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
                   ),
                 ),
                 onPressed: () {
-                  // Pre-fill search query or open dynamic dialog to request activation
                   _searchController.clear();
                   setState(() {
                     _searchQuery = '';
-                    _selectedFilterIndex = 2; // Jump to Requests tab
+                    _selectedFilterIndex = 1; // Jump to Requests tab
                   });
                 },
                 icon: const Icon(Icons.add_circle_outline),
@@ -310,10 +315,9 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
-                _buildFilterChip(0, widget.appState.translate('filter_all')),
-                _buildFilterChip(1, widget.appState.translate('filter_active')),
+                _buildFilterChip(0, widget.appState.translate('filter_active')),
                 _buildFilterChip(
-                  2,
+                  1,
                   widget.appState.translate('filter_inactive'),
                 ),
               ],
@@ -353,6 +357,10 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
                         isRequesting: isReq,
                         currentLocale: widget.appState.locale,
                         translate: widget.appState.translate,
+                        isFavorite: widget.appState.isFavorite(item.id),
+                        onFavoriteToggle: () {
+                          widget.appState.toggleFavorite(item.id);
+                        },
                         onTapAction: () {
                           if (item.isSupported) {
                             _handleDeepLink(item);

@@ -46,6 +46,7 @@ class _TowersScreenState extends State<TowersScreen>
     if (!AppStateNotifier.isTesting) {
       _radarController.repeat();
     }
+    widget.appState.addRecent('8935c8e5-ec77-421f-af86-d970583195f8');
   }
 
   @override
@@ -331,228 +332,272 @@ class _TowersScreenState extends State<TowersScreen>
     final appState = widget.appState;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
 
-    return Stack(
-      children: [
-        // 1. Map/Radar Visualizer Pane
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: MediaQuery.of(context).size.height * 0.35,
-          child: RepaintBoundary(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _showMap
-                  ? TowersMapView(
-                      key: const ValueKey('map_view'),
-                      appState: widget.appState,
-                      records: _getFilteredRecords(),
-                      selectedRecordId: _selectedRecordId,
-                      mapController: _mapController,
-                      onMarkerTap: _onMarkerTap,
-                      showAntennas: _selectedFilterIndex == 0,
-                    )
-                  : AnimatedBuilder(
-                      key: const ValueKey('radar_view'),
-                      animation: _radarController,
-                      builder: (context, _) {
-                        // Dynamically pull coordinate dots from active collection
-                        final records = _selectedFilterIndex == 1
-                            ? appState.permitRecords
-                            : appState.antennaRecords;
-                        return CustomPaint(
-                          painter: RadarGridPainter(
-                            angle: _radarController.value * 2 * math.pi,
-                            records: records,
-                            isDark: appState.isDarkMode,
-                          ),
-                          child: Container(),
-                        );
-                      },
-                    ),
+    return Scaffold(
+      backgroundColor: AppColors.baseBg,
+      appBar: AppBar(
+        backgroundColor: const Color(0x33000000),
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          appState.translate('towers_title'),
+          style: AppTypography.headlineLg(
+            context,
+            color: AppColors.primary,
+          ).copyWith(fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors.primary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          ListenableBuilder(
+            listenable: appState,
+            builder: (context, _) {
+              final isFav = appState.isFavorite(
+                '8935c8e5-ec77-421f-af86-d970583195f8',
+              );
+              return IconButton(
+                icon: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  color: isFav ? AppColors.danger : AppColors.textSecondary,
+                ),
+                onPressed: () => appState.toggleFavorite(
+                  '8935c8e5-ec77-421f-af86-d970583195f8',
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // 1. Map/Radar Visualizer Pane
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.35,
+            child: RepaintBoundary(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _showMap
+                    ? TowersMapView(
+                        key: const ValueKey('map_view'),
+                        appState: widget.appState,
+                        records: _getFilteredRecords(),
+                        selectedRecordId: _selectedRecordId,
+                        mapController: _mapController,
+                        onMarkerTap: _onMarkerTap,
+                        showAntennas: _selectedFilterIndex == 0,
+                      )
+                    : AnimatedBuilder(
+                        key: const ValueKey('radar_view'),
+                        animation: _radarController,
+                        builder: (context, _) {
+                          // Dynamically pull coordinate dots from active collection
+                          final records = _selectedFilterIndex == 1
+                              ? appState.permitRecords
+                              : appState.antennaRecords;
+                          return CustomPaint(
+                            painter: RadarGridPainter(
+                              angle: _radarController.value * 2 * math.pi,
+                              records: records,
+                              isDark: appState.isDarkMode,
+                            ),
+                            child: Container(),
+                          );
+                        },
+                      ),
+              ),
             ),
           ),
-        ),
 
-        // Map controls overlay (Zoom and Recenter buttons)
-        if (_showMap)
+          // Map controls overlay (Zoom and Recenter buttons)
+          if (_showMap)
+            Positioned(
+              top: 12,
+              left: isRtl ? 16 : null,
+              right: isRtl ? null : 16,
+              child: MapControlsOverlay(
+                mapController: _mapController,
+                onRecenter: _recenterOnUserLocation,
+              ),
+            ),
+
+          // Toggle Switch Overlay for Radar/Map selection
           Positioned(
             top: 12,
-            left: isRtl ? 16 : null,
-            right: isRtl ? null : 16,
-            child: MapControlsOverlay(
-              mapController: _mapController,
-              onRecenter: _recenterOnUserLocation,
-            ),
-          ),
-
-        // Toggle Switch Overlay for Radar/Map selection
-        Positioned(
-          top: 12,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.all(4.0),
-              decoration: BoxDecoration(
-                color: AppColors.glassBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.glassBorder, width: 1.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.glassGlow,
-                    blurRadius: 10.0,
-                    spreadRadius: 2.0,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildToggleOption(
-                    icon: Icons.map,
-                    label: widget.appState.locale == 'he' ? 'מפה' : 'Map',
-                    isSelected: _showMap,
-                    onTap: () {
-                      setState(() {
-                        _showMap = true;
-                      });
-                    },
-                  ),
-                  _buildToggleOption(
-                    icon: Icons.radar,
-                    label: widget.appState.locale == 'he' ? 'רדאר' : 'Radar',
-                    isSelected: !_showMap,
-                    onTap: () {
-                      setState(() {
-                        _showMap = false;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // 2. Interactive Bottom Sheet Content Area
-        Positioned.fill(
-          key: const ValueKey('bottom_sheet_content'),
-          top: MediaQuery.of(context).size.height * 0.32,
-          child: Column(
-            children: [
-              // Bottom sheet drag handle indicator
-              Container(
-                width: 40,
-                height: 5,
-                margin: const EdgeInsets.symmetric(vertical: 8),
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(4.0),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withAlpha(50),
-                  borderRadius: BorderRadius.circular(3),
+                  color: AppColors.glassBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.glassBorder, width: 1.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.glassGlow,
+                      blurRadius: 10.0,
+                      spreadRadius: 2.0,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildToggleOption(
+                      icon: Icons.map,
+                      label: widget.appState.locale == 'he' ? 'מפה' : 'Map',
+                      isSelected: _showMap,
+                      onTap: () {
+                        setState(() {
+                          _showMap = true;
+                        });
+                      },
+                    ),
+                    _buildToggleOption(
+                      icon: Icons.radar,
+                      label: widget.appState.locale == 'he' ? 'רדאר' : 'Radar',
+                      isSelected: !_showMap,
+                      onTap: () {
+                        setState(() {
+                          _showMap = false;
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ),
-
-              // Segmented Control Filters (Active Towers vs Construction Permits)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceLow.withAlpha(150),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.glassBorder, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildSegmentItem(
-                        context,
-                        index: 0,
-                        label: appState.translate('towers_active_label'),
-                      ),
-                      _buildSegmentItem(
-                        context,
-                        index: 1,
-                        label: appState.translate('towers_permit_label'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Search Input Field
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceLow.withAlpha(100),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.glassBorder, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Icon(
-                          Icons.search,
-                          color: AppColors.textSecondary,
-                          size: 20,
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (val) {
-                            setState(() {
-                              _searchQuery = val;
-                            });
-                          },
-                          style: AppTypography.bodySm(
-                            context,
-                            color: AppColors.textPrimary,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: appState.translate(
-                              'towers_search_placeholder',
-                            ),
-                            hintStyle: AppTypography.bodySm(
-                              context,
-                              color: AppColors.textTertiary,
-                            ),
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                      if (_searchQuery.isNotEmpty)
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: Icon(
-                            Icons.close,
-                            color: AppColors.textSecondary,
-                            size: 18,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Scrollable Records List View
-              Expanded(child: _buildRecordsList(context)),
-            ],
+            ),
           ),
-        ),
-      ],
+
+          // 2. Interactive Bottom Sheet Content Area
+          Positioned.fill(
+            key: const ValueKey('bottom_sheet_content'),
+            top: MediaQuery.of(context).size.height * 0.32,
+            child: Column(
+              children: [
+                // Bottom sheet drag handle indicator
+                Container(
+                  width: 40,
+                  height: 5,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary.withAlpha(50),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+
+                // Segmented Control Filters (Active Towers vs Construction Permits)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLow.withAlpha(150),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.glassBorder,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildSegmentItem(
+                          context,
+                          index: 0,
+                          label: appState.translate('towers_active_label'),
+                        ),
+                        _buildSegmentItem(
+                          context,
+                          index: 1,
+                          label: appState.translate('towers_permit_label'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Search Input Field
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLow.withAlpha(100),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.glassBorder,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Icon(
+                            Icons.search,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val;
+                              });
+                            },
+                            style: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: appState.translate(
+                                'towers_search_placeholder',
+                              ),
+                              hintStyle: AppTypography.bodySm(
+                                context,
+                                color: AppColors.textTertiary,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        if (_searchQuery.isNotEmpty)
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              Icons.close,
+                              color: AppColors.textSecondary,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Scrollable Records List View
+                Expanded(child: _buildRecordsList(context)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

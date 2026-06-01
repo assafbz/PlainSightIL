@@ -6,9 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
-import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
-import 'package:plainsight/features/directory/presentation/pages/liquidation_page.dart';
 import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -213,36 +211,17 @@ class AppShell extends StatelessWidget {
       case 0:
         return DashboardScreen(appState: appState);
       case 1:
-        return TowersScreen(
-          key: const ValueKey('towers_screen'),
+        return DatasetDirectoryScreen(
+          key: const ValueKey('directory_screen'),
           appState: appState,
         );
       case 2:
-        return LiquidationScreen(
-          key: const ValueKey('liquidation_screen'),
-          appState: appState,
-        );
-      case 3:
-        return ComingSoonScreen(
-          key: const ValueKey('budget_coming_soon'),
-          title: appState.translate('budget_roadmap_title'),
-          icon: Icons.payments,
-          color: AppColors.secondary,
-          description: appState.translate('budget_roadmap_desc'),
-          appState: appState,
-        );
-      case 4:
         return ComingSoonScreen(
           key: const ValueKey('alerts_coming_soon'),
           title: appState.translate('alerts_roadmap_title'),
           icon: Icons.notifications,
           color: AppColors.danger,
           description: appState.translate('alerts_roadmap_desc'),
-          appState: appState,
-        );
-      case 5:
-        return DatasetDirectoryScreen(
-          key: const ValueKey('directory_screen'),
           appState: appState,
         );
       default:
@@ -268,24 +247,12 @@ class AppShell extends StatelessWidget {
             _buildNavItem(
               context,
               index: 1,
-              icon: Icons.cell_tower,
-              label: appState.translate('nav_towers'),
+              icon: Icons.folder_open,
+              label: appState.translate('nav_directory'),
             ),
             _buildNavItem(
               context,
               index: 2,
-              icon: Icons.gavel,
-              label: appState.translate('nav_water'),
-            ),
-            _buildNavItem(
-              context,
-              index: 3,
-              icon: Icons.payments,
-              label: appState.translate('nav_budget'),
-            ),
-            _buildNavItem(
-              context,
-              index: 4,
               icon: Icons.notifications,
               label: appState.translate('nav_alerts'),
             ),
@@ -441,42 +408,18 @@ class NavigationDrawerWidget extends StatelessWidget {
                           _buildNavItem(
                             context,
                             index: 1,
-                            icon: Icons.cell_tower,
-                            titleKey: 'towers_title',
+                            icon: Icons.folder_open,
+                            titleKey: 'nav_directory',
                             isActive: appState.activeTab == 1,
                             isRoadmap: false,
                           ),
                           _buildNavItem(
                             context,
                             index: 2,
-                            icon: Icons.gavel,
-                            titleKey: 'water_title',
-                            isActive: appState.activeTab == 2,
-                            isRoadmap: false,
-                          ),
-                          _buildNavItem(
-                            context,
-                            index: 3,
-                            icon: Icons.payments,
-                            titleKey: 'budget_title',
-                            isActive: appState.activeTab == 3,
-                            isRoadmap: true,
-                          ),
-                          _buildNavItem(
-                            context,
-                            index: 4,
                             icon: Icons.notifications,
                             titleKey: 'alerts_title',
-                            isActive: appState.activeTab == 4,
+                            isActive: appState.activeTab == 2,
                             isRoadmap: true,
-                          ),
-                          _buildNavItem(
-                            context,
-                            index: 5,
-                            icon: Icons.folder_open,
-                            titleKey: 'nav_directory',
-                            isActive: appState.activeTab == 5,
-                            isRoadmap: false,
                           ),
                         ],
                       ),

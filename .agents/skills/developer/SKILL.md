@@ -23,6 +23,7 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
   - **Testing Mock Schema Alignment**: Ensure mock records used in testing are structurally synchronized with production Firestore schemas (e.g., matching coordinates structure, datatypes, and key naming conventions).
   - **Avoid Deprecated APIs**: Always verify deprecation warnings on the target Flutter framework version (e.g., using `Color.withValues(alpha: ...)` instead of `Color.withOpacity(...)` to prevent static analysis issues).
   - **Test Viewport Constraints**: Wrap scrollable pages and utilize `tester.ensureVisible` for interactive components during widget testing to prevent hit-test misses in the default 800x600 test viewport.
+  - **Build Phase State Updates**: Never trigger synchronous notifications or state modifications (e.g., calling state methods that invoke `notifyListeners()`) directly within `initState()` or during a widget's build phase. Wrap these updates in `WidgetsBinding.instance.addPostFrameCallback((_) { ... })` to defer them safely to the next frame.
   - Use `replace_file_content` or `multi_replace_file_content` for existing files.
   - Create new files using `write_to_file` if designated by the blueprint.
 

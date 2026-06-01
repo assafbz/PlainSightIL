@@ -19,6 +19,12 @@ class _LiquidationScreenState extends State<LiquidationScreen> {
   int _selectedFilterIndex = 0; // 0: All, 1: Active, 2: Closed
 
   @override
+  void initState() {
+    super.initState();
+    widget.appState.addRecent('d8715392-287f-49b7-9ae3-f21ec5bf55f3');
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -169,12 +175,34 @@ class _LiquidationScreenState extends State<LiquidationScreen> {
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        widget.appState.translate('liquidation_title'),
-                        style: AppTypography.headlineLg(
-                          context,
-                          color: AppColors.textPrimary,
+                      Expanded(
+                        child: Text(
+                          widget.appState.translate('liquidation_title'),
+                          style: AppTypography.headlineLg(
+                            context,
+                            color: AppColors.textPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      ListenableBuilder(
+                        listenable: widget.appState,
+                        builder: (context, _) {
+                          final isFav = widget.appState.isFavorite(
+                            'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+                          );
+                          return IconButton(
+                            icon: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              color: isFav
+                                  ? AppColors.danger
+                                  : AppColors.textSecondary,
+                            ),
+                            onPressed: () => widget.appState.toggleFavorite(
+                              'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
