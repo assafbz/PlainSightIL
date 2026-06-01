@@ -17,6 +17,7 @@ void main() async {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: 'demo-api-key',
+        authDomain: 'demo-plainsightil.firebaseapp.com',
         appId: 'demo-app-id',
         messagingSenderId: 'demo-sender-id',
         projectId: 'demo-plainsightil',
