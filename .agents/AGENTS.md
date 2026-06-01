@@ -76,6 +76,14 @@ personas:
     git_label: "status:ui-ux-design"
     role_description: "Designs interactive layout frameworks, color schemas, and style specifications."
     tools_allowed: ["read_file", "write_file"]
+
+  lessons_learned:
+    name: "Lessons Learned Agent"
+    playbook: ".agents/skills/lessons_learned/SKILL.md"
+    git_label: "status:lessons-learned"
+    role_description: "Reviews the completed cycle, identifies pitfalls, updates guidelines/documentation, and refactors code to improve future cycles."
+    tools_allowed: ["read_file", "write_file", "run_command", "replace_file_content", "multi_replace_file_content", "grep_search"]
+
 ```
 
 ---
@@ -123,14 +131,15 @@ lifecycle_paths:
         next_phase: "implementation"
         hitl_gate: false
 
-      - id: "implementation"
-        assignee: "senior_developer"
-        next_phase: "qa_validation"
-        hitl_gate: false
-
       - id: "qa_validation"
         assignee: "qa_engineer"
         output_file: "QA_REPORT.md"
+        next_phase: "lessons_learned"
+        hitl_gate: false
+
+      - id: "lessons_learned"
+        assignee: "lessons_learned"
+        output_file: "LESSONS_LEARNED.md"
         next_phase: "merge_approval"
         hitl_gate: false
 
@@ -165,7 +174,17 @@ lifecycle_paths:
       - id: "qa_validation"
         assignee: "qa_engineer"
         output_file: "QA_REPORT.md"
+        next_phase: "lessons_learned"
+        hitl_gate: false
+
+      - id: "lessons_learned"
+        assignee: "lessons_learned"
+        output_file: "LESSONS_LEARNED.md"
         next_phase: "merge_approval"
+        hitl_gate: false
+
+      - id: "merge_approval"
+        assignee: "coordinator"
         hitl_gate: true
 
   refactor:
@@ -195,7 +214,17 @@ lifecycle_paths:
       - id: "qa_validation"
         assignee: "qa_engineer"
         output_file: "QA_REPORT.md"
+        next_phase: "lessons_learned"
+        hitl_gate: false
+
+      - id: "lessons_learned"
+        assignee: "lessons_learned"
+        output_file: "LESSONS_LEARNED.md"
         next_phase: "merge_approval"
+        hitl_gate: false
+
+      - id: "merge_approval"
+        assignee: "coordinator"
         hitl_gate: true
 ```
 

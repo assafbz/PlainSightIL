@@ -19,7 +19,8 @@ graph TD
     Security --> Blueprint[Blueprint Gate: BLUEPRINT.md]
     Blueprint --> Implementation[Implementation Gate: Local Tests & Lints]
     Implementation --> QAValidation[QA Gate: QA_REPORT.md]
-    QAValidation --> Merge[Merge Gate: Final HITL Approval]
+    QAValidation --> LessonsLearned[Lessons Learned Gate: LESSONS_LEARNED.md]
+    LessonsLearned --> Merge[Merge Gate: Final HITL Approval]
 ```
 
 ---
@@ -89,7 +90,15 @@ graph TD
     *   [ ] Zero open blocker or high-severity defects.
     *   [ ] Regression audit completed on adjacent system features.
 
-### 2.8 Merge Approval Gate (Coordinator Gate)
+### 2.8 Lessons Learned Gate (Lessons Learned Deliverable)
+*   **Gatekeeper**: Lessons Learned Agent
+*   **Required Deliverable**: `LESSONS_LEARNED.md` (Lessons Learned Report)
+*   **Checklist Criteria**:
+    *   [ ] Structured report summarizing the cycle's pitfalls, resolution steps, and preventative guidelines.
+    *   [ ] Required playbook or coding standard updates applied to prevent documented pitfalls.
+    *   [ ] Implemented code review completed, with remaining minor formatting, lint warnings, or style cleanup refactored.
+
+### 2.9 Merge Approval Gate (Coordinator Gate)
 *   **Gatekeeper**: Coordinator Agent
 *   **Checklist Criteria**:
     *   [ ] All preceding phase artifacts are present and fully filled out.

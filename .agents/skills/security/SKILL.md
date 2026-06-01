@@ -37,6 +37,9 @@ Detail the required validation regex, sanitization rules, and schema assertions.
 ## 4. Audit Findings & Remediations
 - **FINDING-01 (Severity: High/Med/Low)**: Description and mitigation plan.
 - **Approval Status**: APPROVED / APPROVED WITH REMEDIATIONS / REJECTED.
+
+## 5. Security Hurdles & Threat Risks
+Document any security complications, package vulnerabilities, or Firestore rule limitations encountered during auditing. This will be harvested by the final Lessons Learned phase.
 ```
 
 ### 3. State Update

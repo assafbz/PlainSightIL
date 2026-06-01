@@ -50,6 +50,9 @@ Specify animation durations and curves for:
 - Hover / Active button states.
 - Card expansion/collapse transitions.
 - Tooltip triggers.
+
+## 6. UX Layout Constraints & Hurdles
+Document any visual, responsiveness, or spacing issues that had to be designed around (e.g. RTL swapping rules, viewport height bounds). This will be harvested by the final Lessons Learned phase.
 ```
 
 ### 3. State Update

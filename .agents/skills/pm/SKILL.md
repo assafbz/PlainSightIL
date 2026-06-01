@@ -44,6 +44,9 @@ What this feature will *not* do to prevent scope creep.
 
 ## 6. Open Questions
 List any details that need clarification.
+
+## 7. Product Obstacles & Scope Hurdles
+Document any product constraints, user-flow challenges, or edge cases that were particularly difficult to design around. This section will be harvested during the final Lessons Learned phase.
 ```
 
 ### 3. State Update

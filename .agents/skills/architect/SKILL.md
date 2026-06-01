@@ -37,6 +37,9 @@ Specify files that will be modified, created, or deleted:
 
 ## 5. Potential Performance & Security Impacts
 Assess any CPU or UI thread bottlenecks. Outline clean-up routines.
+
+## 6. Architecture & Implementation Decisions
+Document key architectural choices, compromises, or tech debt introduced. This will be harvested by the final Lessons Learned phase.
 ```
 
 ### 3. State Update

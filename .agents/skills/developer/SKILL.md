@@ -29,6 +29,7 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
 
 ### 4. Updating Blueprint and State
 - Mark task items in the `BLUEPRINT.md` checklist as completed (`[x]`).
+- Document any codebase hurdles, compile errors, or third-party package issues encountered under a new "Developer Notes & Coding Pitfalls" sub-section in `BLUEPRINT.md` or the active issue state file. This will be harvested by the final Lessons Learned phase.
 - Update the issue state `.agents/state/active_issues/issue_<id>.md`:
   - Append transition/work logs.
   - Set `current_phase` to `implementation-review`.

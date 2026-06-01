@@ -83,6 +83,7 @@ function getWorkflowPhases(issueType) {
       { id: 'blueprinting', assignee: 'tech_lead', label: 'status:blueprint' },
       { id: 'implementation', assignee: 'senior_developer', label: 'status:development' },
       { id: 'qa_validation', assignee: 'qa_engineer', label: 'status:qa-validation' },
+      { id: 'lessons_learned', assignee: 'lessons_learned', label: 'status:lessons-learned' },
       { id: 'merge_approval', assignee: 'coordinator', label: 'status:blocked' }
     ],
     bug: [
@@ -91,6 +92,7 @@ function getWorkflowPhases(issueType) {
       { id: 'blueprinting', assignee: 'tech_lead', label: 'status:blueprint' },
       { id: 'implementation', assignee: 'senior_developer', label: 'status:development' },
       { id: 'qa_validation', assignee: 'qa_engineer', label: 'status:qa-validation' },
+      { id: 'lessons_learned', assignee: 'lessons_learned', label: 'status:lessons-learned' },
       { id: 'merge_approval', assignee: 'coordinator', label: 'status:blocked' }
     ],
     refactor: [
@@ -99,6 +101,7 @@ function getWorkflowPhases(issueType) {
       { id: 'blueprinting', assignee: 'tech_lead', label: 'status:blueprint' },
       { id: 'implementation', assignee: 'senior_developer', label: 'status:development' },
       { id: 'qa_validation', assignee: 'qa_engineer', label: 'status:qa-validation' },
+      { id: 'lessons_learned', assignee: 'lessons_learned', label: 'status:lessons-learned' },
       { id: 'merge_approval', assignee: 'coordinator', label: 'status:blocked' }
     ]
   };
@@ -236,6 +239,9 @@ function validateQualityGate(issueId, currentPhase) {
       
     case 'qa_validation':
       return verifyDeliverable(issueId, 'QA_REPORT.md');
+      
+    case 'lessons_learned':
+      return verifyDeliverable(issueId, 'LESSONS_LEARNED.md');
       
     default:
       return true;

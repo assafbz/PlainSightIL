@@ -40,6 +40,9 @@ Execute tests (locally, using testing scripts, or browser automations). Create t
 
 ## 4. Regression Audit
 Verify that unrelated components behave correctly after the changes.
+
+## 5. QA Hurdles & Verification Bottlenecks
+Document any verification challenges, emulator limitations, or test setup hurdles encountered during testing. This will be harvested by the final Lessons Learned phase.
 ```
 
 ### 3. State Update
@@ -50,6 +53,6 @@ Verify that unrelated components behave correctly after the changes.
   - In the audit logs, describe the failure.
   - Set phase to `blueprint-revision` and assign back to the `Senior Developer`.
 - If status is `PASSED`:
-  - Transition `current_phase` to `merge_approval`.
-  - Set `hitl_approval_required: true`.
-  - Assign to `coordinator` for user merge sign-off.
+  - Transition `current_phase` to `lessons_learned`.
+  - Set `hitl_approval_required: false`.
+  - Assign to `lessons_learned` for final review, cleanup, and playbook refinement.

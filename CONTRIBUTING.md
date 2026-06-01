@@ -117,7 +117,8 @@ graph TD
     Security --> Blueprint[Blueprint Gate: BLUEPRINT.md]
     Blueprint --> Implementation[Implementation Gate: Local Tests & Lints]
     Implementation --> QAValidation[QA Gate: QA_REPORT.md]
-    QAValidation --> Merge[Merge Gate: Final HITL Approval]
+    QAValidation --> LessonsLearned[Lessons Learned Gate: LESSONS_LEARNED.md]
+    LessonsLearned --> Merge[Merge Gate: Final HITL Approval]
 ```
 
 ### 1. Active Issue States
@@ -145,6 +146,7 @@ As issues move through the lifecycle, the following files are produced and saved
 *   **Security Audit**: `SECURITY.md` (Security Audit Report)
 *   **Blueprinting**: `BLUEPRINT.md` (Implementation Checklist & Steps)
 *   **QA Validation**: `QA_REPORT.md` (Test Cases, Viewports, and Accessibility validations)
+*   **Lessons Learned**: `LESSONS_LEARNED.md` (Lessons Learned Report containing pitfalls and updates)
 
 ---
 
