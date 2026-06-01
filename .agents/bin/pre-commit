@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Antigravity SDLC pre-commit hook
+# Validates branch naming and active issue tracking.
+
+# Enable bypass via environment variable
+if [ "$SKIP_SDLC" = "1" ] || [ "$SKIP_SDLC" = "true" ]; then
+  exit 0
+fi
+
+# Get current branch name
+BRANCH_NAME=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# If not on a branch (detached HEAD), allow
+if [ -z "$BRANCH_NAME" ]; then
+  exit 0
+fi
+
+# Protected branches check
+if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "dev" ]; then
+  echo "🛑 ERROR: Direct commits to '$BRANCH_NAME' branch are prohibited by PlainSightIL SDLC rules!"
+  echo "Please create a branch using: agents/<issue_id>-<description> or dev/<issue_id>-<description>"
+  echo "If you absolutely must commit directly, set SKIP_SDLC=1"
+  exit 1
+fi
+
+# Match branch pattern: agents/<issue_id>-<desc> or dev/<issue_id>-<desc>
+# E.g. agents/123-navigation-drawer
+# Let's extract issue ID using standard pattern matching
+if [[ "$BRANCH_NAME" =~ ^(agents|dev)/([0-9]+)-.+$ ]]; then
+  ISSUE_ID="${BASH_REMATCH[2]}"
+else
+  echo "🛑 ERROR: Branch name '$BRANCH_NAME' does not follow SDLC conventions!"
+  echo "Branch name must match the pattern: agents/<issue_id>-<description> or dev/<issue_id>-<description>"
+  echo "Example: agents/42-setup-login-page"
+  echo "To bypass SDLC validation, set SKIP_SDLC=1"
+  exit 1
+fi
+
+# Locate the active issue file
+STATE_DIR=".agents/state/active_issues"
+ISSUE_FILE="$STATE_DIR/issue_$ISSUE_ID.md"
+
+if [ ! -f "$ISSUE_FILE" ]; then
+  echo "🛑 ERROR: Active issue file not found for Issue #$ISSUE_ID!"
+  echo "Expected file: $ISSUE_FILE"
+  echo "Every task must be tracked with an active issue file before starting development."
+  echo "To bypass, set SKIP_SDLC=1"
+  exit 1
+fi
+
+# Check issue metadata (status, phase)
+STATUS=$(grep -E "^status:" "$ISSUE_FILE" | head -n 1 | cut -d':' -f2 | tr -d ' "\r\n')
+PHASE=$(grep -E "^current_phase:" "$ISSUE_FILE" | head -n 1 | cut -d':' -f2 | tr -d ' "\r\n')
+
+# Verify the issue is in a phase that allows development
+if [ "$PHASE" != "implementation" ]; then
+  echo "⚠️ WARNING: Current issue phase is '$PHASE', not 'implementation'!"
+  echo "Ensure the issue is moved to 'implementation' phase using coordinator CLI:"
+  echo "  node .agents/bin/coordinator.js --transition $ISSUE_ID"
+fi
+
+if [ "$STATUS" != "in-progress" ] && [ "$STATUS" != "blueprint-revision" ]; then
+  echo "🛑 ERROR: Issue #$ISSUE_ID status is '$STATUS', not 'in-progress' or 'blueprint-revision'!"
+  echo "You cannot commit to an issue that is not active."
+  echo "To bypass, set SKIP_SDLC=1"
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,103 @@
+#!/bin/bash
+
+# Antigravity SDLC pre-push hook
+# Performs automated validation (format, lint, tests) for modified modules before pushing.
+
+# Enable bypass via environment variable
+if [ "$SKIP_SDLC" = "1" ] || [ "$SKIP_SDLC" = "true" ]; then
+  exit 0
+fi
+
+echo "🛡️  PlainSightIL SDLC Pre-Push Enforcement..."
+
+# Determine base branch to compare against
+BASE_BRANCH="dev"
+if ! git show-ref --verify --quiet refs/heads/dev && ! git show-ref --verify --quiet refs/remotes/origin/dev; then
+  BASE_BRANCH="main"
+fi
+
+# Get list of changed files compared to base branch (remote or local)
+CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH 2>/dev/null || git diff --name-only $BASE_BRANCH 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null)
+
+# Flags to run checks
+RUN_CLIENT=false
+RUN_BACKEND=false
+
+# Check if changes exist in client/ or backend/
+while read -r file; do
+  if [[ "$file" =~ ^client/ ]]; then
+    RUN_CLIENT=true
+  elif [[ "$file" =~ ^backend/ ]]; then
+    RUN_BACKEND=true
+  fi
+done <<< "$CHANGED_FILES"
+
+# Root workspace directory
+PROJECT_ROOT=$(pwd)
+
+# ----------------- CLIENT (FLUTTER) CHECKS -----------------
+if [ "$RUN_CLIENT" = true ]; then
+  echo "📱 Detected changes in 'client/'. Executing quality checks..."
+  cd "$PROJECT_ROOT/client" || exit 1
+  
+  echo "   [1/3] Checking Dart code formatting..."
+  if ! dart format --set-exit-if-changed .; then
+    echo "🛑 ERROR: Dart formatting violations found. Run 'dart format .' to fix."
+    exit 1
+  fi
+  
+  echo "   [2/3] Analyzing Flutter code..."
+  if ! flutter analyze; then
+    echo "🛑 ERROR: Flutter analysis failed. Please fix all lint warnings and errors."
+    exit 1
+  fi
+  
+  echo "   [3/3] Running Flutter unit & widget tests..."
+  if ! flutter test; then
+    echo "🛑 ERROR: Flutter unit tests failed."
+    exit 1
+  fi
+  
+  echo "✅ Client checks passed successfully!"
+fi
+
+# ----------------- BACKEND (FIREBASE) CHECKS -----------------
+if [ "$RUN_BACKEND" = true ]; then
+  echo "☁️  Detected changes in 'backend/'. Executing quality checks..."
+  cd "$PROJECT_ROOT/backend/functions" || exit 1
+  
+  # Ensure dependencies are installed
+  if [ ! -d "node_modules" ]; then
+    echo "   [0/5] Installing backend dependencies..."
+    npm ci || npm install || exit 1
+  fi
+
+  echo "   [1/5] Checking Prettier formatting..."
+  if ! npm run format:check; then
+    echo "🛑 ERROR: Backend formatting violations found. Run 'npm run format' to fix."
+    exit 1
+  fi
+  
+  echo "   [2/5] Running ESLint linter..."
+  if ! npm run lint; then
+    echo "🛑 ERROR: Backend ESLint violations found. Fix them before pushing."
+    exit 1
+  fi
+  
+  echo "   [3/5] Running backend unit tests..."
+  if ! npm run test; then
+    echo "🛑 ERROR: Backend unit tests failed."
+    exit 1
+  fi
+
+  echo "   [4/5] Testing TypeScript compilation..."
+  if ! npm run build; then
+    echo "🛑 ERROR: TypeScript compilation failed."
+    exit 1
+  fi
+  
+  echo "✅ Backend checks passed successfully!"
+fi
+
+echo "🛡️  SDLC Gate Check passed. Push authorized!"
+exit 0

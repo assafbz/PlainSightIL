@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const STATE_DIR = path.join(ROOT_DIR, 'state', 'active_issues');
@@ -137,6 +138,110 @@ function printStatus() {
   console.log('===========================\n');
 }
 
+// Get list of changed files relative to base branch
+function getChangedFiles() {
+  try {
+    const baseBranch = execSync('git show-ref --verify --quiet refs/heads/dev && echo dev || echo main', { encoding: 'utf8' }).trim();
+    const diffCommand = `git diff --name-only origin/${baseBranch} 2>/dev/null || git diff --name-only ${baseBranch} 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null`;
+    const files = execSync(diffCommand, { encoding: 'utf8' }).split('\n').map(f => f.trim()).filter(Boolean);
+    return files;
+  } catch (e) {
+    return [];
+  }
+}
+
+// Utility: run a shell validation command in cwd
+function runCheck(command, cwd, description) {
+  console.log(`⏳ Running ${description}... (${command})`);
+  try {
+    execSync(command, { cwd, stdio: 'inherit' });
+    console.log(`✅ ${description} passed.`);
+    return true;
+  } catch (error) {
+    console.error(`❌ ${description} FAILED!`);
+    return false;
+  }
+}
+
+// Utility: check if a deliverable exists and is non-empty
+function verifyDeliverable(issueId, filename) {
+  const deliverablePath = path.join(ROOT_DIR, 'state', `issue_${issueId}`, filename);
+  if (!fs.existsSync(deliverablePath)) {
+    console.error(`🛑 QUALITY GATE FAILURE: Missing required deliverable '${filename}'!`);
+    console.error(`Expected file: .agents/state/issue_${issueId}/${filename}`);
+    return false;
+  }
+  const stats = fs.statSync(deliverablePath);
+  if (stats.size < 50) {
+    console.error(`🛑 QUALITY GATE FAILURE: Deliverable '${filename}' appears empty or is just a placeholder.`);
+    console.error(`File path: .agents/state/issue_${issueId}/${filename}`);
+    return false;
+  }
+  return true;
+}
+
+// Validate Quality Gates for the transitioning phase
+function validateQualityGate(issueId, currentPhase) {
+  if (process.env.SKIP_SDLC === '1' || process.env.SKIP_SDLC === 'true') {
+    console.log('⚠️  Bypassing Quality Gates checks (SKIP_SDLC=1)');
+    return true;
+  }
+
+  console.log(`🛡️  Enforcing Quality Gates for transition from '${currentPhase}'...`);
+
+  switch (currentPhase) {
+    case 'discovery':
+      return verifyDeliverable(issueId, 'PRD.md');
+      
+    case 'ui_ux_design':
+      return verifyDeliverable(issueId, 'DESIGN.md');
+      
+    case 'architecture_design':
+      return verifyDeliverable(issueId, 'TDD.md');
+      
+    case 'security_audit':
+      return verifyDeliverable(issueId, 'SECURITY.md');
+      
+    case 'blueprinting':
+      return verifyDeliverable(issueId, 'BLUEPRINT.md');
+      
+    case 'implementation':
+      const changedFiles = getChangedFiles();
+      const hasClientChanges = changedFiles.some(f => f.startsWith('client/'));
+      const hasBackendChanges = changedFiles.some(f => f.startsWith('backend/'));
+      const repoRoot = path.resolve(ROOT_DIR, '..');
+
+      // If no files detected (e.g. running outside git or initial commit), run all as fallback
+      const runAll = !hasClientChanges && !hasBackendChanges;
+
+      if (hasClientChanges || runAll) {
+        const clientDir = path.join(repoRoot, 'client');
+        if (!runCheck('dart format --set-exit-if-changed .', clientDir, 'Client formatting check')) return false;
+        if (!runCheck('flutter analyze', clientDir, 'Client static analysis')) return false;
+        if (!runCheck('flutter test', clientDir, 'Client unit tests')) return false;
+      }
+
+      if (hasBackendChanges || runAll) {
+        const backendDir = path.join(repoRoot, 'backend', 'functions');
+        // Ensure node_modules exists
+        if (!fs.existsSync(path.join(backendDir, 'node_modules'))) {
+          if (!runCheck('npm ci || npm install', backendDir, 'Backend dependency installation')) return false;
+        }
+        if (!runCheck('npm run format:check', backendDir, 'Backend formatting check')) return false;
+        if (!runCheck('npm run lint', backendDir, 'Backend linting')) return false;
+        if (!runCheck('npm run test', backendDir, 'Backend unit tests')) return false;
+        if (!runCheck('npm run build', backendDir, 'Backend TypeScript compilation')) return false;
+      }
+      return true;
+      
+    case 'qa_validation':
+      return verifyDeliverable(issueId, 'QA_REPORT.md');
+      
+    default:
+      return true;
+  }
+}
+
 // Transition Issue to next phase
 function transitionIssue(issueIdStr, comment = '') {
   const issueId = Number(issueIdStr);
@@ -162,6 +267,12 @@ function transitionIssue(issueIdStr, comment = '') {
   if (metadata.hitl_approval_required && !metadata.hitl_approved_by) {
     console.log(`🛑 Cannot transition Issue #${issueId}: Blocked on Human-in-the-Loop review!`);
     console.log(`Please add 'hitl_approved_by: "your_username"' to the frontmatter first.`);
+    return;
+  }
+
+  // Validate programmatic quality gates
+  if (!validateQualityGate(issueId, metadata.current_phase)) {
+    console.log(`🛑 Transition blocked due to Quality Gate violation.`);
     return;
   }
 

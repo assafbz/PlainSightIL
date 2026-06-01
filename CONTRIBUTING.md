@@ -85,6 +85,20 @@ Before starting development, ensure you have the appropriate runtimes and SDKs i
     npm run serve
     ```
 
+### 🛡️ Git Hooks (SDLC Enforcement)
+
+To automate SDLC checks and ensure code health, PlainSightIL utilizes local Git hooks:
+*   **pre-commit hook**: Validates that commits are not made directly to `main` or `dev` branches, that branch names follow the pattern `agents/<issue_id>-<desc>` or `dev/<issue_id>-<desc>`, and that a corresponding active issue file exists with `status: in-progress` or `status: blueprint-revision`.
+*   **pre-push hook**: Automatically runs lints, formatting checks, and unit tests locally before pushing code, matching the files modified (client and/or backend).
+
+To install these hooks in your local environment, run:
+```bash
+chmod +x .agents/bin/install-hooks.sh
+./.agents/bin/install-hooks.sh
+```
+
+To bypass SDLC validation in emergency situations, you can prepend `SKIP_SDLC=1` to your git command (e.g., `SKIP_SDLC=1 git commit -m "Emergency fix"`).
+
 ---
 
 ## 🔄 Multi-Agent SDLC & Issue Tracking
