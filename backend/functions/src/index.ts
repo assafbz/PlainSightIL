@@ -56,4 +56,3 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
     });
   }
 });
-

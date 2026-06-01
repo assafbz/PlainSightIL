@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../theme/design_system.dart';
 
 class AppStateNotifier extends ChangeNotifier {
+  static bool isTesting = false;
+
   String _locale = 'en';
   int _activeTab = 0;
   bool _isDarkMode = true;
@@ -25,6 +27,26 @@ class AppStateNotifier extends ChangeNotifier {
 
   /// Initialize metadata listener for cellular permits
   void initPermitMetadataListener() {
+    if (isTesting) {
+      _permitSyncStatus = 'idle';
+      _permitRecords = [
+        {
+          'id': '1',
+          'referenceNumber': 2081659,
+          'company': {'he': 'סלקום', 'en': 'Cellcom'},
+          'permitType': 'היתר הקמה',
+          'siteNumber': 'NN1845A',
+          'locality': 'אפיקים',
+          'addressDescription': 'קיבוץ אפיקים',
+          'focalPointType': 'קרקעי',
+          'jurisdiction': 'עמק הירדן',
+        }
+      ];
+      _isLoadingPermits = false;
+      notifyListeners();
+      return;
+    }
+
     FirebaseFirestore.instance
         .collection('dataset_metadata')
         .doc('cellular_permit_applications')

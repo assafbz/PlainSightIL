@@ -7,28 +7,28 @@ import { encodeGeohash } from "../utils/geohash";
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
   "EPSG:2039",
-  "+proj=tmerc +lat_0=31.73439361111111 +lon_0=35.20451694444445 +k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 +towgs84=-48,55,52,0,0,0,0 +units=m +no_defs"
+  "+proj=tmerc +lat_0=31.73439361111111 +lon_0=35.20451694444445 +k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 +towgs84=-48,55,52,0,0,0,0 +units=m +no_defs",
 );
 const itmToWgs84Converter = proj4("EPSG:2039", "EPSG:4326");
 
-export function convertItmToWgs84(xItm: number, yItm: number): { latitude: number; longitude: number } {
+export function convertItmToWgs84(
+  xItm: number,
+  yItm: number,
+): { latitude: number; longitude: number } {
   const [longitude, latitude] = itmToWgs84Converter.forward([xItm, yItm]);
   return { latitude, longitude };
 }
 
 export function isValidIsraelCoordinates(latitude: number, longitude: number): boolean {
-  return (
-    latitude >= 29.3 && latitude <= 33.4 &&
-    longitude >= 34.2 && longitude <= 35.9
-  );
+  return latitude >= 29.3 && latitude <= 33.4 && longitude >= 34.2 && longitude <= 35.9;
 }
 
 // Translation mapping for cellular operator names
 const OPERATOR_TRANSLATIONS: Record<string, string> = {
   "PHI (משרת את הוט ופרטנר)": "PHI (HOT & Partner)",
-  "פלאפון": "Pelephone",
-  "פרטנר": "Partner",
-  "סלקום": "Cellcom",
+  פלאפון: "Pelephone",
+  פרטנר: "Partner",
+  סלקום: "Cellcom",
   "הוט מובייל": "HOT Mobile",
 };
 
@@ -146,7 +146,7 @@ async function purgeCollection(db: admin.firestore.Firestore, collectionPath: st
 
 export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
-  resourceId = "ff398c7e-c522-4ee8-a53a-312b188a573d"
+  resourceId = "ff398c7e-c522-4ee8-a53a-312b188a573d",
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = "cellular_permit_applications";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -156,7 +156,8 @@ export async function scrapeAndSyncPermitApplications(
     const metaDoc = await metadataRef.get();
     const currentActive = metaDoc.exists ? metaDoc.data()?.activeCollection : null;
 
-    const targetCollection = currentActive === "permit_apps_blue" ? "permit_apps_green" : "permit_apps_blue";
+    const targetCollection =
+      currentActive === "permit_apps_blue" ? "permit_apps_green" : "permit_apps_blue";
     logger.info(`Starting sync. Target collection buffer: ${targetCollection}`);
 
     // 2. Unconditionally Purge Inactive Collection
@@ -175,7 +176,7 @@ export async function scrapeAndSyncPermitApplications(
     while (hasMore) {
       const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
-      
+
       const response = await axios.get(url);
       const records: HebrewPermitRecord[] = response.data?.result?.records ?? [];
 
@@ -216,7 +217,7 @@ export async function scrapeAndSyncPermitApplications(
         recordCount: processedCount,
         status: "idle",
       },
-      { merge: true }
+      { merge: true },
     );
 
     logger.info(`Swapped active pointer to ${targetCollection}. Ingestion complete.`);

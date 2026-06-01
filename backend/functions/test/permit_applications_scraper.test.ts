@@ -22,7 +22,7 @@ describe("Coordinate Conversion & Boundaries", () => {
   it("should convert ITM coordinates (EPSG:2039) to WGS84 coordinates correctly", () => {
     // Jerusalem coordinate sample: X:217320, Y:627507
     const wgs = convertItmToWgs84(217320, 627507);
-    expect(wgs.latitude).toBeCloseTo(31.740, 2);
+    expect(wgs.latitude).toBeCloseTo(31.74, 2);
     expect(wgs.longitude).toBeCloseTo(35.181, 2);
   });
 
@@ -194,7 +194,7 @@ describe("Double-Buffering Scraper Ingestion", () => {
         status: "idle",
         recordCount: 1,
       }),
-      { merge: true }
+      { merge: true },
     );
   });
 });

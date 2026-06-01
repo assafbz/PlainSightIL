@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/main.dart';
 
 void main() {
+  setUp(() {
+    AppStateNotifier.isTesting = true;
+  });
+
   testWidgets('App loads on dashboard and shows initial English content',
       (WidgetTester tester) async {
     // Build our app and trigger a frame.
@@ -76,12 +81,10 @@ void main() {
     await tester.tap(find.text('Cellular Antennas'));
     await tester.pumpAndSettle();
 
-    // Verify Cellular Antennas placeholder screen is shown
-    expect(find.byIcon(Icons.cell_tower), findsNWidgets(2)); // Nav bar icon + screen icon
-    expect(
-      find.text('This dataset screen is under construction. Future integrations will include live data and interactive maps.'),
-      findsOneWidget,
-    );
+    // Verify Cellular Antennas screen is shown with segmented controls
+    expect(find.byIcon(Icons.cell_tower), findsOneWidget);
+    expect(find.text('Active Towers'), findsOneWidget);
+    expect(find.text('Construction Permits'), findsOneWidget);
 
     // Tap the Home navigation item to go back to Dashboard
     await tester.tap(find.text('Home'));

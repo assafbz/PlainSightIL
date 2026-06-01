@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -189,12 +190,8 @@ class AppShell extends StatelessWidget {
       case 0:
         return DashboardScreen(appState: appState);
       case 1:
-        return ComingSoonScreen(
-          key: const ValueKey('towers_coming_soon'),
-          title: appState.translate('towers_roadmap_title'),
-          icon: Icons.cell_tower,
-          color: AppColors.primary,
-          description: appState.translate('towers_roadmap_desc'),
+        return TowersScreen(
+          key: const ValueKey('towers_screen'),
           appState: appState,
         );
       case 2:
