@@ -20,6 +20,12 @@ class _MyAppState extends State<MyApp> {
   final AppStateNotifier _appState = AppStateNotifier();
 
   @override
+  void initState() {
+    super.initState();
+    _appState.initPermitMetadataListener();
+  }
+
+  @override
   void dispose() {
     _appState.dispose();
     super.dispose();
