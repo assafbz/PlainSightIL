@@ -40,10 +40,7 @@ class AppStateNotifier extends ChangeNotifier {
   bool get isGuestMode => _isGuestMode;
 
   Map<String, String>? get mockUser => _isMockAuthenticated
-      ? {
-          'name': 'Assaf Benzaken',
-          'email': 'assaf@plainsight.il',
-        }
+      ? {'name': 'Assaf Benzaken', 'email': 'assaf@plainsight.il'}
       : null;
 
   Future<void> signInWithGoogle() async {
@@ -633,7 +630,8 @@ class AppStateNotifier extends ChangeNotifier {
       'sign_in_google': 'Sign in with Google',
       'sign_up_google': 'Sign up with Google',
       'create_account_title': 'Create Account',
-      'create_account_desc': 'Create an account to save your favorite views, customize alerts, and track permits',
+      'create_account_desc':
+          'Create an account to save your favorite views, customize alerts, and track permits',
       'login_desc': 'Unlock the transparency of civic data',
       'already_have_account': 'Already have an account?',
       'dont_have_account': 'Don’t have an account?',
@@ -641,8 +639,10 @@ class AppStateNotifier extends ChangeNotifier {
       'signup_label': 'Sign up',
       'continue_guest': 'Continue as Guest',
       'ssl_protection': 'PROTECTED BY SSL',
-      'login_info_text': 'Access detailed visualizations of government spending and civic permits instantly.',
-      'terms_disclaimer': 'By continuing, you agree to PlainSight IL\'s Terms of Service and Privacy Policy.',
+      'login_info_text':
+          'Access detailed visualizations of government spending and civic permits instantly.',
+      'terms_disclaimer':
+          'By continuing, you agree to PlainSight IL\'s Terms of Service and Privacy Policy.',
       'logout_label': 'Log out',
     },
     'he': {
@@ -716,7 +716,8 @@ class AppStateNotifier extends ChangeNotifier {
       'sign_in_google': 'התחברות באמצעות Google',
       'sign_up_google': 'הרשמה באמצעות Google',
       'create_account_title': 'הרשמה',
-      'create_account_desc': 'צור חשבון כדי לשמור תצוגות מועדפות, להתאים התראות ולעקוב אחר היתרים',
+      'create_account_desc':
+          'צור חשבון כדי לשמור תצוגות מועדפות, להתאים התראות ולעקוב אחר היתרים',
       'login_desc': 'חשפו את השקיפות של הנתונים האזרחיים',
       'already_have_account': 'כבר יש לך חשבון?',
       'dont_have_account': 'אין לך חשבון?',
@@ -724,8 +725,10 @@ class AppStateNotifier extends ChangeNotifier {
       'signup_label': 'הרשמה',
       'continue_guest': 'המשך כאורח',
       'ssl_protection': 'מאובטח באמצעות SSL',
-      'login_info_text': 'קבלו גישה מיידית לפירוט הוצאות ממשלתיות והיתרים אזרחיים.',
-      'terms_disclaimer': 'בהמשך השימוש, הינך מסכים לתנאי השירות ומדיניות הפרטיות של בגובה העיניים.',
+      'login_info_text':
+          'קבלו גישה מיידית לפירוט הוצאות ממשלתיות והיתרים אזרחיים.',
+      'terms_disclaimer':
+          'בהמשך השימוש, הינך מסכים לתנאי השירות ומדיניות הפרטיות של בגובה העיניים.',
       'logout_label': 'התנתקות',
     },
   };

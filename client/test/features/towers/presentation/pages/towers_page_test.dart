@@ -117,8 +117,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-
-
       // Tap on the Recenter button
       final recenterButtonFinder = find.byTooltip('Recenter on Location');
       expect(recenterButtonFinder, findsOneWidget);
@@ -151,8 +149,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-
-
 
       // Tap on the Recenter button
       await tester.tap(find.byTooltip('Recenter on Location'));

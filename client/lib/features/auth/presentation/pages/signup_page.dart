@@ -13,7 +13,8 @@ class SignupPage extends StatefulWidget {
   State<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateMixin {
+class _SignupPageState extends State<SignupPage>
+    with SingleTickerProviderStateMixin {
   double _mouseX = 0.0;
   double _mouseY = 0.0;
   bool _isAuthenticating = false;
@@ -144,7 +145,9 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                     cursor: SystemMouseCursors.click,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.glassBg,
                         borderRadius: BorderRadius.circular(20),
@@ -152,8 +155,10 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                       ),
                       child: Text(
                         widget.appState.translate('toggle_lang'),
-                        style: AppTypography.labelXs(context,
-                            color: AppColors.primary),
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -185,7 +190,9 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                               border: Border.all(color: AppColors.glassBorder),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.secondary.withValues(alpha: 0.15),
+                                  color: AppColors.secondary.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   blurRadius: 20,
                                   spreadRadius: 2,
                                 ),
@@ -202,19 +209,23 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                           // Header Text
                           Text(
                             'PlainSight IL',
-                            style: AppTypography.headlineLg(context,
-                                    color: AppColors.textPrimary)
-                                .copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
+                            style:
+                                AppTypography.headlineLg(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ).copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             widget.appState.translate('create_account_desc'),
                             textAlign: TextAlign.center,
-                            style: AppTypography.bodySm(context,
-                                color: AppColors.textSecondary),
+                            style: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 32),
 
@@ -227,38 +238,46 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
-                                    widget.appState.translate('create_account_title'),
+                                    widget.appState.translate(
+                                      'create_account_title',
+                                    ),
                                     textAlign: TextAlign.center,
-                                    style: AppTypography.headlineMd(context,
-                                        color: AppColors.textPrimary),
+                                    style: AppTypography.headlineMd(
+                                      context,
+                                      color: AppColors.textPrimary,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     widget.appState.translate('secure_auth'),
                                     textAlign: TextAlign.center,
-                                    style: AppTypography.labelXs(context,
-                                            color: AppColors.textTertiary)
-                                        .copyWith(letterSpacing: 1.5),
+                                    style: AppTypography.labelXs(
+                                      context,
+                                      color: AppColors.textTertiary,
+                                    ).copyWith(letterSpacing: 1.5),
                                   ),
                                   const SizedBox(height: 32),
 
                                   // Google Button
                                   _isAuthenticating
                                       ? const Center(
-                                          child: CircularProgressIndicator())
+                                          child: CircularProgressIndicator(),
+                                        )
                                       : OutlinedButton(
                                           onPressed: () =>
                                               _handleGoogleSignup(context),
                                           style: OutlinedButton.styleFrom(
                                             side: BorderSide(
-                                                color: AppColors.glassBorder,
-                                                width: 1.5),
+                                              color: AppColors.glassBorder,
+                                              width: 1.5,
+                                            ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                             ),
                                             padding: const EdgeInsets.symmetric(
-                                                vertical: 14),
+                                              vertical: 14,
+                                            ),
                                             backgroundColor: AppColors.glassBg,
                                           ),
                                           child: Row(
@@ -269,24 +288,29 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                                 'https://www.gstatic.com/images/branding/product/1x/glogo_32dp.png',
                                                 height: 24,
                                                 width: 24,
-                                                errorBuilder: (context,
-                                                        error,
-                                                        stackTrace) =>
-                                                    const Icon(
-                                                        Icons.g_mobiledata,
-                                                        color: Colors.blue),
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) => const Icon(
+                                                      Icons.g_mobiledata,
+                                                      color: Colors.blue,
+                                                    ),
                                               ),
                                               const SizedBox(width: 12),
                                               Flexible(
                                                 child: Text(
                                                   widget.appState.translate(
-                                                      'sign_up_google'),
+                                                    'sign_up_google',
+                                                  ),
                                                   style: GoogleFonts.outfit(
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.w600,
                                                     color: Colors.white,
                                                   ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ],
@@ -305,13 +329,16 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 12.0),
+                                          horizontal: 12.0,
+                                        ),
                                         child: Text(
                                           widget.appState.translate(
-                                              'ssl_protection'),
-                                          style: AppTypography.labelXs(context,
-                                                  color: AppColors.textTertiary)
-                                              .copyWith(fontSize: 10),
+                                            'ssl_protection',
+                                          ),
+                                          style: AppTypography.labelXs(
+                                            context,
+                                            color: AppColors.textTertiary,
+                                          ).copyWith(fontSize: 10),
                                         ),
                                       ),
                                       Expanded(
@@ -326,14 +353,14 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
 
                                   // Disclaimer
                                   Text(
-                                    widget.appState.translate('terms_disclaimer'),
-                                    textAlign: TextAlign.center,
-                                    style: AppTypography.labelXs(context,
-                                            color: AppColors.textTertiary)
-                                        .copyWith(
-                                      fontSize: 10,
-                                      height: 1.5,
+                                    widget.appState.translate(
+                                      'terms_disclaimer',
                                     ),
+                                    textAlign: TextAlign.center,
+                                    style: AppTypography.labelXs(
+                                      context,
+                                      color: AppColors.textTertiary,
+                                    ).copyWith(fontSize: 10, height: 1.5),
                                   ),
                                 ],
                               ),
@@ -347,9 +374,12 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                             children: [
                               Text(
                                 widget.appState.translate(
-                                    'already_have_account'),
-                                style: AppTypography.bodySm(context,
-                                    color: AppColors.textSecondary),
+                                  'already_have_account',
+                                ),
+                                style: AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                               const SizedBox(width: 6),
                               GestureDetector(
@@ -360,12 +390,14 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                   cursor: SystemMouseCursors.click,
                                   child: Text(
                                     widget.appState.translate('login_label'),
-                                    style: AppTypography.bodySm(context,
-                                            color: AppColors.primary)
-                                        .copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
-                                    ),
+                                    style:
+                                        AppTypography.bodySm(
+                                          context,
+                                          color: AppColors.primary,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          decoration: TextDecoration.underline,
+                                        ),
                                   ),
                                 ),
                               ),

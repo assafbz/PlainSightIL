@@ -14,7 +14,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   double _mouseX = 0.0;
   double _mouseY = 0.0;
   bool _isHoveringLogo = false;
@@ -142,7 +143,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     cursor: SystemMouseCursors.click,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.glassBg,
                         borderRadius: BorderRadius.circular(20),
@@ -150,8 +153,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ),
                       child: Text(
                         widget.appState.translate('toggle_lang'),
-                        style: AppTypography.labelXs(context,
-                            color: AppColors.primary),
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -175,8 +180,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         children: [
                           // Rotating Brand Logo
                           MouseRegion(
-                            onEnter: (_) => setState(() => _isHoveringLogo = true),
-                            onExit: (_) => setState(() => _isHoveringLogo = false),
+                            onEnter: (_) =>
+                                setState(() => _isHoveringLogo = true),
+                            onExit: (_) =>
+                                setState(() => _isHoveringLogo = false),
                             cursor: SystemMouseCursors.click,
                             child: AnimatedRotation(
                               turns: _isHoveringLogo ? 0.0 : (3 / 360),
@@ -188,10 +195,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 decoration: BoxDecoration(
                                   color: AppColors.glassBg,
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: AppColors.glassBorder),
+                                  border: Border.all(
+                                    color: AppColors.glassBorder,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       blurRadius: 20,
                                       spreadRadius: 2,
                                     ),
@@ -210,19 +221,23 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           // Brand Headers
                           Text(
                             'PlainSight IL',
-                            style: AppTypography.headlineLg(context,
-                                    color: AppColors.textPrimary)
-                                .copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
+                            style:
+                                AppTypography.headlineLg(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ).copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             widget.appState.translate('login_desc'),
                             textAlign: TextAlign.center,
-                            style: AppTypography.bodySm(context,
-                                color: AppColors.textSecondary),
+                            style: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 32),
 
@@ -237,37 +252,44 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   Text(
                                     widget.appState.translate('welcome_back'),
                                     textAlign: TextAlign.center,
-                                    style: AppTypography.headlineMd(context,
-                                        color: AppColors.textPrimary),
+                                    style: AppTypography.headlineMd(
+                                      context,
+                                      color: AppColors.textPrimary,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     widget.appState.translate('secure_auth'),
                                     textAlign: TextAlign.center,
-                                    style: AppTypography.labelXs(context,
-                                            color: AppColors.textTertiary)
-                                        .copyWith(letterSpacing: 1.5),
+                                    style: AppTypography.labelXs(
+                                      context,
+                                      color: AppColors.textTertiary,
+                                    ).copyWith(letterSpacing: 1.5),
                                   ),
                                   const SizedBox(height: 32),
 
                                   // Google Button
                                   _isAuthenticating
                                       ? const Center(
-                                          child: CircularProgressIndicator())
+                                          child: CircularProgressIndicator(),
+                                        )
                                       : Material(
                                           color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           child: InkWell(
                                             onTap: () =>
                                                 _handleGoogleLogin(context),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             child: Container(
                                               height: 52,
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                      horizontal: 16),
+                                                    horizontal: 16,
+                                                  ),
                                               child: Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment.center,
@@ -276,27 +298,32 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                                     'https://www.gstatic.com/images/branding/product/1x/glogo_32dp.png',
                                                     height: 24,
                                                     width: 24,
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        const Icon(
-                                                            Icons.g_mobiledata,
-                                                            color:
-                                                                Colors.blue),
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) => const Icon(
+                                                          Icons.g_mobiledata,
+                                                          color: Colors.blue,
+                                                        ),
                                                   ),
                                                   const SizedBox(width: 12),
                                                   Flexible(
                                                     child: Text(
                                                       widget.appState.translate(
-                                                          'sign_in_google'),
+                                                        'sign_in_google',
+                                                      ),
                                                       style: GoogleFonts.outfit(
                                                         fontSize: 16,
                                                         fontWeight:
                                                             FontWeight.w600,
-                                                        color:
-                                                            const Color(0xFF1F1F1F),
+                                                        color: const Color(
+                                                          0xFF1F1F1F,
+                                                        ),
                                                       ),
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                 ],
@@ -317,13 +344,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 12.0),
+                                          horizontal: 12.0,
+                                        ),
                                         child: Text(
                                           widget.appState.translate(
-                                              'ssl_protection'),
-                                          style: AppTypography.labelXs(context,
-                                                  color: AppColors.textTertiary)
-                                              .copyWith(fontSize: 10),
+                                            'ssl_protection',
+                                          ),
+                                          style: AppTypography.labelXs(
+                                            context,
+                                            color: AppColors.textTertiary,
+                                          ).copyWith(fontSize: 10),
                                         ),
                                       ),
                                       Expanded(
@@ -343,29 +373,35 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                       color: AppColors.glassGlow,
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                        color:
-                                            AppColors.primary.withValues(alpha: 0.1),
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
                                       ),
                                     ),
                                     child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Icon(Icons.info_outline,
-                                            color: AppColors.primary,
-                                            size: 20),
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: AppColors.primary,
+                                          size: 20,
+                                        ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Text(
                                             widget.appState.translate(
-                                                'login_info_text'),
-                                            style: AppTypography.bodySm(context,
-                                                    color: AppColors
-                                                        .textSecondary)
-                                                .copyWith(
-                                              fontSize: 12,
-                                              height: 1.4,
+                                              'login_info_text',
                                             ),
+                                            style:
+                                                AppTypography.bodySm(
+                                                  context,
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ).copyWith(
+                                                  fontSize: 12,
+                                                  height: 1.4,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -382,26 +418,37 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                widget.appState.translate(
-                                    'dont_have_account'),
-                                style: AppTypography.bodySm(context,
-                                    color: AppColors.textSecondary),
+                                widget.appState.translate('dont_have_account'),
+                                style: AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                               const SizedBox(width: 6),
                               GestureDetector(
                                 onTap: () {
                                   Navigator.of(context).push(
                                     PageRouteBuilder<void>(
-                                      pageBuilder: (context, animation,
-                                              secondaryAnimation) =>
-                                          SignupPage(appState: widget.appState),
-                                      transitionsBuilder: (context, animation,
-                                          secondaryAnimation, child) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        );
-                                      },
+                                      pageBuilder:
+                                          (
+                                            context,
+                                            animation,
+                                            secondaryAnimation,
+                                          ) => SignupPage(
+                                            appState: widget.appState,
+                                          ),
+                                      transitionsBuilder:
+                                          (
+                                            context,
+                                            animation,
+                                            secondaryAnimation,
+                                            child,
+                                          ) {
+                                            return FadeTransition(
+                                              opacity: animation,
+                                              child: child,
+                                            );
+                                          },
                                     ),
                                   );
                                 },
@@ -409,12 +456,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   cursor: SystemMouseCursors.click,
                                   child: Text(
                                     widget.appState.translate('signup_label'),
-                                    style: AppTypography.bodySm(context,
-                                            color: AppColors.primary)
-                                        .copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
-                                    ),
+                                    style:
+                                        AppTypography.bodySm(
+                                          context,
+                                          color: AppColors.primary,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          decoration: TextDecoration.underline,
+                                        ),
                                   ),
                                 ),
                               ),
@@ -431,11 +480,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               cursor: SystemMouseCursors.click,
                               child: Text(
                                 widget.appState.translate('continue_guest'),
-                                style: AppTypography.bodySm(context,
-                                        color: AppColors.textTertiary)
-                                    .copyWith(
-                                  decoration: TextDecoration.underline,
-                                ),
+                                style:
+                                    AppTypography.bodySm(
+                                      context,
+                                      color: AppColors.textTertiary,
+                                    ).copyWith(
+                                      decoration: TextDecoration.underline,
+                                    ),
                               ),
                             ),
                           ),

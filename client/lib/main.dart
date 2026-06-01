@@ -518,8 +518,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                 children: [
                   Text(
                     appState.locale == 'he' ? 'משתמש אורח' : 'Guest User',
-                    style: AppTypography.bodySm(context, color: AppColors.textPrimary)
-                        .copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 2),
                   GestureDetector(
@@ -529,8 +531,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                     },
                     child: Text(
                       appState.translate('login_label'),
-                      style: AppTypography.labelXs(context, color: AppColors.primary)
-                          .copyWith(decoration: TextDecoration.underline),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.primary,
+                      ).copyWith(decoration: TextDecoration.underline),
                     ),
                   ),
                 ],
@@ -541,8 +545,12 @@ class NavigationDrawerWidget extends StatelessWidget {
       );
     }
 
-    final displayName = appState.currentUser?.displayName ?? appState.mockUser?['name'] ?? 'User';
-    final email = appState.currentUser?.email ?? appState.mockUser?['email'] ?? '';
+    final displayName =
+        appState.currentUser?.displayName ??
+        appState.mockUser?['name'] ??
+        'User';
+    final email =
+        appState.currentUser?.email ?? appState.mockUser?['email'] ?? '';
     final photoUrl = appState.currentUser?.photoURL;
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
@@ -560,7 +568,13 @@ class NavigationDrawerWidget extends StatelessWidget {
             backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
             backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
             child: photoUrl == null
-                ? Text(initial, style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold))
+                ? Text(
+                    initial,
+                    style: TextStyle(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
                 : null,
           ),
           const SizedBox(width: 12),
@@ -570,16 +584,20 @@ class NavigationDrawerWidget extends StatelessWidget {
               children: [
                 Text(
                   displayName,
-                  style: AppTypography.bodySm(context, color: AppColors.textPrimary)
-                      .copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.bodySm(
+                    context,
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (email.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     email,
-                    style: AppTypography.labelXs(context, color: AppColors.textSecondary)
-                        .copyWith(fontSize: 10),
+                    style: AppTypography.labelXs(
+                      context,
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 10),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -801,7 +819,9 @@ class NavigationDrawerWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.danger.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: AppColors.danger.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -810,8 +830,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           appState.translate('logout_label'),
-                          style: AppTypography.bodySm(context, color: AppColors.danger)
-                              .copyWith(fontWeight: FontWeight.bold),
+                          style: AppTypography.bodySm(
+                            context,
+                            color: AppColors.danger,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
