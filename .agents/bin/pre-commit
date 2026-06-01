@@ -67,4 +67,7 @@ if [ "$STATUS" != "in-progress" ] && [ "$STATUS" != "blueprint-revision" ]; then
   exit 1
 fi
 
+# Run the automated version bumping system
+node scripts/bump-version.js
+
 exit 0

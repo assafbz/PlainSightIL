@@ -18,6 +18,7 @@ You are the QA Engineer Agent. Your mission is to verify that the implemented co
   - **Visual & CustomPainter boundaries**: When changes involve custom rendering/drawing on canvas, verify behavior with: (a) zero coordinate/pin counts (empty data state), (b) all items mapped to a single coordinate (zero delta), (c) items missing spatial attributes or containing malformed/null coordinates, and (d) repainting efficiency to prevent excessive redraws.
   - Accessibility & Contrast checks.
   - Visual layout responsiveness across mobile and tablet sizes.
+  - **Documentation Audit**: Check that all new classes, public methods, endpoints, or complex code parts have three-slash (`///`) comments (Dart) or JSDoc comments (TypeScript/JS) in compliance with [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards).
 
 ### 2. Execution & Report Generation
 Execute tests (locally, using testing scripts, or browser automations). Create the QA Validation Report (`QA_REPORT.md`) under `.agents/state/issue_<id>/QA_REPORT.md`:

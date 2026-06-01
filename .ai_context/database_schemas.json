@@ -298,6 +298,85 @@
           "required": ["votedAt"]
         }
       }
+    },
+    "companies_liquidation": {
+      "description": "List of companies in liquidation process, including case status, submission dates, and local jurisdiction info.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the company (matches doc ID and companyId)."
+        },
+        "companyId": {
+          "type": "integer",
+          "description": "Official company registration ID number."
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Hebrew name of the company."
+        },
+        "liquidationCaseId": {
+          "type": "integer",
+          "description": "Unique identifier of the liquidation case."
+        },
+        "caseStatus": {
+          "$ref": "#/definitions/localizedString"
+        },
+        "submissionDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the liquidation request submission."
+        },
+        "liquidationOrderDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the liquidation order was granted."
+        },
+        "cancellationFreezeDate": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "ISO timestamp of case cancellation or freeze, or null."
+        },
+        "closureDate": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "ISO timestamp of case closure, or null."
+        },
+        "closureReason": {
+          "type": ["string", "null"],
+          "description": "Reason for case closure in Hebrew, or null."
+        },
+        "districtCourt": {
+          "type": "string",
+          "description": "District court managing the case in Hebrew."
+        },
+        "cityOfActivity": {
+          "type": "string",
+          "description": "City or locality of company activity in Hebrew."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the last scraper update."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of document ingestion."
+        }
+      },
+      "required": [
+        "id",
+        "companyId",
+        "companyName",
+        "liquidationCaseId",
+        "caseStatus",
+        "submissionDate",
+        "liquidationOrderDate",
+        "districtCourt",
+        "cityOfActivity",
+        "lastUpdated"
+      ]
     }
   }
 }

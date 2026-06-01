@@ -112,7 +112,7 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0.0, -500.0));
     await tester.pumpAndSettle();
 
-    final cardFinder = find.text('חברות בפירוק מרצון או בית משפט');
+    final cardFinder = find.text('מאגר הכונס הרשמי');
     final buttonFinder = find.descendant(
       of: find.ancestor(of: cardFinder, matching: find.byType(DatasetCard)),
       matching: find.text('Open Visualizer'),
