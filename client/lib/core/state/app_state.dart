@@ -61,7 +61,9 @@ class AppStateNotifier extends ChangeNotifier {
       _permitSyncStatus = 'error';
       _isLoadingPermits = false;
       notifyListeners();
-      debugPrint('Firebase is not initialized. Skipping permit metadata listener.');
+      debugPrint(
+        'Firebase is not initialized. Skipping permit metadata listener.',
+      );
       return;
     }
 
