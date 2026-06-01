@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/design_system.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/directory/data/models/liquidation_record_model.dart';
@@ -19,9 +20,64 @@ class AppStateNotifier extends ChangeNotifier {
   bool _isGuestMode = false;
   bool _isMockAuthenticated = false;
 
+  // Favorites and Recents
+  List<String> _favorites = [];
+  List<String> _recents = [];
+
+  List<String> get favorites => _favorites;
+  List<String> get recents => _recents;
+
   AppStateNotifier() {
     _isMockAuthenticated = isTesting;
     _initAuthListener();
+    _initSharedPreferences();
+  }
+
+  Future<void> _initSharedPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _favorites = prefs.getStringList('favorites') ?? [];
+      _recents = prefs.getStringList('recents') ?? [];
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error initializing SharedPreferences: $e');
+    }
+  }
+
+  bool isFavorite(String datasetId) {
+    return _favorites.contains(datasetId);
+  }
+
+  Future<void> toggleFavorite(String datasetId) async {
+    if (_favorites.contains(datasetId)) {
+      _favorites.remove(datasetId);
+    } else {
+      _favorites.add(datasetId);
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('favorites', _favorites);
+    } catch (e) {
+      debugPrint('Error saving favorites: $e');
+    }
+  }
+
+  Future<void> addRecent(String datasetId) async {
+    _recents.remove(datasetId);
+    _recents.insert(0, datasetId);
+    if (_recents.length > 5) {
+      _recents = _recents.sublist(0, 5);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('recents', _recents);
+    } catch (e) {
+      debugPrint('Error saving recents: $e');
+    }
   }
 
   void _initAuthListener() {

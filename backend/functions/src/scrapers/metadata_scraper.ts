@@ -13,6 +13,7 @@ export interface CKANPackage {
   num_resources?: number;
   metadata_modified?: string;
   tags?: Array<{ name: string }>;
+  resources?: Array<{ id: string; name?: string }>;
 }
 
 export interface DatasetMetadata {
@@ -27,10 +28,11 @@ export interface DatasetMetadata {
   isSupported: boolean;
 }
 
-// Hardcoded list of dataset IDs that are currently visualized/supported in PlainSightIL
+// Hardcoded list of dataset IDs that are currently visualized/supported in PlainSightIL (resource IDs)
 const SUPPORTED_DATASET_IDS = new Set([
   "8935c8e5-ec77-421f-af86-d970583195f8", // Active Cellular Antennas
   "ff398c7e-c522-4ee8-a53a-312b188a573d", // Cellular Antennas Under Construction Permits
+  "d8715392-287f-49b7-9ae3-f21ec5bf55f3", // Companies in Liquidation
 ]);
 
 /**
@@ -74,7 +76,23 @@ export async function scrapeAndSyncDatasetMetadata(
         continue;
       }
 
-      const id = pkg.id.trim();
+      let id = pkg.id.trim();
+      let isSupported = false;
+
+      // Check if the package ID itself is one of the supported dataset IDs
+      if (SUPPORTED_DATASET_IDS.has(id)) {
+        isSupported = true;
+      } else {
+        // Find if any resource ID in the package is in the supported dataset list
+        const matchedResource = (pkg.resources ?? []).find(
+          (r) => r.id && SUPPORTED_DATASET_IDS.has(r.id.trim()),
+        );
+        if (matchedResource) {
+          id = matchedResource.id.trim();
+          isSupported = true;
+        }
+      }
+
       const name = (pkg.name ?? "").trim();
       const title = pkg.title.trim();
       const notes = sanitizeNotes(pkg.notes);
@@ -82,7 +100,6 @@ export async function scrapeAndSyncDatasetMetadata(
       const resourceCount = pkg.num_resources ?? 0;
       const lastUpdated = pkg.metadata_modified ?? now;
       const tags = (pkg.tags ?? []).map((t) => (t.name ?? "").trim()).filter(Boolean);
-      const isSupported = SUPPORTED_DATASET_IDS.has(id);
 
       parsedDatasets.push({
         id,

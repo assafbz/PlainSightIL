@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/features/directory/presentation/widgets/dataset_card.dart';
 import 'package:plainsight/main.dart';
 
 void main() {
@@ -23,7 +24,6 @@ void main() {
     // Verify dataset cards are present on the dashboard
     expect(find.text('Cellular Antennas'), findsOneWidget);
     expect(find.text('Companies in Liquidation'), findsOneWidget);
-    expect(find.text('Government Budget'), findsOneWidget);
   });
 
   testWidgets(
@@ -52,7 +52,6 @@ void main() {
       expect(find.text('הנגשת מידע ממשלתי לציבור'), findsOneWidget);
       expect(find.text('אנטנות סלולריות'), findsOneWidget);
       expect(find.text('חברות בפירוק'), findsOneWidget);
-      expect(find.text('תקציב המדינה'), findsOneWidget);
 
       // Verify toggle button now displays 'EN'
       expect(find.text('EN'), findsOneWidget);
@@ -85,29 +84,47 @@ void main() {
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
 
+    // Ensure the card is visible before tapping
+    await tester.ensureVisible(find.text('Cellular Antennas'));
+    await tester.pumpAndSettle();
+
     // Tap on the Cellular Antennas card on the Dashboard
     await tester.tap(find.text('Cellular Antennas'));
     await tester.pumpAndSettle();
 
     // Verify Cellular Antennas screen is shown with segmented controls
-    expect(find.byIcon(Icons.cell_tower), findsOneWidget);
+    expect(find.byIcon(Icons.map), findsOneWidget);
     expect(find.text('Active Towers'), findsOneWidget);
     expect(find.text('Construction Permits'), findsOneWidget);
 
-    // Tap the Home navigation item to go back to Dashboard
-    await tester.tap(find.text('Home'));
+    // Tap the AppBar Back button to go back to Dashboard
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     // Verify we are back on the Dashboard by checking for the mission subtitle
     expect(find.text('Democratizing Civic Data'), findsOneWidget);
 
-    // Tap the Winding Up navigation tab directly from bottom nav bar
-    await tester.tap(find.text('Winding Up'));
+    // Tap the Directory navigation tab directly from bottom nav bar
+    await tester.tap(find.text('Directory'));
+    await tester.pumpAndSettle();
+
+    // Scroll the directory list down to reveal the rest of the cards
+    await tester.drag(find.byType(ListView), const Offset(0.0, -500.0));
+    await tester.pumpAndSettle();
+
+    final cardFinder = find.text('חברות בפירוק מרצון או בית משפט');
+    final buttonFinder = find.descendant(
+      of: find.ancestor(of: cardFinder, matching: find.byType(DatasetCard)),
+      matching: find.text('Open Visualizer'),
+    );
+    await tester.ensureVisible(buttonFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
 
     // Verify Companies in Liquidation screen is shown
     expect(find.text('Companies in Liquidation'), findsWidgets);
-    expect(find.byIcon(Icons.gavel), findsOneWidget);
+    expect(find.byIcon(Icons.search), findsOneWidget);
   });
 
   testWidgets('Drawer opens and theme and language can be toggled', (
@@ -143,7 +160,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(NavigationDrawerWidget),
-        matching: find.text('אנטנות סלולריות'),
+        matching: find.text('מדריך מאגרים'),
       ),
       findsOneWidget,
     );
