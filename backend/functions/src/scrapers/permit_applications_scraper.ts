@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { GeoPoint } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import axios from "axios";
 import proj4 from "proj4";
@@ -64,7 +65,7 @@ export interface CellularPermitApplication {
   locality: string;
   addressDescription: string;
   focalPointType: string;
-  coordinates: admin.firestore.GeoPoint;
+  coordinates: GeoPoint;
   geohash: string;
   jurisdiction: string;
   lastUpdated: string;
@@ -123,7 +124,7 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
     locality,
     addressDescription,
     focalPointType,
-    coordinates: new admin.firestore.GeoPoint(latitude, longitude),
+    coordinates: new GeoPoint(latitude, longitude),
     geohash,
     jurisdiction,
     lastUpdated: new Date().toISOString(),

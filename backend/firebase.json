@@ -14,5 +14,17 @@
         "firestore-debug.log"
       ]
     }
-  ]
+  ],
+  "emulators": {
+    "firestore": {
+      "port": 8081
+    },
+    "functions": {
+      "port": 5002
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4001
+    }
+  }
 }
