@@ -98,9 +98,9 @@ Every new development task—including new features, bug fixes, and code refacto
 
 ### 4.1 Enforced Lifecycle Sequences
 No development changes may bypass their respective lifecycle stages:
-- **Features**: `triage` -> `discovery` (output: `PRD.md`) -> `ui_ux_design` (output: `DESIGN.md`) -> `architecture_design` (output: `TDD.md`) -> `security_audit` (output: `SECURITY.md`) -> `blueprinting` (output: `BLUEPRINT.md`) -> `implementation` -> `qa_validation` (output: `QA_REPORT.md`) -> `merge_approval`.
-- **Bugs**: `triage` -> `qa_reproduction` (output: `QA_REPRODUCTION_REPORT.md`) -> `blueprinting` -> `implementation` -> `qa_validation` -> `merge_approval`.
-- **Refactors**: `triage` -> `architecture_design` (output: `TDD.md`) -> `blueprinting` -> `implementation` -> `qa_validation` -> `merge_approval`.
+- **Features**: `triage` -> `discovery` (output: `PRD.md`) -> `ui_ux_design` (output: `DESIGN.md`) -> `architecture_design` (output: `TDD.md`) -> `security_audit` (output: `SECURITY.md`) -> `blueprinting` (output: `BLUEPRINT.md`) -> `implementation` -> `qa_validation` (output: `QA_REPORT.md`) -> `lessons_learned` (output: `LESSONS_LEARNED.md`) -> `merge_approval`.
+- **Bugs**: `triage` -> `qa_reproduction` (output: `QA_REPRODUCTION_REPORT.md`) -> `blueprinting` -> `implementation` -> `qa_validation` -> `lessons_learned` (output: `LESSONS_LEARNED.md`) -> `merge_approval`.
+- **Refactors**: `triage` -> `architecture_design` (output: `TDD.md`) -> `blueprinting` -> `implementation` -> `qa_validation` -> `lessons_learned` (output: `LESSONS_LEARNED.md`) -> `merge_approval`.
 
 ### 4.2 Gate Review Controls
 - Artifacts must be generated and linked in the active issue file under `.agents/state/active_issues/` before moving to subsequent phases.

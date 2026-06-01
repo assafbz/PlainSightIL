@@ -35,6 +35,9 @@ Declare the variables, functions, and modules to be introduced:
 - Command to install dependencies: `flutter pub get`
 - Command to run static analysis: `flutter analyze`
 - Command to execute tests: `flutter test`
+
+## 5. Technical Lead Blueprinting Observations
+Document any blueprint implementation constraints, dynamic adjustments made during execution, or task layout complexities. This will be harvested by the final Lessons Learned phase.
 ```
 - Update `.agents/state/active_issues/issue_<id>.md`.
 - Set `current_phase` to `implementation` and assign issue to `Senior Developer`.
