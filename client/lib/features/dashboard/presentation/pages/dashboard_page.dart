@@ -107,9 +107,10 @@ class DashboardScreen extends StatelessWidget {
               title: appState.translate('water_title'),
               desc: appState.translate('water_desc'),
               badge: appState.translate('water_count'),
-              icon: Icons.water_drop,
-              accentColor: AppColors.info,
-              onTap: () => appState.setActiveTab(2), // Index 2 is Water
+              icon: Icons.gavel,
+              accentColor: AppColors.danger,
+              onTap: () =>
+                  appState.setActiveTab(2), // Index 2 is now Liquidation
             ),
             const SizedBox(height: 12),
             _buildDatasetCard(

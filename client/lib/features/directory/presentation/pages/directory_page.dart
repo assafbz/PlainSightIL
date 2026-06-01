@@ -112,6 +112,8 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         dataset.id == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
       // Index 1 represents Cellular Antennas screen in navigation
       widget.appState.setActiveTab(1);
+    } else if (dataset.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
+      widget.appState.setActiveTab(2);
     }
   }
 

@@ -3,6 +3,7 @@ import * as functions from "firebase-functions/v1";
 import { scrapeAndSyncAntennas } from "./scrapers/antennas_scraper";
 import { scrapeAndSyncPermitApplications } from "./scrapers/permit_applications_scraper";
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
+import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
 
 admin.initializeApp();
 
@@ -78,6 +79,31 @@ export const manualSyncMetadata = functions.https.onRequest(async (req, res) => 
     const err = error as Error;
     res.status(500).json({
       message: "Metadata sync failed",
+      error: err.message || String(error),
+    });
+  }
+});
+
+// Scheduled Cloud Function for Companies in Liquidation - runs weekly on Sunday at 2:00 AM (Israel timezone)
+export const scheduledCompaniesLiquidationScraper = functions.pubsub
+  .schedule("0 2 * * 0")
+  .timeZone("Asia/Jerusalem")
+  .onRun(async () => {
+    await scrapeAndSyncCompaniesLiquidation(db);
+  });
+
+// HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
+export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
+  try {
+    const result = await scrapeAndSyncCompaniesLiquidation(db);
+    res.status(200).json({
+      message: "Companies in liquidation sync completed successfully",
+      count: result.count,
+    });
+  } catch (error) {
+    const err = error as Error;
+    res.status(500).json({
+      message: "Companies in liquidation sync failed",
       error: err.message || String(error),
     });
   }
