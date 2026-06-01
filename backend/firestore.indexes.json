@@ -13,6 +13,34 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "permit_apps_blue",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "company.en",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "geohash",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "permit_apps_green",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "company.en",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "geohash",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
