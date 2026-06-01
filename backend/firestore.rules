@@ -19,5 +19,28 @@ service cloud.firestore {
       allow write: if false;
       allow list: if request.query.limit <= 100;
     }
+    match /cellular_permit_applications/{docId} {
+      allow read: if true;
+      allow write: if false;
+      allow list: if request.query.limit <= 100;
+    }
+    match /datasets_metadata/{document} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /dataset_requests/{datasetId} {
+      allow read: if true;
+      allow create: if request.auth != null 
+                    && request.resource.data.requestCount == 1
+                    && request.resource.data.datasetId == datasetId;
+      allow update: if request.auth != null 
+                    && request.resource.data.requestCount == resource.data.requestCount + 1
+                    && request.resource.data.datasetId == resource.data.datasetId;
+
+      match /votes/{userId} {
+        allow read: if true;
+        allow write, create: if request.auth != null && request.auth.uid == userId;
+      }
+    }
   }
 }

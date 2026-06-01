@@ -1,62 +1,105 @@
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import axios from "axios";
+import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
 
-export interface HebrewAntennaRecord {
-  antennaId?: string | number;
-  latitude?: number | string;
-  longitude?: number | string;
-  operatorName?: string;
-  permitType?: string;
-  radiationFrequency?: number | string;
-  lastTestDate?: string;
-  addressHebrew?: string;
-  addressEnglish?: string;
+// Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
+proj4.defs(
+  "EPSG:2039",
+  "+proj=tmerc +lat_0=31.73439361111111 +lon_0=35.20451694444445 +k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 +towgs84=-48,55,52,0,0,0,0 +units=m +no_defs",
+);
+const itmToWgs84Converter = proj4("EPSG:2039", "EPSG:4326");
 
-  // Literal Hebrew keys mapping from data.gov.il API
-  מזהה_אנטנה?: string | number;
-  קו_רוחב?: number | string;
-  קו_אורך?: number | string;
-  שם_מפעיל?: string;
-  סוג_אישור?: string;
-  תדר?: number | string;
-  תאריך_בדיקה_אחרון?: string;
-  כתובת_אתר?: string;
+export function convertItmToWgs84(
+  xItm: number,
+  yItm: number,
+): { latitude: number; longitude: number } {
+  const [longitude, latitude] = itmToWgs84Converter.forward([xItm, yItm]);
+  return { latitude, longitude };
+}
+
+export function isValidIsraelCoordinates(latitude: number, longitude: number): boolean {
+  return latitude >= 29.3 && latitude <= 33.4 && longitude >= 34.2 && longitude <= 35.9;
+}
+
+// Translation mapping for cellular operator names
+const OPERATOR_TRANSLATIONS: Record<string, string> = {
+  "PHI (משרת את הוט ופרטנר)": "PHI (HOT & Partner)",
+  פלאפון: "Pelephone",
+  פרטנר: "Partner",
+  סלקום: "Cellcom",
+  "הוט מובייל": "HOT Mobile",
+};
+
+export function getTranslatedOperator(rawValue: string): { he: string; en: string } {
+  const normalized = (rawValue || "").trim();
+  const english = OPERATOR_TRANSLATIONS[normalized] || normalized;
+  return { he: normalized, en: english };
+}
+
+export interface HebrewAntennaRecord {
+  ID?: number | string;
+  _id?: number;
+  חברה?: string;
+  "מס' אתר"?: string;
+  עיר?: string;
+  "כתובת האתר"?: string;
+  "רשות מקומית"?: string;
+  "תחום שיפוט"?: string;
+  X_ITM?: number | string;
+  Y_ITM?: number | string;
+  "סוג אתר"?: string;
+  "תאריך היתר הקמה"?: string;
+  "תאריך היתר הפעלה"?: string;
+  "בדיקה תקופתית אחרונה"?: string;
+  "היתר קרינה"?: string;
+  "עוצמה מרבית תיאורטית בµW לסמר"?: number | string;
+  "תוצאה מירבית ב% ביחס לסף הבריאות"?: number | string;
+  "תאור נקודה בה התקבלה תוצאה מירבית"?: string;
+  "קובץ הקמה"?: string;
+  "קובץ הפעלה"?: string;
+  "טכנולוגיית שידור"?: string;
 }
 
 export interface CellularAntenna {
+  id: string;
   antennaId: string;
+  siteNumber: string;
   coordinates: admin.firestore.GeoPoint;
   geohash: string;
   operatorName: string;
+  company: { he: string; en: string };
+  locality: string;
   permitType: string;
   radiationFrequency: number;
   lastTestDate: string;
   addressHebrew: string;
   addressEnglish: string;
+  createdAt?: string;
+  lastUpdated?: string;
 }
 
-function translateOperator(hebrewOperator: string): string {
-  const lower = hebrewOperator.trim();
-  if (lower.includes("פרטנר") || lower.toLowerCase().includes("partner")) return "Partner";
-  if (lower.includes("סלקום") || lower.toLowerCase().includes("cellcom")) return "Cellcom";
-  if (lower.includes("פלאפון") || lower.toLowerCase().includes("pelephone")) return "Pelephone";
-  if (lower.includes("הוט") || lower.toLowerCase().includes("hot")) return "HOT Mobile";
-  return hebrewOperator;
+function parseFrequency(tech: string): number {
+  const normalized = (tech || "").trim();
+  if (normalized.includes("5")) return 3500;
+  if (normalized.includes("4")) return 1800;
+  if (normalized.includes("3")) return 2100;
+  return 900;
 }
 
-function translatePermit(hebrewPermit: string): string {
-  const lower = hebrewPermit.trim();
-  if (lower.includes("פעיל") || lower.includes("מאושר") || lower.toLowerCase().includes("active"))
-    return "Active";
-  if (lower.includes("הקמה") || lower.includes("זמני") || lower.toLowerCase().includes("permitted"))
-    return "Permitted";
-  return "Under Review";
-}
-
-function formatToISOString(dateStr: string): string {
+function parseDdmmyyyyToISO(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString();
   try {
+    const parts = dateStr.trim().split("/");
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // 0-indexed month
+      const year = parseInt(parts[2], 10);
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+        return new Date(Date.UTC(year, month, day)).toISOString();
+      }
+    }
     const timestamp = Date.parse(dateStr);
     if (!isNaN(timestamp)) {
       return new Date(timestamp).toISOString();
@@ -95,46 +138,58 @@ function translateAddress(hebrewAddress: string): string {
 }
 
 export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null {
-  const rawId = record.antennaId ?? record["מזהה_אנטנה"];
-  const rawLat = record.latitude ?? record["קו_רוחב"];
-  const rawLng = record.longitude ?? record["קו_אורך"];
+  const rawId = record.ID ?? record._id;
+  const x = record.X_ITM;
+  const y = record.Y_ITM;
 
-  if (rawId === undefined || rawLat === undefined || rawLng === undefined) {
+  if (rawId === undefined || x === undefined || y === undefined) {
     return null;
   }
 
-  const antennaId = String(rawId).trim();
-  const latitude = typeof rawLat === "string" ? parseFloat(rawLat) : rawLat;
-  const longitude = typeof rawLng === "string" ? parseFloat(rawLng) : rawLng;
+  const id = String(rawId).trim();
+  const antennaId = id;
+  const siteNumber = (record["מס' אתר"] ?? "לא ידוע").trim();
 
-  if (isNaN(latitude) || isNaN(longitude)) {
+  const xItm = typeof x === "string" ? parseFloat(x) : x;
+  const yItm = typeof y === "string" ? parseFloat(y) : y;
+
+  if (isNaN(xItm) || isNaN(yItm)) {
+    return null;
+  }
+
+  const { latitude, longitude } = convertItmToWgs84(xItm, yItm);
+  if (!isValidIsraelCoordinates(latitude, longitude)) {
     return null;
   }
 
   const geohash = encodeGeohash(latitude, longitude);
 
-  const rawOperator = record.operatorName ?? record["שם_מפעיל"] ?? "Unknown";
-  const operatorName = translateOperator(rawOperator);
+  const company = getTranslatedOperator(record.חברה ?? "לא ידוע");
+  const operatorName = company.en;
 
-  const rawPermit = record.permitType ?? record["סוג_אישור"] ?? "Under Review";
-  const permitType = translatePermit(rawPermit);
+  const permitType = (record["היתר קרינה"] ?? "יש היתר").trim();
 
-  const rawFreq = record.radiationFrequency ?? record["תדר"] ?? 0;
-  const radiationFrequency = typeof rawFreq === "string" ? parseFloat(rawFreq) : rawFreq;
+  const tech = record["טכנולוגיית שידור"] ?? "";
+  const radiationFrequency = parseFrequency(tech);
 
-  const rawDate = record.lastTestDate ?? record["תאריך_בדיקה_אחרון"] ?? new Date().toISOString();
-  const lastTestDate = formatToISOString(rawDate);
+  const rawDate = record["בדיקה תקופתית אחרונה"] ?? "";
+  const lastTestDate = parseDdmmyyyyToISO(rawDate);
 
-  const addressHebrew = record.addressHebrew ?? record["כתובת_אתר"] ?? "לא ידוע";
-  const addressEnglish = record.addressEnglish ?? translateAddress(addressHebrew);
+  const locality = (record.עיר ?? "לא ידוע").trim();
+  const addressHebrew = (record["כתובת האתר"] ?? "").trim() || locality;
+  const addressEnglish = translateAddress(addressHebrew);
 
   return {
+    id,
     antennaId,
+    siteNumber,
     coordinates: new admin.firestore.GeoPoint(latitude, longitude),
     geohash,
     operatorName,
+    company,
+    locality,
     permitType,
-    radiationFrequency: isNaN(radiationFrequency) ? 0 : radiationFrequency,
+    radiationFrequency,
     lastTestDate,
     addressHebrew,
     addressEnglish,
@@ -146,60 +201,123 @@ export async function saveAntennasToFirestore(
   antennas: CellularAntenna[],
 ): Promise<void> {
   const collectionRef = db.collection("cellular_antennas");
+  const now = new Date().toISOString();
 
-  let batch = db.batch();
-  let count = 0;
+  // Process in chunks of 500
+  for (let i = 0; i < antennas.length; i += 500) {
+    const chunk = antennas.slice(i, i + 500);
 
-  for (const antenna of antennas) {
-    const docRef = collectionRef.doc(antenna.antennaId);
-    batch.set(docRef, antenna);
-    count++;
+    // Get doc refs for the chunk
+    const docRefs = chunk.map((a) => collectionRef.doc(a.antennaId));
 
-    if (count === 500) {
-      await batch.commit();
-      batch = db.batch();
-      count = 0;
+    // Lookup existing documents in batch
+    const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
+    const existingCreatedAtMap = new Map<string, string>();
+    for (const snap of snapshots) {
+      if (snap.exists) {
+        const data = snap.data();
+        if (data && data.createdAt) {
+          existingCreatedAtMap.set(snap.id, data.createdAt);
+        }
+      }
     }
-  }
 
-  if (count > 0) {
+    // Prepare and write chunk
+    const batch = db.batch();
+    for (const a of chunk) {
+      const docRef = collectionRef.doc(a.antennaId);
+      const existingCreatedAt = existingCreatedAtMap.get(a.antennaId);
+
+      a.createdAt = existingCreatedAt || now;
+      a.lastUpdated = now;
+
+      batch.set(docRef, a);
+    }
     await batch.commit();
   }
 }
 
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
-  apiUrl?: string,
+  resourceIdOrUrl: string = "8935c8e5-ec77-421f-af86-d970583195f8",
 ): Promise<{ success: boolean; count: number }> {
+  const datasetId = "cellular_antennas";
+  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
+
   try {
-    const targetUrl =
-      apiUrl ??
-      "https://data.gov.il/api/3/action/datastore_search?resource_id=c86e2468-b79e-4e4f-b649-43c2d47cf73b&limit=100";
-    logger.info(`Fetching cellular antennas from: ${targetUrl}`);
+    const targetCollection = "cellular_antennas";
+    logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
-    const response = await axios.get(targetUrl);
-    const records: HebrewAntennaRecord[] = response.data?.result?.records ?? [];
+    // Paginated API fetch from data.gov.il datastore search
+    let offset = 0;
+    const limit = 1000;
+    let hasMore = true;
+    let processedCount = 0;
 
-    if (!records.length) {
-      logger.warn("No antenna records fetched from the government portal.");
-      return { success: true, count: 0 };
-    }
+    const targetRef = db.collection(targetCollection);
+    const now = new Date().toISOString();
 
-    const parsedAntennas: CellularAntenna[] = [];
-    for (const record of records) {
-      const parsed = parseRecord(record);
-      if (parsed) {
-        parsedAntennas.push(parsed);
+    const isUrl = resourceIdOrUrl.startsWith("http");
+
+    while (hasMore) {
+      const url = isUrl
+        ? resourceIdOrUrl
+        : `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
+
+      logger.info(`Fetching data from: ${url}`);
+      const response = await axios.get(url);
+      const records: HebrewAntennaRecord[] = response.data?.result?.records ?? [];
+
+      if (records.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      // Collect parsed records for this page
+      const parsedRecords: CellularAntenna[] = [];
+      for (const rec of records) {
+        const parsed = parseRecord(rec);
+        if (parsed) {
+          parsedRecords.push(parsed);
+        }
+      }
+
+      // Save parsed records in chunks
+      if (parsedRecords.length > 0) {
+        await saveAntennasToFirestore(db, parsedRecords);
+        processedCount += parsedRecords.length;
+      }
+
+      if (isUrl) {
+        hasMore = false;
+      } else {
+        offset += limit;
       }
     }
 
-    logger.info(`Parsed ${parsedAntennas.length} valid antennas. Writing to Firestore...`);
-    await saveAntennasToFirestore(db, parsedAntennas);
-    logger.info("Successfully synced cellular antennas with Firestore.");
+    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
 
-    return { success: true, count: parsedAntennas.length };
+    // Retrieve total count of documents in the collection
+    const countSnapshot = await targetRef.count().get();
+    const totalRecords = countSnapshot.data().count;
+
+    // Atomic update of active collection pointer and count
+    await metadataRef.set(
+      {
+        id: datasetId,
+        activeCollection: targetCollection,
+        lastUpdated: now,
+        recordCount: totalRecords,
+        status: "idle",
+      },
+      { merge: true },
+    );
+
+    logger.info("Updated metadata. Ingestion complete.");
+    return { success: true, count: processedCount };
   } catch (error) {
-    logger.error("Failed to scrape and sync cellular antennas:", error);
+    logger.error("Scraper failed:", error);
+    await metadataRef.set({ status: "error" }, { merge: true });
     throw error;
   }
 }

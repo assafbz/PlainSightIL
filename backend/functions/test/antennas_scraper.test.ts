@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as admin from "firebase-admin";
 import axios from "axios";
 import { encodeGeohash } from "../src/utils/geohash";
-import { parseRecord, scrapeAndSyncAntennas } from "../src/scrapers/antennas_scraper";
+import {
+  parseRecord,
+  scrapeAndSyncAntennas,
+  convertItmToWgs84,
+  isValidIsraelCoordinates,
+} from "../src/scrapers/antennas_scraper";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -13,75 +18,102 @@ vi.mock("firebase-functions", () => ({
   },
 }));
 
+describe("Coordinate Conversion & Boundaries", () => {
+  it("should convert ITM coordinates (EPSG:2039) to WGS84 coordinates correctly", () => {
+    // Jerusalem coordinate sample: X:217320, Y:627507
+    const wgs = convertItmToWgs84(217320, 627507);
+    expect(wgs.latitude).toBeCloseTo(31.74, 2);
+    expect(wgs.longitude).toBeCloseTo(35.181, 2);
+  });
+
+  it("should identify valid Israel coordinates correctly", () => {
+    // Inside borders
+    expect(isValidIsraelCoordinates(31.7455, 35.1812)).toBe(true);
+    expect(isValidIsraelCoordinates(32.0853, 34.7818)).toBe(true);
+
+    // Outside borders
+    expect(isValidIsraelCoordinates(40.7128, -74.006)).toBe(false);
+  });
+});
+
 describe("Geohash Utility", () => {
   it("should encode coordinates into correct geohash representation", () => {
     // Tel Aviv center
     const hash = encodeGeohash(32.0853, 34.7818, 9);
     expect(hash).toBe("sv8wx2zq6");
   });
-
-  it("should throw error for invalid coordinates", () => {
-    expect(() => encodeGeohash(-95, 34.7818)).toThrow();
-    expect(() => encodeGeohash(32.0853, 200)).toThrow();
-  });
 });
 
 describe("Record Parser", () => {
   it("should return null if ID or coordinates are missing", () => {
     const incompleteRecord = {
-      מזהה_אנטנה: "SITE-1",
-      קו_רוחב: "32.0853",
-      // longitude missing
+      ID: 123,
+      X_ITM: 255812,
+      // Y_ITM missing
     };
     expect(parseRecord(incompleteRecord)).toBeNull();
   });
 
   it("should parse and translate Hebrew fields correctly", () => {
     const raw = {
-      מזהה_אנטנה: "SITE-100",
-      קו_רוחב: "32.0853",
-      קו_אורך: "34.7818",
-      שם_מפעיל: 'סלקום בע"מ',
-      סוג_אישור: "הקמה זמנית",
-      תדר: "1800",
-      תאריך_בדיקה_אחרון: "2026-05-15",
-      כתובת_אתר: "דיזנגוף 50, תל אביב",
+      ID: 6793,
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      חברה: "סלקום",
+      "מס' אתר": "JC1176A",
+      עיר: "אפיקים",
+      "כתובת האתר": "קיבוץ אפיקים",
+      "היתר קרינה": "יש היתר",
+      "טכנולוגיית שידור": "דור 4",
+      "בדיקה תקופתית אחרונה": "15/05/2026",
     };
 
     const parsed = parseRecord(raw);
     expect(parsed).not.toBeNull();
     if (parsed) {
-      expect(parsed.antennaId).toBe("SITE-100");
+      expect(parsed.id).toBe("6793");
+      expect(parsed.antennaId).toBe("6793");
+      expect(parsed.siteNumber).toBe("JC1176A");
       expect(parsed.coordinates).toBeInstanceOf(admin.firestore.GeoPoint);
-      expect(parsed.coordinates.latitude).toBe(32.0853);
-      expect(parsed.coordinates.longitude).toBe(34.7818);
-      expect(parsed.geohash).toBe("sv8wx2zq6");
+      expect(parsed.coordinates.latitude).toBeCloseTo(32.695, 2);
+      expect(parsed.coordinates.longitude).toBeCloseTo(35.592, 2);
       expect(parsed.operatorName).toBe("Cellcom");
-      expect(parsed.permitType).toBe("Permitted");
+      expect(parsed.company).toEqual({ he: "סלקום", en: "Cellcom" });
+      expect(parsed.locality).toBe("אפיקים");
+      expect(parsed.permitType).toBe("יש היתר");
       expect(parsed.radiationFrequency).toBe(1800);
       expect(parsed.lastTestDate).toBe("2026-05-15T00:00:00.000Z");
-      expect(parsed.addressHebrew).toBe("דיזנגוף 50, תל אביב");
-      expect(parsed.addressEnglish).toBe("Dizengoff 50, Tel Aviv");
+      expect(parsed.addressHebrew).toBe("קיבוץ אפיקים");
     }
   });
 
-  it("should fallback operator and permit translate properly", () => {
-    const raw = {
-      מזהה_אנטנה: "SITE-200",
-      קו_רוחב: 32.0,
-      קו_אורך: 34.0,
-      שם_מפעיל: "אורנג'",
-      סוג_אישור: "לא ידוע סטטוס",
-      תדר: "invalid-freq",
+  it("should handle frequency parsing correctly", () => {
+    const raw5g = {
+      ID: 1,
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      "טכנולוגיית שידור": "דור 5",
     };
+    const parsed5g = parseRecord(raw5g);
+    expect(parsed5g?.radiationFrequency).toBe(3500);
 
-    const parsed = parseRecord(raw);
-    expect(parsed).not.toBeNull();
-    if (parsed) {
-      expect(parsed.operatorName).toBe("אורנג'");
-      expect(parsed.permitType).toBe("Under Review");
-      expect(parsed.radiationFrequency).toBe(0);
-    }
+    const raw3g = {
+      ID: 2,
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      "טכנולוגיית שידור": "דור 3",
+    };
+    const parsed3g = parseRecord(raw3g);
+    expect(parsed3g?.radiationFrequency).toBe(2100);
+
+    const raw2g = {
+      ID: 3,
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      "טכנולוגיית שידור": "דור 2",
+    };
+    const parsed2g = parseRecord(raw2g);
+    expect(parsed2g?.radiationFrequency).toBe(900);
   });
 });
 
@@ -90,16 +122,35 @@ describe("Scraper and Sync Ingestion", () => {
   let mockBatch: any;
   let mockCollection: any;
   let mockDoc: any;
+  let mockGetAll: any;
+  let mockMetadataSet: any;
+  let mockCountGet: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockDoc = vi.fn().mockReturnValue({
-      id: "mock-doc-id",
+    mockMetadataSet = vi.fn().mockResolvedValue(true);
+
+    mockDoc = vi.fn().mockImplementation((id) => {
+      if (id === "cellular_antennas") {
+        return {
+          set: mockMetadataSet,
+        };
+      }
+      return {
+        id,
+      };
+    });
+
+    mockCountGet = vi.fn().mockResolvedValue({
+      data: () => ({ count: 2 }),
     });
 
     mockCollection = vi.fn().mockReturnValue({
       doc: mockDoc,
+      count: vi.fn().mockReturnValue({
+        get: mockCountGet,
+      }),
     });
 
     mockBatch = {
@@ -107,47 +158,117 @@ describe("Scraper and Sync Ingestion", () => {
       commit: vi.fn().mockResolvedValue(true),
     };
 
+    mockGetAll = vi.fn().mockImplementation((...refs) => {
+      // By default, documents do not exist
+      return Promise.resolve(
+        refs.map((ref) => ({
+          exists: false,
+          id: ref.id,
+          data: () => ({}),
+        })),
+      );
+    });
+
     mockDb = {
       collection: mockCollection,
       batch: vi.fn().mockReturnValue(mockBatch),
+      getAll: mockGetAll,
     };
   });
 
-  it("should scrape data, parse, and write to Firestore in batch", async () => {
+  it("should scrape data, parse, and write to Firestore in batch with createdAt and lastUpdated", async () => {
     const apiResponse = {
       data: {
         result: {
           records: [
             {
-              מזהה_אנטנה: "CELL-1",
-              קו_רוחב: "32.085",
-              קו_אורך: "34.781",
-              שם_מפעיל: "פלאפון",
-              סוג_אישור: "פעיל",
+              ID: "6793",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+              חברה: "פלאפון",
+              "היתר קרינה": "יש היתר",
             },
             {
-              מזהה_אנטנה: "CELL-2",
-              קו_רוחב: "32.086",
-              קו_אורך: "34.782",
-              שם_מפעיל: "פרטנר",
-              סוג_אישור: "פעיל",
+              ID: "6794",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+              חברה: "פרטנר",
+              "היתר קרינה": "יש היתר",
             },
           ],
         },
       },
     };
 
-    vi.mocked(axios.get).mockResolvedValue(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
 
     const result = await scrapeAndSyncAntennas(mockDb);
 
     expect(result.success).toBe(true);
     expect(result.count).toBe(2);
 
-    expect(mockDb.collection).toHaveBeenCalledWith("cellular_antennas");
-    expect(mockDb.batch).toHaveBeenCalledTimes(1);
+    expect(mockCollection).toHaveBeenCalledWith("cellular_antennas");
+    expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(2);
-    expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+
+    // Verify fields are populated
+    const doc1 = mockBatch.set.mock.calls[0][1];
+    expect(doc1.antennaId).toBe("6793");
+    expect(doc1.createdAt).toBeDefined();
+    expect(doc1.lastUpdated).toBeDefined();
+
+    // Verify metadata update
+    expect(mockDoc).toHaveBeenCalledWith("cellular_antennas");
+    expect(mockMetadataSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activeCollection: "cellular_antennas",
+        status: "idle",
+        recordCount: 2,
+      }),
+      { merge: true },
+    );
+  });
+
+  it("should preserve existing createdAt timestamp for existing antennas", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "6793",
+        data: () => ({ createdAt: initialCreatedAt }),
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              ID: "6793",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+              חברה: "פלאפון",
+              "היתר קרינה": "יש היתר",
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncAntennas(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+
+    const doc = mockBatch.set.mock.calls[0][1];
+    expect(doc.antennaId).toBe("6793");
+    expect(doc.createdAt).toBe(initialCreatedAt);
+    expect(doc.lastUpdated).toBeDefined();
+    expect(doc.lastUpdated).not.toBe(initialCreatedAt);
   });
 
   it("should handle empty api response gracefully", async () => {

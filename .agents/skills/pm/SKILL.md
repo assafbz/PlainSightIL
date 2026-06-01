@@ -53,5 +53,5 @@ Document any product constraints, user-flow challenges, or edge cases that were 
 Update the issue state markdown file:
 - Append a transition log to the **Audit Log & Stage Transitions** section.
 - Add the link to the generated PRD in the **Work Directory Artifacts** section.
-- Set `hitl_approval_required: true` and set the `current_phase` to `discovery-review`.
+- Set `hitl_approval_required: true` and set the `current_phase` to `discovery`.
 - Hand over assignment to `coordinator` (for user review).

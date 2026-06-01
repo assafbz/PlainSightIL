@@ -5,6 +5,7 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
+import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -237,6 +238,11 @@ class AppShell extends StatelessWidget {
           description: appState.translate('alerts_roadmap_desc'),
           appState: appState,
         );
+      case 5:
+        return DatasetDirectoryScreen(
+          key: const ValueKey('directory_screen'),
+          appState: appState,
+        );
       default:
         return DashboardScreen(appState: appState);
     }
@@ -458,6 +464,14 @@ class NavigationDrawerWidget extends StatelessWidget {
                             titleKey: 'alerts_title',
                             isActive: appState.activeTab == 4,
                             isRoadmap: true,
+                          ),
+                          _buildNavItem(
+                            context,
+                            index: 5,
+                            icon: Icons.folder_open,
+                            titleKey: 'nav_directory',
+                            isActive: appState.activeTab == 5,
+                            isRoadmap: false,
                           ),
                         ],
                       ),

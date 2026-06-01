@@ -105,3 +105,26 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
   dart format .
   flutter analyze
   ```
+
+---
+
+## 5. Pitfall: Coordinate Mapping & Custom Painter Visual Testing Gaps
+
+### Symptoms
+- The Map/Radar visualizer displayed incorrect, randomized coordinate pins for the cellular permits dataset, and completely omitted pins for the active antennas dataset.
+- Real coordinate projections were not bound to the UI visualizer, causing mismatch between lists and map visualizations.
+
+### Root Cause
+- High-fidelity visual components (like `RadarGridPainter` using `CustomPainter`) relied on static mock/seeded-random data generators for simplicity in early design stages.
+- The integration tests and state mocks did not initially define a unified data contract for geospatial coordinates (such as a standard `'coordinates'` key with a `GeoPoint` value) across all dataset items, causing coordinates to be missing or mismatched.
+- Lack of default fallback scaling logic in the custom painter would cause divisions by zero or visual overflows if no valid coordinate pins were present or if all pins shared the exact same coordinates.
+
+### Corrective Action & Best Practice
+- **Production Data Contract Alignment:** Ensure mock/testing datasets contain all keys and types present in real production Firestore documents (e.g. `GeoPoint` coordinates).
+- **Graceful Visual Fallbacks:** Custom canvas painters must implement robust protection against empty states, zero-delta inputs, and missing keys.
+- **Dynamic Projection Scaling:** Map geographic latitude/longitude values relative to the average lat/lng of the dataset, scaling by max-radius limits so coordinate pins always fit within visual boundaries regardless of the geographic region:
+  ```dart
+  final double scale = maxDelta > 0 ? (maxRadius * 0.8) / maxDelta : 0.0;
+  final double px = delta.dx * scale;
+  final double py = -delta.dy * scale; // Flip Y for screen space
+  ```

@@ -15,6 +15,7 @@ You are the QA Engineer Agent. Your mission is to verify that the implemented co
 - Formulate a test matrix covering:
   - Happy paths.
   - Edge cases (empty states, missing API data, zero values, long strings).
+  - **Visual & CustomPainter boundaries**: When changes involve custom rendering/drawing on canvas, verify behavior with: (a) zero coordinate/pin counts (empty data state), (b) all items mapped to a single coordinate (zero delta), (c) items missing spatial attributes or containing malformed/null coordinates, and (d) repainting efficiency to prevent excessive redraws.
   - Accessibility & Contrast checks.
   - Visual layout responsiveness across mobile and tablet sizes.
 

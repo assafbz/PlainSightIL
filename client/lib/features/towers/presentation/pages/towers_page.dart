@@ -1,8 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
+import '../widgets/towers_map_view.dart';
+import '../widgets/map_controls_overlay.dart';
 
 class TowersScreen extends StatefulWidget {
   final AppStateNotifier appState;
@@ -14,12 +20,21 @@ class TowersScreen extends StatefulWidget {
 }
 
 class _TowersScreenState extends State<TowersScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int _selectedFilterIndex =
       0; // 0: Construction Permits (Default), 1: Active Towers
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _radarController;
+
+  // Map and sync state
+  bool _showMap = false;
+  String? _selectedRecordId;
+  final MapController _mapController = MapController();
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
+  AnimationController? _mapAnimationController;
 
   @override
   void initState() {
@@ -37,6 +52,8 @@ class _TowersScreenState extends State<TowersScreen>
   void dispose() {
     _radarController.dispose();
     _searchController.dispose();
+    _mapAnimationController?.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -61,9 +78,257 @@ class _TowersScreenState extends State<TowersScreen>
     }).toList();
   }
 
+  List<Map<String, dynamic>> _getFilteredRecords() {
+    final appState = widget.appState;
+    if (_selectedFilterIndex == 1) {
+      return _filterRecords(appState.antennaRecords);
+    } else {
+      return _filterRecords(appState.permitRecords);
+    }
+  }
+
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    _mapAnimationController?.stop();
+    _mapAnimationController?.dispose();
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _mapAnimationController = controller;
+
+    final LatLng startLocation = _mapController.camera.center;
+    final double startZoom = _mapController.camera.zoom;
+
+    final latTween = Tween<double>(
+      begin: startLocation.latitude,
+      end: destLocation.latitude,
+    );
+    final lngTween = Tween<double>(
+      begin: startLocation.longitude,
+      end: destLocation.longitude,
+    );
+    final zoomTween = Tween<double>(begin: startZoom, end: destZoom);
+
+    final animation = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeInOut,
+    );
+
+    controller.addListener(() {
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+    });
+
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (_mapAnimationController == controller) {
+          _mapAnimationController = null;
+        }
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
+  }
+
+  void _onMarkerTap(Map<String, dynamic> record) {
+    final recordId =
+        record['antennaId']?.toString() ??
+        record['referenceNumber']?.toString() ??
+        record['id']?.toString() ??
+        '';
+    setState(() {
+      _selectedRecordId = recordId;
+    });
+
+    final coords = record['coordinates'] as GeoPoint;
+    _animatedMapMove(LatLng(coords.latitude, coords.longitude), 15.0);
+
+    final filtered = _getFilteredRecords();
+    final index = filtered.indexWhere((rec) {
+      final id =
+          rec['antennaId']?.toString() ??
+          rec['referenceNumber']?.toString() ??
+          rec['id']?.toString() ??
+          '';
+      return id == recordId;
+    });
+    if (index != -1) {
+      _itemScrollController.scrollTo(
+        index: index,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _onCardTap(Map<String, dynamic> record) {
+    final recordId =
+        record['antennaId']?.toString() ??
+        record['referenceNumber']?.toString() ??
+        record['id']?.toString() ??
+        '';
+    setState(() {
+      _selectedRecordId = recordId;
+    });
+
+    final coords = record['coordinates'];
+    if (coords is GeoPoint) {
+      if (_showMap) {
+        _animatedMapMove(LatLng(coords.latitude, coords.longitude), 16.0);
+      }
+    }
+  }
+
+  Future<void> _recenterOnUserLocation() async {
+    // Show explanation dialog first
+    final goAhead = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final isRtl = Directionality.of(context) == TextDirection.rtl;
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            isRtl ? 'גישה למיקום' : 'Location Access',
+            style: AppTypography.headlineMd(context),
+          ),
+          content: Text(
+            isRtl
+                ? 'PlainSightIL זקוקה לגישה למיקום המכשיר שלך כדי להציג אנטנות ואישורים סביבך על המפה.'
+                : 'PlainSightIL needs access to your device location to display cellular antennas and permits around you on the map.',
+            style: AppTypography.bodySm(context),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                isRtl ? 'ביטול' : 'Cancel',
+                style: AppTypography.bodySm(
+                  context,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                isRtl ? 'אישור' : 'Allow',
+                style: AppTypography.bodySm(context, color: AppColors.primary),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (goAhead != true) {
+      _fallbackToTelAviv();
+      return;
+    }
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permissions are denied.');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permissions are permanently denied.');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+      _animatedMapMove(LatLng(position.latitude, position.longitude), 15.0);
+    } catch (e) {
+      _fallbackToTelAviv();
+    }
+  }
+
+  void _fallbackToTelAviv() {
+    _animatedMapMove(const LatLng(32.0782, 34.7741), 15.0);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.danger,
+        content: Text(
+          isRtl
+              ? 'לא ניתן לגשת למיקום הנוכחי. מוצג מרכז תל אביב.'
+              : 'Could not access current location. Centering on Tel Aviv.',
+          style: AppTypography.bodySm(context, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleOption({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withAlpha(50)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: isSelected
+              ? Border.all(color: AppColors.primary.withAlpha(100), width: 1.5)
+              : Border.all(color: Colors.transparent, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style:
+                  AppTypography.bodySm(
+                    context,
+                    color: isSelected
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                  ).copyWith(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = widget.appState;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
     return Stack(
       children: [
         // 1. Map/Radar Visualizer Pane
@@ -73,22 +338,97 @@ class _TowersScreenState extends State<TowersScreen>
           right: 0,
           height: MediaQuery.of(context).size.height * 0.35,
           child: RepaintBoundary(
-            child: AnimatedBuilder(
-              animation: _radarController,
-              builder: (context, _) {
-                // Dynamically pull coordinate dots from active collection
-                final records = _selectedFilterIndex == 0
-                    ? appState.permitRecords
-                    : <Map<String, dynamic>>[];
-                return CustomPaint(
-                  painter: RadarGridPainter(
-                    angle: _radarController.value * 2 * math.pi,
-                    records: records,
-                    isDark: appState.isDarkMode,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _showMap
+                  ? TowersMapView(
+                      key: const ValueKey('map_view'),
+                      appState: widget.appState,
+                      records: _getFilteredRecords(),
+                      selectedRecordId: _selectedRecordId,
+                      mapController: _mapController,
+                      onMarkerTap: _onMarkerTap,
+                      showAntennas: _selectedFilterIndex == 1,
+                    )
+                  : AnimatedBuilder(
+                      key: const ValueKey('radar_view'),
+                      animation: _radarController,
+                      builder: (context, _) {
+                        // Dynamically pull coordinate dots from active collection
+                        final records = _selectedFilterIndex == 0
+                            ? appState.permitRecords
+                            : appState.antennaRecords;
+                        return CustomPaint(
+                          painter: RadarGridPainter(
+                            angle: _radarController.value * 2 * math.pi,
+                            records: records,
+                            isDark: appState.isDarkMode,
+                          ),
+                          child: Container(),
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ),
+
+        // Map controls overlay (Zoom and Recenter buttons)
+        if (_showMap)
+          Positioned(
+            top: 12,
+            left: isRtl ? 16 : null,
+            right: isRtl ? null : 16,
+            child: MapControlsOverlay(
+              mapController: _mapController,
+              onRecenter: _recenterOnUserLocation,
+            ),
+          ),
+
+        // Toggle Switch Overlay for Radar/Map selection
+        Positioned(
+          top: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(4.0),
+              decoration: BoxDecoration(
+                color: AppColors.glassBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.glassBorder, width: 1.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.glassGlow,
+                    blurRadius: 10.0,
+                    spreadRadius: 2.0,
                   ),
-                  child: Container(),
-                );
-              },
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildToggleOption(
+                    icon: Icons.radar,
+                    label: widget.appState.locale == 'he' ? 'רדאר' : 'Radar',
+                    isSelected: !_showMap,
+                    onTap: () {
+                      setState(() {
+                        _showMap = false;
+                      });
+                    },
+                  ),
+                  _buildToggleOption(
+                    icon: Icons.map,
+                    label: widget.appState.locale == 'he' ? 'מפה' : 'Map',
+                    isSelected: _showMap,
+                    onTap: () {
+                      setState(() {
+                        _showMap = true;
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -229,6 +569,7 @@ class _TowersScreenState extends State<TowersScreen>
           onTap: () {
             setState(() {
               _selectedFilterIndex = index;
+              _selectedRecordId = null; // Clear selection when filter changes
             });
           },
           borderRadius: BorderRadius.circular(15),
@@ -258,89 +599,37 @@ class _TowersScreenState extends State<TowersScreen>
 
   Widget _buildRecordsList(BuildContext context) {
     final appState = widget.appState;
+    final filtered = _getFilteredRecords();
 
     if (_selectedFilterIndex == 1) {
-      if (AppStateNotifier.isTesting) {
-        final filtered = _filterRecords([
-          {
-            'antennaId': 'CELL-100',
-            'addressHebrew': 'דיזנגוף 50, תל אביב',
-            'addressEnglish': 'Dizengoff 50, Tel Aviv',
-            'operatorName': 'Pelephone',
-            'radiationFrequency': 1800,
-          },
-        ]);
-        if (filtered.isEmpty) return _buildEmptyState(context);
-        return ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-          itemCount: filtered.length,
-          itemBuilder: (context, index) {
-            final item = filtered[index];
-            return _buildActiveAntennaCard(context, item);
-          },
-        );
+      if (!AppStateNotifier.isTesting &&
+          appState.isLoadingAntennas &&
+          appState.antennaRecords.isEmpty) {
+        return const GlassmorphicCardSkeletonList();
       }
-      // Active Antennas Stream Builder query
-      if (!appState.isFirebaseInitialized) {
-        return _buildEmptyState(context);
-      }
-      return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('cellular_antennas')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const GlassmorphicCardSkeletonList();
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          final records = docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-          final filtered = _filterRecords(records);
-
-          if (filtered.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          return ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-            itemCount: filtered.length,
-            itemBuilder: (context, index) {
-              final item = filtered[index];
-              return _buildActiveAntennaCard(context, item);
-            },
-          );
-        },
-      );
     } else {
-      // Construction Permits double-buffered data
       if (appState.isLoadingPermits && appState.permitRecords.isEmpty) {
         return const GlassmorphicCardSkeletonList();
       }
-
-      final filtered = _filterRecords(appState.permitRecords);
-
-      if (filtered.isEmpty) {
-        return _buildEmptyState(context);
-      }
-
-      return ListView.builder(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-        itemCount: filtered.length,
-        itemBuilder: (context, index) {
-          final item = filtered[index];
-          return _buildPermitCard(context, item);
-        },
-      );
     }
+
+    if (filtered.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    return ScrollablePositionedList.builder(
+      itemScrollController: _itemScrollController,
+      itemPositionsListener: _itemPositionsListener,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        final item = filtered[index];
+        return _selectedFilterIndex == 1
+            ? _buildActiveAntennaCard(context, item)
+            : _buildPermitCard(context, item);
+      },
+    );
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -372,78 +661,97 @@ class _TowersScreenState extends State<TowersScreen>
         : (item['addressEnglish'] as String? ?? 'Unknown');
     final operatorName = item['operatorName'] as String? ?? 'Unknown';
 
+    final id = item['antennaId']?.toString() ?? item['id']?.toString() ?? '';
+    final isSelected = _selectedRecordId == id;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
-      child: Semantics(
-        label: 'Active antenna at $address',
-        child: GlassmorphicCard(
-          startBorderColor: AppColors.success,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "ID: ${item['antennaId']}",
-                      style: AppTypography.headlineMd(
-                        context,
-                        color: AppColors.textPrimary,
-                      ).copyWith(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+      child: Container(
+        decoration: isSelected
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(16.0),
+                border: Border.all(color: AppColors.primary, width: 2.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(80),
+                    blurRadius: 8.0,
+                    spreadRadius: 2.0,
+                  ),
+                ],
+              )
+            : null,
+        child: Semantics(
+          label: 'Active antenna at $address',
+          child: GlassmorphicCard(
+            onTap: () => _onCardTap(item),
+            startBorderColor: AppColors.success,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "ID: ${item['antennaId']}",
+                        style: AppTypography.headlineMd(
+                          context,
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withAlpha(30),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.success.withAlpha(80),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withAlpha(30),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.success.withAlpha(80),
+                          ),
+                        ),
+                        child: Text(
+                          appState.translate('badge_active'),
+                          style: AppTypography.labelXs(
+                            context,
+                            color: AppColors.success,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        appState.translate('badge_active'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    address,
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${appState.translate('permit_operator')}$operatorName",
                         style: AppTypography.labelXs(
                           context,
-                          color: AppColors.success,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  address,
-                  style: AppTypography.bodySm(
-                    context,
-                    color: AppColors.textPrimary,
+                      Text(
+                        "${item['radiationFrequency']} MHz",
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "${appState.translate('permit_operator')}$operatorName",
-                      style: AppTypography.labelXs(
-                        context,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      "${item['radiationFrequency']} MHz",
-                      style: AppTypography.labelXs(
-                        context,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -469,76 +777,96 @@ class _TowersScreenState extends State<TowersScreen>
         ? '$locality - $description'
         : locality;
 
+    final id =
+        item['referenceNumber']?.toString() ?? item['id']?.toString() ?? '';
+    final isSelected = _selectedRecordId == id;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
-      child: Semantics(
-        label: 'Permit application at $addressText',
-        child: GlassmorphicCard(
-          startBorderColor: accentColor,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "${appState.translate('permit_ref_prefix')}${item['referenceNumber']}",
-                      style: AppTypography.headlineMd(
-                        context,
-                        color: AppColors.textPrimary,
-                      ).copyWith(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: accentColor.withAlpha(30),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: accentColor.withAlpha(80)),
-                      ),
-                      child: Text(
-                        badgeText,
-                        style: AppTypography.labelXs(
+      child: Container(
+        decoration: isSelected
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(16.0),
+                border: Border.all(color: AppColors.primary, width: 2.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(80),
+                    blurRadius: 8.0,
+                    spreadRadius: 2.0,
+                  ),
+                ],
+              )
+            : null,
+        child: Semantics(
+          label: 'Permit application at $addressText',
+          child: GlassmorphicCard(
+            onTap: () => _onCardTap(item),
+            startBorderColor: accentColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${appState.translate('permit_ref_prefix')}${item['referenceNumber']}",
+                        style: AppTypography.headlineMd(
                           context,
-                          color: accentColor,
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accentColor.withAlpha(30),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: accentColor.withAlpha(80)),
+                        ),
+                        child: Text(
+                          badgeText,
+                          style: AppTypography.labelXs(
+                            context,
+                            color: accentColor,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  addressText,
-                  style: AppTypography.bodySm(
-                    context,
-                    color: AppColors.textPrimary,
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "${appState.translate('permit_operator')}$operator",
-                      style: AppTypography.labelXs(
-                        context,
-                        color: AppColors.textSecondary,
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    addressText,
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textPrimary,
                     ),
-                    Text(
-                      "${appState.translate('permit_type')}${item['focalPointType']}",
-                      style: AppTypography.labelXs(
-                        context,
-                        color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${appState.translate('permit_operator')}$operator",
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      Text(
+                        "${appState.translate('permit_type')}${item['focalPointType']}",
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -600,7 +928,44 @@ class RadarGridPainter extends CustomPainter {
 
     canvas.drawCircle(center, maxRadius, sweepPaint);
 
-    // Draw Coordinate Pins Mock locations (projected into circle bounds)
+    // Filter records for elements containing a GeoPoint under 'coordinates'
+    final validCoords = <GeoPoint>[];
+    for (final rec in records) {
+      final coordsObj = rec['coordinates'];
+      if (coordsObj is GeoPoint) {
+        validCoords.add(coordsObj);
+      }
+    }
+
+    if (validCoords.isEmpty) {
+      return;
+    }
+
+    // Calculate average latitude and average longitude of the coordinates
+    double sumLat = 0.0;
+    double sumLng = 0.0;
+    for (final coord in validCoords) {
+      sumLat += coord.latitude;
+      sumLng += coord.longitude;
+    }
+    final avgLat = sumLat / validCoords.length;
+    final avgLng = sumLng / validCoords.length;
+
+    // Compute relative dx (longitude delta) and dy (latitude delta) from the average
+    // and find the maximum distance (delta) to scale offsets so they fit within maxRadius * 0.8.
+    double maxDelta = 0.0;
+    final deltas = <_CoordDelta>[];
+    for (final coord in validCoords) {
+      final dy = coord.latitude - avgLat;
+      final dx = coord.longitude - avgLng;
+      final dist = math.sqrt(dx * dx + dy * dy);
+      if (dist > maxDelta) {
+        maxDelta = dist;
+      }
+      deltas.add(_CoordDelta(dx, dy));
+    }
+
+    // Draw Coordinate Pins dynamically projected into circle bounds
     final pinPaint = Paint()
       ..color = AppColors.primary
       ..style = PaintingStyle.fill;
@@ -610,19 +975,19 @@ class RadarGridPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
-    final rand = math.Random(42); // Seed to guarantee static mockup positions
+    for (final delta in deltas) {
+      // Scale offsets so they fit within maxRadius * 0.8
+      final double scale = maxDelta > 0 ? (maxRadius * 0.8) / maxDelta : 0.0;
+      final double px = delta.dx * scale;
+      final double py =
+          -delta.dy * scale; // Y direction is down in screen coords
 
-    for (int i = 0; i < math.min(records.length, 12); i++) {
-      // Mock relative coordinates layout centered inside radar circle
-      final double r = maxRadius * (0.2 + 0.7 * rand.nextDouble());
-      final double a = rand.nextDouble() * 2 * math.pi;
+      final offset = Offset(center.dx + px, center.dy + py);
 
-      final offset = Offset(
-        center.dx + r * math.cos(a),
-        center.dy + r * math.sin(a),
-      );
+      // Compute angle (in radians) of this offset from center to apply sweep fade intensity effect dynamically
+      final double a = math.atan2(py, px);
 
-      // Pulse fade effect relative to sweep sweep angle
+      // Pulse fade effect relative to sweep angle
       double diff = (a - angle) % (2 * math.pi);
       if (diff < 0) diff += 2 * math.pi;
       double intensity = math.max(0.15, 1.0 - (diff / (2 * math.pi)));
@@ -708,4 +1073,10 @@ class GlassmorphicCardSkeletonList extends StatelessWidget {
       },
     );
   }
+}
+
+class _CoordDelta {
+  final double dx;
+  final double dy;
+  _CoordDelta(this.dx, this.dy);
 }
