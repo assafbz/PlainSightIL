@@ -9,6 +9,7 @@ import 'package:plainsight/features/directory/presentation/pages/directory_page.
 import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,8 @@ void main() async {
     );
     // Connect to local Firestore emulator
     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
+    // Connect to local Auth emulator
+    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
   } catch (e) {
     debugPrint('Firebase initialization warning: $e');
   }

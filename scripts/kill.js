@@ -2,7 +2,7 @@ const { execSync } = require('child_process');
 
 console.log('🔍 Locating and terminating PlainSightIL processes...');
 
-const ports = [8081, 5002, 4001, 8080];
+const ports = [8081, 9099, 5002, 4001, 8080];
 const pids = new Set();
 
 for (const port of ports) {
