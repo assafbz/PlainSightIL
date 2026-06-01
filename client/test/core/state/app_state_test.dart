@@ -115,5 +115,35 @@ void main() {
     test('translate returns the key itself if no translation is found', () {
       expect(appState.translate('non_existent_key'), 'non_existent_key');
     });
+
+    test('initAntennaListener initializes antennas in testing mode', () {
+      AppStateNotifier.isTesting = true;
+      expect(appState.antennaRecords.isEmpty, true);
+      expect(appState.isLoadingAntennas, true);
+
+      appState.initAntennaListener();
+
+      expect(appState.isLoadingAntennas, false);
+      expect(appState.antennaRecords.isNotEmpty, true);
+      expect(appState.antennaRecords.first['antennaId'], 'CELL-100');
+      expect(appState.antennaRecords.first['coordinates'], isNotNull);
+    });
+
+    test(
+      'initPermitMetadataListener in testing mode triggers initAntennaListener',
+      () {
+        AppStateNotifier.isTesting = true;
+        expect(appState.antennaRecords.isEmpty, true);
+        expect(appState.permitRecords.isEmpty, true);
+
+        appState.initPermitMetadataListener();
+
+        expect(appState.isLoadingAntennas, false);
+        expect(appState.isLoadingPermits, false);
+        expect(appState.antennaRecords.isNotEmpty, true);
+        expect(appState.permitRecords.isNotEmpty, true);
+        expect(appState.permitRecords.first['coordinates'], isNotNull);
+      },
+    );
   });
 }

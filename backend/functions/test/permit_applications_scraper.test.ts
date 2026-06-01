@@ -99,62 +99,66 @@ describe("Permit Record Parser", () => {
   });
 });
 
-describe("Double-Buffering Scraper Ingestion", () => {
+describe("Incremental Update Scraper Ingestion", () => {
   let mockDb: any;
   let mockBatch: any;
   let mockCollection: any;
   let mockDoc: any;
-  let mockMetadataGet: any;
   let mockMetadataSet: any;
-  let mockPurgeGet: any;
+  let mockCountGet: any;
+  let mockGetAll: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockMetadataGet = vi.fn().mockResolvedValue({
-      exists: true,
-      data: () => ({ activeCollection: "permit_apps_blue" }),
-    });
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
       if (id === "cellular_permit_applications") {
         return {
-          get: mockMetadataGet,
           set: mockMetadataSet,
         };
       }
       return {
-        ref: { id },
+        id,
       };
     });
 
-    mockPurgeGet = vi.fn().mockResolvedValue({
-      size: 0,
-      docs: [],
+    mockCountGet = vi.fn().mockResolvedValue({
+      data: () => ({ count: 1 }),
     });
 
     mockCollection = vi.fn().mockReturnValue({
       doc: mockDoc,
-      limit: vi.fn().mockReturnValue({
-        get: mockPurgeGet,
+      count: vi.fn().mockReturnValue({
+        get: mockCountGet,
       }),
     });
 
     mockBatch = {
       set: vi.fn(),
-      delete: vi.fn(),
       commit: vi.fn().mockResolvedValue(true),
     };
+
+    mockGetAll = vi.fn().mockImplementation((...refs) => {
+      // By default, documents do not exist
+      return Promise.resolve(
+        refs.map((ref) => ({
+          exists: false,
+          id: ref.id,
+          data: () => ({}),
+        })),
+      );
+    });
 
     mockDb = {
       collection: mockCollection,
       batch: vi.fn().mockReturnValue(mockBatch),
+      getAll: mockGetAll,
     };
   });
 
-  it("should scrape cellular permits, select green collection (inactive), purge and bulk write", async () => {
+  it("should scrape cellular permits, check existence using db.getAll, and write to cellular_permit_applications", async () => {
     const apiResponse = {
       data: {
         result: {
@@ -173,7 +177,6 @@ describe("Double-Buffering Scraper Ingestion", () => {
     };
 
     vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
-    // Second fetch returns empty to stop pagination loop
     vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
 
     const result = await scrapeAndSyncPermitApplications(mockDb);
@@ -181,20 +184,71 @@ describe("Double-Buffering Scraper Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    // Active was 'permit_apps_blue', so target is 'permit_apps_green'
-    expect(mockCollection).toHaveBeenCalledWith("permit_apps_green");
+    expect(mockCollection).toHaveBeenCalledWith("cellular_permit_applications");
+    expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
-    expect(mockBatch.commit).toHaveBeenCalled();
+
+    // Verify that the record is written with createdAt and lastUpdated
+    const writtenRecord = mockBatch.set.mock.calls[0][1];
+    expect(writtenRecord.id).toBe("50");
+    expect(writtenRecord.createdAt).toBeDefined();
+    expect(writtenRecord.lastUpdated).toBeDefined();
 
     // Verify metadata update
     expect(mockDoc).toHaveBeenCalledWith("cellular_permit_applications");
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "permit_apps_green",
+        activeCollection: "cellular_permit_applications",
         status: "idle",
         recordCount: 1,
       }),
       { merge: true },
     );
+  });
+
+  it("should preserve initial createdAt timestamp if the record already exists", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    // Setup db.getAll to return that the document exists with the initialCreatedAt timestamp
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "50",
+        data: () => ({ createdAt: initialCreatedAt }),
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              ID: "50",
+              "תאריך הגשת הבקשה": "2025-09-01 00:00:00",
+              "מס' סימוכין": 2081659,
+              חברה: "סלקום",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncPermitApplications(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+
+    const writtenRecord = mockBatch.set.mock.calls[0][1];
+    expect(writtenRecord.id).toBe("50");
+    // Verify that createdAt is preserved
+    expect(writtenRecord.createdAt).toBe(initialCreatedAt);
+    expect(writtenRecord.lastUpdated).toBeDefined();
+    // lastUpdated should be different from initialCreatedAt (we'll assume now is used)
+    expect(writtenRecord.lastUpdated).not.toBe(initialCreatedAt);
   });
 });

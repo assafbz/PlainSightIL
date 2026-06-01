@@ -69,6 +69,7 @@ export interface CellularPermitApplication {
   geohash: string;
   jurisdiction: string;
   lastUpdated: string;
+  createdAt?: string;
 }
 
 export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApplication | null {
@@ -131,20 +132,6 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
   };
 }
 
-async function purgeCollection(db: admin.firestore.Firestore, collectionPath: string) {
-  const collectionRef = db.collection(collectionPath);
-  const snapshot = await collectionRef.limit(500).get();
-
-  if (snapshot.size === 0) return;
-
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
-
-  // Recurse to purge remainder
-  await purgeCollection(db, collectionPath);
-}
-
 export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
   resourceId = "ff398c7e-c522-4ee8-a53a-312b188a573d",
@@ -153,26 +140,17 @@ export async function scrapeAndSyncPermitApplications(
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    // 1. Fetch metadata pointer to determine targets
-    const metaDoc = await metadataRef.get();
-    const currentActive = metaDoc.exists ? metaDoc.data()?.activeCollection : null;
+    const targetCollection = "cellular_permit_applications";
+    logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
-    const targetCollection =
-      currentActive === "permit_apps_blue" ? "permit_apps_green" : "permit_apps_blue";
-    logger.info(`Starting sync. Target collection buffer: ${targetCollection}`);
-
-    // 2. Unconditionally Purge Inactive Collection
-    await purgeCollection(db, targetCollection);
-    logger.info(`Purged target buffer collection: ${targetCollection}`);
-
-    // 3. Paginated API fetch from data.gov.il datastore search
+    // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
     const limit = 1000;
     let hasMore = true;
     let processedCount = 0;
 
-    let batch = db.batch();
     const targetRef = db.collection(targetCollection);
+    const now = new Date().toISOString();
 
     while (hasMore) {
       const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
@@ -186,42 +164,71 @@ export async function scrapeAndSyncPermitApplications(
         break;
       }
 
+      // Collect parsed records for this page
+      const parsedRecords: CellularPermitApplication[] = [];
       for (const rec of records) {
         const parsed = parsePermitRecord(rec);
         if (parsed) {
-          const docRef = targetRef.doc(parsed.id);
-          batch.set(docRef, parsed);
-          processedCount++;
+          parsedRecords.push(parsed);
+        }
+      }
 
-          if (processedCount % 500 === 0) {
-            await batch.commit();
-            batch = db.batch();
+      // Process parsed records in chunks of 500
+      for (let i = 0; i < parsedRecords.length; i += 500) {
+        const chunk = parsedRecords.slice(i, i + 500);
+
+        // Get doc refs for the chunk
+        const docRefs = chunk.map((r) => targetRef.doc(r.id));
+
+        // Lookup existing documents in batch
+        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
+        const existingCreatedAtMap = new Map<string, string>();
+        for (const snap of snapshots) {
+          if (snap.exists) {
+            const data = snap.data();
+            if (data && data.createdAt) {
+              existingCreatedAtMap.set(snap.id, data.createdAt);
+            }
           }
         }
+
+        // Prepare and write chunk
+        const batch = db.batch();
+        for (const r of chunk) {
+          const docRef = targetRef.doc(r.id);
+          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+
+          r.createdAt = existingCreatedAt || now;
+          r.lastUpdated = now;
+
+          batch.set(docRef, r);
+          processedCount++;
+        }
+        await batch.commit();
       }
 
       offset += limit;
     }
 
-    if (processedCount % 500 !== 0) {
-      await batch.commit();
-    }
+    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
 
-    logger.info(`Successfully parsed and stored ${processedCount} records in ${targetCollection}`);
+    // Retrieve total count of documents in the collection
+    const countSnapshot = await targetRef.count().get();
+    const totalRecords = countSnapshot.data().count;
 
-    // 4. Atomic switch of active collection pointer
+    // Atomic update of active collection pointer and count
     await metadataRef.set(
       {
         id: datasetId,
         activeCollection: targetCollection,
-        lastUpdated: new Date().toISOString(),
-        recordCount: processedCount,
+        lastUpdated: now,
+        recordCount: totalRecords,
         status: "idle",
       },
       { merge: true },
     );
 
-    logger.info(`Swapped active pointer to ${targetCollection}. Ingestion complete.`);
+    logger.info("Updated metadata. Ingestion complete.");
     return { success: true, count: processedCount };
   } catch (error) {
     logger.error("Scraper failed:", error);

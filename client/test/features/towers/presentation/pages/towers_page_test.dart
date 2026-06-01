@@ -1,0 +1,176 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
+import 'package:plainsight/features/towers/presentation/widgets/towers_map_view.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  const MethodChannel geolocatorChannel = MethodChannel(
+    'flutter.baseflow.com/geolocator',
+  );
+
+  setUp(() {
+    AppStateNotifier.isTesting = true;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(geolocatorChannel, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'isLocationServiceEnabled') {
+            return false;
+          }
+          return null;
+        });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(geolocatorChannel, null);
+  });
+
+  group('TowersScreen & TowersMapView Widget Tests', () {
+    testWidgets('Toggles between radar and map views', (
+      WidgetTester tester,
+    ) async {
+      final appState = AppStateNotifier();
+      appState.initPermitMetadataListener();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TowersScreen(appState: appState)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Initially shows RadarView (uses CustomPaint) and NOT TowersMapView
+      expect(find.byType(CustomPaint), findsWidgets);
+      expect(find.byType(TowersMapView), findsNothing);
+
+      // Tap on the Map toggle option
+      final mapToggleFinder = find.text('Map');
+      expect(mapToggleFinder, findsOneWidget);
+      await tester.tap(mapToggleFinder);
+      await tester.pumpAndSettle();
+
+      // Now it should show TowersMapView and NOT CustomPaint for radar
+      expect(find.byType(TowersMapView), findsOneWidget);
+      expect(find.byKey(const ValueKey('radar_view')), findsNothing);
+    });
+
+    testWidgets('TowersMapView discards invalid coordinates', (
+      WidgetTester tester,
+    ) async {
+      final appState = AppStateNotifier();
+      final mapController = MapController();
+      final records = [
+        {
+          'antennaId': 'VALID-1',
+          'coordinates': const GeoPoint(32.0782, 34.7741),
+        },
+        {'antennaId': 'INVALID-TYPE', 'coordinates': 'not_a_geopoint'},
+        {'antennaId': 'NULL-COORDS', 'coordinates': null},
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TowersMapView(
+              appState: appState,
+              records: records,
+              selectedRecordId: null,
+              mapController: mapController,
+              onMarkerTap: (_) {},
+              showAntennas: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final clusterFinder = find.byType(MarkerClusterLayerWidget);
+      expect(clusterFinder, findsOneWidget);
+
+      final MarkerClusterLayerWidget clusterWidget = tester.widget(
+        clusterFinder,
+      );
+      // Only the VALID-1 record should be mapped as a marker
+      expect(clusterWidget.options.markers.length, 1);
+      expect(clusterWidget.options.markers.first.point.latitude, 32.0782);
+      expect(clusterWidget.options.markers.first.point.longitude, 34.7741);
+    });
+
+    testWidgets('GPS Recenter handles cancellation gracefully', (
+      WidgetTester tester,
+    ) async {
+      final appState = AppStateNotifier();
+      appState.initPermitMetadataListener();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TowersScreen(appState: appState)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Switch to Map view
+      await tester.tap(find.text('Map'));
+      await tester.pumpAndSettle();
+
+      // Tap on the Recenter button
+      final recenterButtonFinder = find.byTooltip('Recenter on Location');
+      expect(recenterButtonFinder, findsOneWidget);
+      await tester.tap(recenterButtonFinder);
+      await tester.pumpAndSettle();
+
+      // Location explanation dialog should appear
+      expect(find.text('Location Access'), findsOneWidget);
+
+      // Tap Cancel in the dialog
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      // SnackBar fallback should appear
+      expect(
+        find.text('Could not access current location. Centering on Tel Aviv.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('GPS Recenter handles exception/denial gracefully', (
+      WidgetTester tester,
+    ) async {
+      final appState = AppStateNotifier();
+      appState.initPermitMetadataListener();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: TowersScreen(appState: appState)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Switch to Map view
+      await tester.tap(find.text('Map'));
+      await tester.pumpAndSettle();
+
+      // Tap on the Recenter button
+      await tester.tap(find.byTooltip('Recenter on Location'));
+      await tester.pumpAndSettle();
+
+      // Tap Allow in the explanation dialog
+      await tester.tap(find.text('Allow'));
+      await tester.pumpAndSettle();
+
+      // The platform exception in test is caught and triggers fallback SnackBar
+      expect(
+        find.text('Could not access current location. Centering on Tel Aviv.'),
+        findsOneWidget,
+      );
+    });
+  });
+}

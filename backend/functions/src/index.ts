@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 import { scrapeAndSyncAntennas } from "./scrapers/antennas_scraper";
 import { scrapeAndSyncPermitApplications } from "./scrapers/permit_applications_scraper";
+import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 
 admin.initializeApp();
 
@@ -52,6 +53,31 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
     const err = error as Error;
     res.status(500).json({
       message: "Sync failed",
+      error: err.message || String(error),
+    });
+  }
+});
+
+// Scheduled Cloud Function for Dataset Metadata - runs weekly on Sunday at 1:00 AM (Israel timezone)
+export const scheduledMetadataScraper = functions.pubsub
+  .schedule("0 1 * * 0")
+  .timeZone("Asia/Jerusalem")
+  .onRun(async () => {
+    await scrapeAndSyncDatasetMetadata(db);
+  });
+
+// HTTPS Triggered Cloud Function for Dataset Metadata - manual sync
+export const manualSyncMetadata = functions.https.onRequest(async (req, res) => {
+  try {
+    const result = await scrapeAndSyncDatasetMetadata(db);
+    res.status(200).json({
+      message: "Metadata sync completed successfully",
+      count: result.count,
+    });
+  } catch (error) {
+    const err = error as Error;
+    res.status(500).json({
+      message: "Metadata sync failed",
       error: err.message || String(error),
     });
   }

@@ -121,6 +121,16 @@ class DashboardScreen extends StatelessWidget {
               accentColor: AppColors.secondary,
               onTap: () => appState.setActiveTab(3), // Index 3 is Budget
             ),
+            const SizedBox(height: 12),
+            _buildDatasetCard(
+              context,
+              title: appState.translate('directory_title'),
+              desc: appState.translate('search_hint'),
+              badge: '1,200',
+              icon: Icons.folder_open,
+              accentColor: AppColors.primary,
+              onTap: () => appState.setActiveTab(5), // Index 5 is Directory
+            ),
             const SizedBox(height: 24),
           ],
         ),
