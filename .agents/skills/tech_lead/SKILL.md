@@ -31,12 +31,17 @@ Declare the variables, functions, and modules to be introduced:
 - `class MyWidget extends StatelessWidget`: describe interface and parameters
 - BLoC event/state class declarations
 
-## 4. Compilation & Verification Targets
+## 4. Documentation Checklist
+Verify and enforce in-code documentation targets:
+- `[ ]` Task D1: Document all new/modified public APIs (classes, methods, interfaces, constructors) using three-slash (`///`) comments for Dart/Flutter or JSDoc (`/** ... */`) for TypeScript.
+- `[ ]` Task D2: Add clear inline comments explaining non-obvious code workarounds, math, canvas coordinates/pixel transformations, or complex logic.
+
+## 5. Compilation & Verification Targets
 - Command to install dependencies: `flutter pub get`
 - Command to run static analysis: `flutter analyze`
 - Command to execute tests: `flutter test`
 
-## 5. Technical Lead Blueprinting Observations
+## 6. Technical Lead Blueprinting Observations
 Document any blueprint implementation constraints, dynamic adjustments made during execution, or task layout complexities. This will be harvested by the final Lessons Learned phase.
 ```
 - Update `.agents/state/active_issues/issue_<id>.md`.
@@ -45,6 +50,10 @@ Document any blueprint implementation constraints, dynamic adjustments made duri
 ### 2. Review Phase (Post-Implementation)
 - When the Developer completes code changes, evaluate their work.
 - Perform compilation check, syntax audit, and verify that they followed `BLUEPRINT.md` exactly.
+- Audit the implementation against the in-code documentation standards defined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards). Verify that:
+  - All new public APIs, classes, methods, and functions have three-slash (`///`) or JSDoc comments with descriptions of parameters and return values.
+  - Complex logic, custom canvas painters, or mathematical algorithms are fully commented.
+  - TODO comments are structured (e.g. `// TODO: (Issue #123) ...`).
 - If changes are needed, update the state file:
   - Add details to **Blockers & Review Feedback**.
   - Set `current_phase` to `blueprint-revision`.

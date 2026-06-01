@@ -38,7 +38,10 @@ Specify files that will be modified, created, or deleted:
 ## 5. Potential Performance & Security Impacts
 Assess any CPU or UI thread bottlenecks. Outline clean-up routines.
 
-## 6. Architecture & Implementation Decisions
+## 6. Expected API Documentation & Code Comments
+Declare which new or modified APIs, public endpoints, classes, or widgets require detailed three-slash (`///`) or JSDoc (`/** ... */`) comments. Highlight complex logic or custom rendering coordinates that require explanatory comments.
+
+## 7. Architecture & Implementation Decisions
 Document key architectural choices, compromises, or tech debt introduced. This will be harvested by the final Lessons Learned phase.
 ```
 
@@ -47,3 +50,69 @@ Document key architectural choices, compromises, or tech debt introduced. This w
 - Add the `TDD.md` link to the artifacts list.
 - Append transition logs.
 - Transition `current_phase` to `security-audit` and assign to `Security Engineer`.
+
+## 3. Codebase File Architecture & Boundaries
+
+The System Architect must respect and design around the modular Clean Architecture boundaries established in the workspace. Below is the mapping of how files are structured and their strict dependency directions.
+
+### Clean Architecture File Dependency Diagram
+
+```mermaid
+graph TD
+    subgraph Presentation Layer [client/lib/features/X/presentation/]
+        UI[pages/ & widgets/] -->|Listens to / Triggers| Bloc[blocs/ X_bloc.dart]
+    end
+
+    subgraph Domain Layer [client/lib/features/X/domain/]
+        Bloc -->|Invokes| UseCase[usecases/ get_X.dart]
+        UseCase -->|Calls Contract| RepoInterface[repositories/ X_repository.dart]
+        RepoInterface -->|Returns Entity| Entity[entities/ X_entity.dart]
+    end
+
+    subgraph Data Layer [client/lib/features/X/data/]
+        RepoImpl[repositories/ X_repository_impl.dart] -.->|Implements| RepoInterface
+        RepoImpl -->|Queries| RemoteDS[datasources/ X_remote_datasource.dart]
+        RepoImpl -->|Queries/Caches| LocalDS[datasources/ X_local_datasource.dart]
+        RemoteDS -->|Maps JSON to| Model[models/ X_model.dart]
+        Model -.->|Extends| Entity
+    end
+
+    %% Dependency Rule: Inner layers must not know about outer layers
+    Presentation Layer --> Domain Layer
+    Data Layer --> Domain Layer
+    
+    style Presentation Layer fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    style Domain Layer fill:#efebe9,stroke:#5d4037,stroke-width:2px;
+    style Data Layer fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+```
+
+### End-to-End Ingestion & Caching Data Flow
+
+This diagram illustrates how data flows from external APIs to client UI components, showing the backend scraper and client database files involved:
+
+```mermaid
+graph TD
+    GovAPI[data.gov.il API] -->|HTTP GET / Cron| Functions[backend/functions/src/scrapers/]
+    Functions -->|Format & Parse| Firestore[(Cloud Firestore DB)]
+    
+    subgraph Client Data Flow
+        Firestore -->|Fetch Snapshots| RemoteDS[X_remote_datasource.dart]
+        RemoteDS -->|JSON Deserialization| Model[X_model.dart]
+        Model --> RepoImpl[X_repository_impl.dart]
+        RepoImpl -->|Write Cache| IsarDB[(Isar Local Cache DB)]
+        IsarDB -->|Read Cached Query| RepoImpl
+        RepoImpl -->|Yield Entities| UseCase[get_X.dart]
+        UseCase -->|State Update| Bloc[X_bloc.dart]
+        Bloc -->|Rebuild Widget| View[X_page.dart]
+    end
+
+    style GovAPI fill:#f9f,stroke:#333,stroke-width:2px
+    style Firestore fill:#bbf,stroke:#333,stroke-width:2px
+    style IsarDB fill:#dfd,stroke:#333,stroke-width:2px
+```
+
+### Key Architectural Guidelines
+1. **Domain Isolation**: Files in the `domain/` directory must not import package dependencies of outer layers, such as `flutter`, `isar`, `cloud_firestore`, or `flutter_bloc`.
+2. **Double Buffering / Blue-Green Datasets**: For scrapers and local syncing, use unique dataset identifiers (e.g. `d8715392-287f-49b7-9ae3-f21ec5bf55f3.ts` for scrapers and test suites) to ensure modularity and ease of dataset swaps.
+3. **No Direct imports across Features**: Presentational and data components in feature `A` must never import files from feature `B`. Shared services should be moved to `client/lib/core/`.
+

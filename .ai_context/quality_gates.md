@@ -55,6 +55,7 @@ graph TD
     *   [ ] Backend changes outlined (new Cloud Functions, Firestore schema updates, or SQL tables).
     *   [ ] Explicit data sync caching flow detailed (Isar local DB schema vs Firestore updates).
     *   [ ] Identification of critical third-party dependencies or APIs to be introduced.
+    *   [ ] **Expected API Documentation**: Expected API documentation targets (critical classes, interfaces, data mappings, calculations) are declared in `TDD.md`.
 
 ### 2.4 Security Gate (Security Engineer Deliverable)
 *   **Gatekeeper**: Security Engineer Agent
@@ -72,6 +73,7 @@ graph TD
     *   [ ] File modification breakdown listing precisely which files will be created/edited.
     *   [ ] Detailed, step-by-step instructions for implementation to minimize developer context drift.
     *   [ ] Clear mapping of who owns each step (dependencies resolved).
+    *   [ ] **Documentation Targets**: Clear checklist items defined for in-code API documentation targets (triple-slash for Dart/Flutter, JSDoc for TypeScript/Node).
 
 ### 2.6 Implementation Gate (Developer Deliverable)
 *   **Gatekeeper**: Senior Developer Agent
@@ -79,6 +81,7 @@ graph TD
     *   [ ] All checklist items in `BLUEPRINT.md` are marked completed.
     *   [ ] Local testing is successful (unit tests and linting pass).
     *   [ ] No compilation warnings or formatting violations left in the modified files.
+    *   [ ] **In-Code Documentation**: All new/modified public classes, methods, constructors, and modules conform to the documentation guidelines in `coding_standards.md` (descriptions, parameters, return types, complex logic explanations).
 
 ### 2.7 QA Validation Gate (QA Engineer Deliverable)
 *   **Gatekeeper**: QA Engineer Agent
@@ -89,6 +92,7 @@ graph TD
     *   [ ] Accessibility auditing (screen readers, color contrast, tap target sizing).
     *   [ ] Zero open blocker or high-severity defects.
     *   [ ] Regression audit completed on adjacent system features.
+    *   [ ] **Documentation Audit**: QA has verified that all new public interfaces and methods contain valid doc comments, and no leftover raw comments or placeholder text exist.
 
 ### 2.8 Lessons Learned Gate (Lessons Learned Deliverable)
 *   **Gatekeeper**: Lessons Learned Agent
@@ -97,6 +101,7 @@ graph TD
     *   [ ] Structured report summarizing the cycle's pitfalls, resolution steps, and preventative guidelines.
     *   [ ] Required playbook or coding standard updates applied to prevent documented pitfalls.
     *   [ ] Implemented code review completed, with remaining minor formatting, lint warnings, or style cleanup refactored.
+    *   [ ] **Documentation Cleanup**: In-code documentation audit complete; missing comments or docstrings on all new modules have been fully resolved.
 
 ### 2.9 Merge Approval Gate (Coordinator Gate)
 *   **Gatekeeper**: Coordinator Agent

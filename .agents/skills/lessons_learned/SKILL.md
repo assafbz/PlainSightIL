@@ -39,7 +39,7 @@ If a pitfall or hurdle can be prevented by refining the codebase documentation o
 ### 4. Clean Up and Refactor Code
 - Review the modified files and git diff for this issue branch.
 - Look for minor issues that do not block QA but can be improved:
-  - Missing comments or docstrings on newly introduced classes/methods.
+  - Missing comments or docstrings on newly introduced classes/methods. Explicitly verify that the code complies with the in-code documentation standards defined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards) and add any missing doc comments (three-slash `///` in Dart or JSDoc in TS).
   - Lint or static analysis warnings.
   - Hardcoded styling strings/colors that should use predefined tokens.
 - Apply minor refactoring and code cleanup directly using code modification tools to ensure the codebase remains in an immaculate state.

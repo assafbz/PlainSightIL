@@ -24,6 +24,7 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
   - **Avoid Deprecated APIs**: Always verify deprecation warnings on the target Flutter framework version (e.g., using `Color.withValues(alpha: ...)` instead of `Color.withOpacity(...)` to prevent static analysis issues).
   - **Test Viewport Constraints**: Wrap scrollable pages and utilize `tester.ensureVisible` for interactive components during widget testing to prevent hit-test misses in the default 800x600 test viewport.
   - **Build Phase State Updates**: Never trigger synchronous notifications or state modifications (e.g., calling state methods that invoke `notifyListeners()`) directly within `initState()` or during a widget's build phase. Wrap these updates in `WidgetsBinding.instance.addPostFrameCallback((_) { ... })` to defer them safely to the next frame.
+  - **In-Code Documentation**: Adhere strictly to the in-code documentation standards defined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards). Ensure all new public APIs (classes, interfaces, methods, constructors, functions) are documented with three-slash (`///`) comments in Dart/Flutter or JSDoc (`/** ... */`) in TypeScript, and use inline comments to explain non-obvious workarounds, calculations, or complex algorithms.
   - Use `replace_file_content` or `multi_replace_file_content` for existing files.
   - Create new files using `write_to_file` if designated by the blueprint.
 

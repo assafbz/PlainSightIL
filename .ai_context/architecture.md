@@ -114,18 +114,27 @@ sequenceDiagram
 ### 4.0 Ground-Truth Database Schemas (JSON Specification)
 Detailed, machine-readable JSON schemas defining properties, types, constraints, and subcollections for all Firestore documents are located in [database_schemas.json](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/database_schemas.json). AI agents and codebase generators must refer to this file as the database ground-truth.
 
-### 4.1 Cloud Firestore Document Schema (`cellular_antennas/{documentId}`)
-To optimize geo-searches, documents use Firestore geopoints and pre-computed geohashes:
+### 4.1 Cloud Firestore Document Schema Examples
 
+To optimize geo-searches and provide bilingual information, documents use pre-computed structures. Here are examples of the primary collections:
+
+#### Cellular Antennas (`cellular_antennas/{documentId}`)
 ```json
 {
+  "id": "CELL-4921A",
   "antennaId": "CELL-4921A",
+  "siteNumber": "site-103a",
   "coordinates": {
     "_latitude": 32.0853,
     "_longitude": 34.7818
   },
   "geohash": "svz7rhfb8",
   "operatorName": "Partner",
+  "company": {
+    "he": "פרטנר",
+    "en": "Partner"
+  },
+  "locality": "תל אביב",
   "permitType": "Active",
   "radiationFrequency": 1800.0,
   "lastTestDate": "2026-05-15T00:00:00Z",
@@ -133,6 +142,54 @@ To optimize geo-searches, documents use Firestore geopoints and pre-computed geo
   "addressEnglish": "50 Dizengoff, Tel Aviv"
 }
 ```
+
+#### Cellular Permit Applications (`cellular_permit_applications/{documentId}`)
+```json
+{
+  "id": "1002345",
+  "submissionDate": "2026-04-10T00:00:00Z",
+  "referenceNumber": 2026041002,
+  "company": {
+    "he": "סלקום",
+    "en": "Cellcom"
+  },
+  "permitType": "היתר הקמה",
+  "siteNumber": "NS-392A",
+  "locality": "ירושלים",
+  "addressDescription": "גג בית החולים",
+  "focalPointType": "גג",
+  "coordinates": {
+    "_latitude": 31.7719,
+    "_longitude": 35.2170
+  },
+  "geohash": "svz3qyfb8",
+  "jurisdiction": "ירושלים",
+  "lastUpdated": "2026-06-01T22:30:00Z"
+}
+```
+
+#### Companies in Liquidation (`companies_liquidation/{documentId}`)
+```json
+{
+  "id": "514930129",
+  "companyId": 514930129,
+  "companyName": "טקסטיל בעמ",
+  "liquidationCaseId": 930129,
+  "caseStatus": {
+    "he": "פירוק פעיל",
+    "en": "Active Winding Up"
+  },
+  "submissionDate": "2026-01-15T00:00:00Z",
+  "liquidationOrderDate": "2026-03-20T00:00:00Z",
+  "cancellationFreezeDate": null,
+  "closureDate": null,
+  "closureReason": null,
+  "districtCourt": "תל אביב",
+  "cityOfActivity": "בני ברק",
+  "lastUpdated": "2026-06-01T22:39:22Z"
+}
+```
+
 
 ### 4.2 Client Isar Database Model (Cached Query Ranges)
 The client application caches previously retrieved coordinate grids to speed up map panning.
