@@ -1,5 +1,6 @@
 class DatasetMetadataModel {
   final String id;
+  final String datasetId;
   final String name;
   final String title;
   final String notes;
@@ -11,6 +12,7 @@ class DatasetMetadataModel {
 
   DatasetMetadataModel({
     required this.id,
+    required this.datasetId,
     required this.name,
     required this.title,
     required this.notes,
@@ -37,6 +39,7 @@ class DatasetMetadataModel {
 
     return DatasetMetadataModel(
       id: map['id'] as String? ?? '',
+      datasetId: map['datasetId'] as String? ?? '',
       name: map['name'] as String? ?? '',
       title: map['title'] as String? ?? '',
       notes: map['notes'] as String? ?? '',
@@ -51,6 +54,7 @@ class DatasetMetadataModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'datasetId': datasetId,
       'name': name,
       'title': title,
       'notes': notes,

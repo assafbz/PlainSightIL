@@ -7,7 +7,7 @@ import {
   scrapeAndSyncAntennas,
   convertItmToWgs84,
   isValidIsraelCoordinates,
-} from "../src/scrapers/antennas_scraper";
+} from "../src/scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({

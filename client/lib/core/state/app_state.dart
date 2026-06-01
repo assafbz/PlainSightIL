@@ -435,6 +435,7 @@ class AppStateNotifier extends ChangeNotifier {
       _directoryRecords = [
         DatasetMetadataModel(
           id: '8935c8e5-ec77-421f-af86-d970583195f8',
+          datasetId: '995eb826-c471-4572-8fd3-39d92a3a9603',
           name: 'active_antennas',
           title: 'אנטנות סלולריות פעילות',
           notes: 'רשימת מוקדי שידור סלולריים פעילים ובדיקות קרינה שנערכו להם.',
@@ -446,6 +447,7 @@ class AppStateNotifier extends ChangeNotifier {
         ),
         DatasetMetadataModel(
           id: 'ff398c7e-c522-4ee8-a53a-312b188a573d',
+          datasetId: '4e9111d8-e842-40ec-b587-629e684e85ac',
           name: 'cellular_permit_applications',
           title: 'בקשות להיתרי הקמה של אנטנות',
           notes:
@@ -458,8 +460,9 @@ class AppStateNotifier extends ChangeNotifier {
         ),
         DatasetMetadataModel(
           id: 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          name: 'companies_liquidation',
-          title: 'חברות בפירוק מרצון או בית משפט',
+          datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
+          name: 'pr2018',
+          title: 'מאגר הכונס הרשמי',
           notes:
               'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
           publisher: 'רשות התאגידים',
@@ -470,6 +473,7 @@ class AppStateNotifier extends ChangeNotifier {
         ),
         DatasetMetadataModel(
           id: 'government-budget-dataset-id',
+          datasetId: 'government-budget-dataset-id',
           name: 'government_budget',
           title: 'ספר התקציב ונתוני הוצאות',
           notes: 'ספר התקציב הפתוח ונתוני ביצוע תקציב הממשלה.',

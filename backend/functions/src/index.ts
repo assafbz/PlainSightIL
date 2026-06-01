@@ -1,9 +1,9 @@
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions/v1";
-import { scrapeAndSyncAntennas } from "./scrapers/antennas_scraper";
-import { scrapeAndSyncPermitApplications } from "./scrapers/permit_applications_scraper";
+import { scrapeAndSyncAntennas } from "./scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
+import { scrapeAndSyncPermitApplications } from "./scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
-import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
+import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
 
 admin.initializeApp();
 

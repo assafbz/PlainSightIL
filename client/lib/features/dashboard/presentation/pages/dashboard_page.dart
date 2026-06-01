@@ -11,9 +11,9 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key, required this.appState});
 
   String _getDatasetTitle(DatasetMetadataModel item) {
-    if (item.name == 'active_antennas') {
+    if (item.name == 'active_antennas' || item.id == '8935c8e5-ec77-421f-af86-d970583195f8') {
       return appState.translate('towers_title');
-    } else if (item.name == 'companies_liquidation') {
+    } else if (item.name == 'companies_liquidation' || item.name == 'pr2018' || item.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
       return appState.translate('water_title');
     } else if (item.name == 'government_budget') {
       return appState.translate('budget_title');
@@ -22,9 +22,9 @@ class DashboardScreen extends StatelessWidget {
   }
 
   String _getDatasetDesc(DatasetMetadataModel item) {
-    if (item.name == 'active_antennas') {
+    if (item.name == 'active_antennas' || item.id == '8935c8e5-ec77-421f-af86-d970583195f8') {
       return appState.translate('towers_desc');
-    } else if (item.name == 'companies_liquidation') {
+    } else if (item.name == 'companies_liquidation' || item.name == 'pr2018' || item.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
       return appState.translate('water_desc');
     } else if (item.name == 'government_budget') {
       return appState.translate('budget_desc');
