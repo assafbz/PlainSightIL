@@ -22,6 +22,7 @@ PlainSightIL utilizes a decoupled client-server architecture. The backend aggreg
 *   **State Management**: **BLoC (Business Logic Component)**. Ensures unidirectional data flow, separating UI events from business logic. No business logic in presentation files.
 *   **Client Caching**: **Isar Database (NoSQL)**. Local query caching to allow offline operation and near-instant load times without syncing the complete database.
 *   **UI Assets**: Vector rendering with `flutter_svg` and native hardware-accelerated drawing with `CustomPainter`.
+*   **Offline Mock Mode**: Managed via the `AppStateNotifier.isTesting` flag. When `true`, it bypasses live Firestore calls and loads local mock lists to enable rapid widget testing and previewing without launching the Firebase emulator suite. Set `isTesting = false` inside `app_state.dart` to connect to local Firebase emulators.
 
 ### 1.2 Backend Stack
 *   **Platform**: **Firebase & Google Cloud Platform (GCP)**.
@@ -109,6 +110,9 @@ sequenceDiagram
 ---
 
 ## 4. Database Schema Specifications
+
+### 4.0 Ground-Truth Database Schemas (JSON Specification)
+Detailed, machine-readable JSON schemas defining properties, types, constraints, and subcollections for all Firestore documents are located in [database_schemas.json](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/database_schemas.json). AI agents and codebase generators must refer to this file as the database ground-truth.
 
 ### 4.1 Cloud Firestore Document Schema (`cellular_antennas/{documentId}`)
 To optimize geo-searches, documents use Firestore geopoints and pre-computed geohashes:

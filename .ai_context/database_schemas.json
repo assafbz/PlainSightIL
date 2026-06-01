@@ -1,0 +1,303 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PlainSightIL Firestore Database Schemas",
+  "description": "Ground-truth database schema definitions for Cloud Firestore collections, enabling autonomous AI agents to construct correct models and queries.",
+  "definitions": {
+    "geoPoint": {
+      "type": "object",
+      "description": "Firestore GeoPoint object representing geographic coordinates.",
+      "properties": {
+        "_latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "_longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "required": ["_latitude", "_longitude"]
+    },
+    "localizedString": {
+      "type": "object",
+      "description": "Bilingual string containing both Hebrew and English variants.",
+      "properties": {
+        "he": {
+          "type": "string",
+          "description": "Hebrew text representation."
+        },
+        "en": {
+          "type": "string",
+          "description": "English text representation."
+        }
+      },
+      "required": ["he", "en"]
+    }
+  },
+  "collections": {
+    "cellular_antennas": {
+      "description": "List of active cellular transmission antennas and radiation measurements.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the antenna (matches doc ID)."
+        },
+        "antennaId": {
+          "type": "string",
+          "description": "Operator site or antenna identification code."
+        },
+        "siteNumber": {
+          "type": "string",
+          "description": "Official government site registration number."
+        },
+        "coordinates": {
+          "$ref": "#/definitions/geoPoint"
+        },
+        "geohash": {
+          "type": "string",
+          "description": "Length 9 geohash calculated from coordinates for spatial range queries."
+        },
+        "operatorName": {
+          "type": "string",
+          "description": "Translated English name of the cellular operator."
+        },
+        "company": {
+          "$ref": "#/definitions/localizedString"
+        },
+        "locality": {
+          "type": "string",
+          "description": "Hebrew name of the town/locality."
+        },
+        "permitType": {
+          "type": "string",
+          "description": "Type of radiation permit issued (e.g. 'Active', 'Permitted')."
+        },
+        "radiationFrequency": {
+          "type": "number",
+          "description": "Transmission frequency in MHz."
+        },
+        "lastTestDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the last periodic radiation safety test."
+        },
+        "addressHebrew": {
+          "type": "string",
+          "description": "Full physical address in Hebrew."
+        },
+        "addressEnglish": {
+          "type": "string",
+          "description": "Rough translated address in English."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of document ingestion."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of last document modification."
+        }
+      },
+      "required": [
+        "id",
+        "antennaId",
+        "siteNumber",
+        "coordinates",
+        "geohash",
+        "operatorName",
+        "company",
+        "locality",
+        "permitType",
+        "radiationFrequency",
+        "lastTestDate",
+        "addressHebrew",
+        "addressEnglish"
+      ]
+    },
+    "cellular_permit_applications": {
+      "description": "Permit applications for cellular towers under construction or review. Follows the blue-green partition system (e.g. permit_apps_blue and permit_apps_green).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document unique identifier (often stringified reference number)."
+        },
+        "referenceNumber": {
+          "type": "integer",
+          "description": "Official application reference tracking number."
+        },
+        "company": {
+          "$ref": "#/definitions/localizedString"
+        },
+        "permitType": {
+          "type": "string",
+          "description": "Hebrew name of permit stage (e.g., 'היתר הקמה', 'היתר הפעלה')."
+        },
+        "siteNumber": {
+          "type": "string",
+          "description": "Cellular site registration identifier."
+        },
+        "locality": {
+          "type": "string",
+          "description": "Name of the locality/city in Hebrew."
+        },
+        "addressDescription": {
+          "type": "string",
+          "description": "Detailed description of location (e.g. roof, ground-based, street address)."
+        },
+        "focalPointType": {
+          "type": "string",
+          "description": "Physical structure type (e.g. 'גג' for roof, 'קרקעי' for ground)."
+        },
+        "jurisdiction": {
+          "type": "string",
+          "description": "Local planning authority or jurisdiction."
+        },
+        "coordinates": {
+          "$ref": "#/definitions/geoPoint"
+        },
+        "geohash": {
+          "type": "string",
+          "description": "Calculated geohash for proximity indexing."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the scraper updated this record."
+        }
+      },
+      "required": [
+        "id",
+        "referenceNumber",
+        "company",
+        "permitType",
+        "siteNumber",
+        "locality",
+        "addressDescription",
+        "focalPointType",
+        "jurisdiction",
+        "coordinates",
+        "geohash",
+        "lastUpdated"
+      ]
+    },
+    "dataset_metadata": {
+      "description": "Coordination meta-records for active scraper sync partitions (Double Buffering metadata).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document ID mapping to the dataset name (e.g. 'cellular_permit_applications')."
+        },
+        "activeCollection": {
+          "type": "string",
+          "description": "The name of the partition currently active for client queries (e.g., 'permit_apps_blue')."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the last complete successful ingestion."
+        },
+        "recordCount": {
+          "type": "integer",
+          "description": "Total number of documents written to the active partition."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["idle", "syncing", "error"],
+          "description": "The operational state of the backend sync cron job."
+        }
+      },
+      "required": ["id", "activeCollection", "lastUpdated", "recordCount", "status"]
+    },
+    "datasets_metadata": {
+      "description": "Registry of public datasets available or requested for integration in the Directory screen.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier (often matches data.gov.il resource/package ID)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Internal snake_case identifier."
+        },
+        "title": {
+          "type": "string",
+          "description": "Hebrew name of the dataset."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Description of dataset utility."
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Government ministry or agency publishing the dataset."
+        },
+        "resourceCount": {
+          "type": "integer",
+          "description": "Number of resource files in the government package."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of data availability."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Search keyword tags."
+        },
+        "isSupported": {
+          "type": "boolean",
+          "description": "True if fully integrated and visualized in the app. False if in the roadmap (voteable)."
+        }
+      },
+      "required": ["id", "name", "title", "notes", "publisher", "resourceCount", "lastUpdated", "tags", "isSupported"]
+    },
+    "dataset_requests": {
+      "description": "Tracks community voting metrics for roadmap dataset activation requests.",
+      "type": "object",
+      "properties": {
+        "datasetId": {
+          "type": "string",
+          "description": "Target dataset ID (matches doc ID in datasets_metadata)."
+        },
+        "datasetTitle": {
+          "type": "string",
+          "description": "Hebrew title of the requested dataset."
+        },
+        "requestCount": {
+          "type": "integer",
+          "description": "Total aggregation count of votes cast."
+        },
+        "lastRequestedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the most recent vote."
+        }
+      },
+      "required": ["datasetId", "datasetTitle", "requestCount", "lastRequestedAt"],
+      "subcollections": {
+        "votes": {
+          "description": "Identifies users who voted to prevent duplicate voting (one vote per anonymous uid). Doc ID = user UID.",
+          "type": "object",
+          "properties": {
+            "votedAt": {
+              "type": "object",
+              "description": "Server timestamp representing when the user clicked request."
+            }
+          },
+          "required": ["votedAt"]
+        }
+      }
+    }
+  }
+}
