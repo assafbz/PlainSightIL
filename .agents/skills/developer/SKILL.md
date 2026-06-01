@@ -27,8 +27,9 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
   - Create new files using `write_to_file` if designated by the blueprint.
 
 ### 3. Local Verification
-- Check for linter errors or compiler warnings.
-- Run build/test commands as specified in `BLUEPRINT.md`.
+- Run local code analysis (e.g., `flutter analyze` for the client and `npm run lint` / `npm run build` for the backend) to catch any compilation, linter, or type inference issues before claiming completion.
+- Ensure that widgets using non-constant variables or properties (like dynamic theme colors from `AppColors`) are not marked as `const`.
+- Explicitly parameterize generic type methods and constructors (like `MaterialPageRoute<void>` or `showModalBottomSheet<void>`) to avoid type inference warnings.
 - Make sure local execution passes without runtime crashes.
 
 ### 4. Updating Blueprint and State

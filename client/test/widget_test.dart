@@ -22,7 +22,7 @@ void main() {
 
     // Verify dataset cards are present on the dashboard
     expect(find.text('Cellular Antennas'), findsOneWidget);
-    expect(find.text('Kinneret Water Level'), findsOneWidget);
+    expect(find.text('Companies in Liquidation'), findsOneWidget);
     expect(find.text('Government Budget'), findsOneWidget);
   });
 
@@ -51,7 +51,7 @@ void main() {
       // Verify text is now translated to Hebrew
       expect(find.text('הנגשת מידע ממשלתי לציבור'), findsOneWidget);
       expect(find.text('אנטנות סלולריות'), findsOneWidget);
-      expect(find.text('מפלס הכנרת'), findsOneWidget);
+      expect(find.text('חברות בפירוק'), findsOneWidget);
       expect(find.text('תקציב המדינה'), findsOneWidget);
 
       // Verify toggle button now displays 'EN'
@@ -101,15 +101,13 @@ void main() {
     // Verify we are back on the Dashboard by checking for the mission subtitle
     expect(find.text('Democratizing Civic Data'), findsOneWidget);
 
-    // Tap the Water navigation tab directly from bottom nav bar
-    await tester.tap(find.text('Water'));
+    // Tap the Winding Up navigation tab directly from bottom nav bar
+    await tester.tap(find.text('Winding Up'));
     await tester.pumpAndSettle();
 
-    // Verify Kinneret Water Level placeholder screen is shown
-    expect(
-      find.byIcon(Icons.water_drop),
-      findsNWidgets(2),
-    ); // Nav bar icon + screen icon
+    // Verify Companies in Liquidation screen is shown
+    expect(find.text('Companies in Liquidation'), findsWidgets);
+    expect(find.byIcon(Icons.gavel), findsOneWidget);
   });
 
   testWidgets('Drawer opens and theme and language can be toggled', (

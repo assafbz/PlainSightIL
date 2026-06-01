@@ -66,7 +66,8 @@ function startServices() {
     const syncEndpoints = [
       '/demo-plainsightil/us-central1/manualSyncMetadata',
       '/demo-plainsightil/us-central1/manualSyncPermitApps',
-      '/demo-plainsightil/us-central1/manualSyncAntennas'
+      '/demo-plainsightil/us-central1/manualSyncAntennas',
+      '/demo-plainsightil/us-central1/manualSyncCompaniesLiquidation'
     ];
 
     const runSync = (index) => {

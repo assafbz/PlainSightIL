@@ -24,6 +24,11 @@ service cloud.firestore {
       allow write: if false;
       allow list: if request.query.limit <= 100;
     }
+    match /companies_liquidation/{companyId} {
+      allow read: if true;
+      allow write: if false;
+      allow list: if request.query.limit <= 100;
+    }
     match /datasets_metadata/{document} {
       allow read: if true;
       allow write: if false;

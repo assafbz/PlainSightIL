@@ -8,6 +8,7 @@ import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
+import 'package:plainsight/features/directory/presentation/pages/liquidation_page.dart';
 import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -217,12 +218,8 @@ class AppShell extends StatelessWidget {
           appState: appState,
         );
       case 2:
-        return ComingSoonScreen(
-          key: const ValueKey('water_coming_soon'),
-          title: appState.translate('water_roadmap_title'),
-          icon: Icons.water_drop,
-          color: AppColors.info,
-          description: appState.translate('water_roadmap_desc'),
+        return LiquidationScreen(
+          key: const ValueKey('liquidation_screen'),
           appState: appState,
         );
       case 3:
@@ -277,7 +274,7 @@ class AppShell extends StatelessWidget {
             _buildNavItem(
               context,
               index: 2,
-              icon: Icons.water_drop,
+              icon: Icons.gavel,
               label: appState.translate('nav_water'),
             ),
             _buildNavItem(
@@ -452,10 +449,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                           _buildNavItem(
                             context,
                             index: 2,
-                            icon: Icons.water_drop,
+                            icon: Icons.gavel,
                             titleKey: 'water_title',
                             isActive: appState.activeTab == 2,
-                            isRoadmap: true,
+                            isRoadmap: false,
                           ),
                           _buildNavItem(
                             context,

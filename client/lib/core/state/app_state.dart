@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../theme/design_system.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
+import '../../features/directory/data/models/liquidation_record_model.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   static bool isTesting = false;
@@ -115,6 +116,14 @@ class AppStateNotifier extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _directorySubscription;
   StreamSubscription<QuerySnapshot>? _requestsSubscription;
 
+  // Companies in Liquidation state fields
+  List<LiquidationRecordModel> _liquidationRecords = [];
+  bool _isLoadingLiquidation = true;
+  StreamSubscription<QuerySnapshot>? _liquidationSubscription;
+
+  List<LiquidationRecordModel> get liquidationRecords => _liquidationRecords;
+  bool get isLoadingLiquidation => _isLoadingLiquidation;
+
   List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
   bool get isLoadingDirectory => _isLoadingDirectory;
   int getRequestCount(String id) => _datasetRequestCounts[id] ?? 0;
@@ -143,6 +152,7 @@ class AppStateNotifier extends ChangeNotifier {
   void initPermitMetadataListener() {
     initAntennaListener();
     initDirectoryListener();
+    initLiquidationListener();
 
     if (isTesting) {
       _permitSyncStatus = 'idle';
@@ -266,6 +276,7 @@ class AppStateNotifier extends ChangeNotifier {
     try {
       _permitSubscription = FirebaseFirestore.instance
           .collection(newCollection)
+          .limit(100)
           .snapshots()
           .listen(
             (snapshot) {
@@ -390,15 +401,16 @@ class AppStateNotifier extends ChangeNotifier {
           isSupported: true,
         ),
         DatasetMetadataModel(
-          id: 'water-level-dataset-id',
-          name: 'kinneret_water_level',
-          title: 'מפלס הכנרת ונתוני הידרולוגיה',
-          notes: 'מפלס הכנרת היומי ונתוני שפיעת מעיינות הידרולוגיים.',
-          publisher: 'רשות המים',
-          resourceCount: 2,
-          lastUpdated: DateTime(2026, 5, 28),
-          tags: ['כנרת', 'מים', 'מפלס'],
-          isSupported: false,
+          id: 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+          name: 'companies_liquidation',
+          title: 'חברות בפירוק מרצון או בית משפט',
+          notes:
+              'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
+          publisher: 'רשות התאגידים',
+          resourceCount: 3,
+          lastUpdated: DateTime(2026, 6, 1),
+          tags: ['פירוק', 'חברות', 'רשות התאגידים', 'משפט'],
+          isSupported: true,
         ),
         DatasetMetadataModel(
           id: 'government-budget-dataset-id',
@@ -412,10 +424,7 @@ class AppStateNotifier extends ChangeNotifier {
           isSupported: false,
         ),
       ];
-      _datasetRequestCounts = {
-        'water-level-dataset-id': 42,
-        'government-budget-dataset-id': 18,
-      };
+      _datasetRequestCounts = {'government-budget-dataset-id': 18};
       _isLoadingDirectory = false;
       notifyListeners();
       return;
@@ -467,6 +476,84 @@ class AppStateNotifier extends ChangeNotifier {
       _isLoadingDirectory = false;
       notifyListeners();
       debugPrint('Failed to initialize directory listener: $e');
+    }
+  }
+
+  void initLiquidationListener() {
+    _liquidationSubscription?.cancel();
+
+    if (isTesting) {
+      _liquidationRecords = [
+        LiquidationRecordModel(
+          liquidationCaseId: 12345,
+          cityOfActivity: 'תל אביב - יפו',
+          caseStatus: const {'he': 'פירוק פעיל', 'en': 'Active Winding Up'},
+          submissionDate: '2024-05-12T00:00:00.000Z',
+          liquidationOrderDate: '2024-06-15T00:00:00.000Z',
+          districtCourt: 'מחוזי תל אביב',
+          companyName: 'אלברט לוי הנדסה בע"מ',
+          companyId: 512345678,
+        ),
+        LiquidationRecordModel(
+          liquidationCaseId: 12346,
+          cityOfActivity: 'חיפה',
+          caseStatus: const {'he': 'הקפאת הליכים', 'en': 'Frozen'},
+          submissionDate: '2024-03-10T00:00:00.000Z',
+          liquidationOrderDate: '2024-04-12T00:00:00.000Z',
+          cancellationFreezeDate: '2024-04-20T00:00:00.000Z',
+          districtCourt: 'מחוזי חיפה',
+          companyName: 'משה שירותי בנייה בע"מ',
+          companyId: 512345679,
+        ),
+        LiquidationRecordModel(
+          liquidationCaseId: 12347,
+          cityOfActivity: 'ירושלים',
+          caseStatus: const {'he': 'סגור', 'en': 'Closed'},
+          submissionDate: '2023-08-15T00:00:00.000Z',
+          liquidationOrderDate: '2023-09-20T00:00:00.000Z',
+          closureDate: '2024-01-10T00:00:00.000Z',
+          closureReason: 'הסדר נושים',
+          districtCourt: 'מחוזי ירושלים',
+          companyName: 'ישראל קומפני בע"מ',
+          companyId: 512345680,
+        ),
+      ];
+      _isLoadingLiquidation = false;
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) {
+      _isLoadingLiquidation = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      _liquidationSubscription = FirebaseFirestore.instance
+          .collection('companies_liquidation')
+          .limit(100)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              _liquidationRecords = snapshot.docs
+                  .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
+                  .toList();
+              _isLoadingLiquidation = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingLiquidation = false;
+              notifyListeners();
+              debugPrint(
+                'Firestore liquidation collection listener error: $err',
+              );
+            },
+          );
+    } catch (e) {
+      _isLoadingLiquidation = false;
+      notifyListeners();
+      debugPrint('Failed to initialize liquidation listener: $e');
     }
   }
 
@@ -572,6 +659,7 @@ class AppStateNotifier extends ChangeNotifier {
     _antennaSubscription?.cancel();
     _directorySubscription?.cancel();
     _requestsSubscription?.cancel();
+    _liquidationSubscription?.cancel();
     super.dispose();
   }
 
@@ -600,9 +688,9 @@ class AppStateNotifier extends ChangeNotifier {
       'permit_badge_pending': 'Pending',
       'permit_badge_approved': 'In Construction',
       'no_results': 'No records found',
-      'water_title': 'Kinneret Water Level',
-      'water_desc': 'Real-time water levels and seasonal metrics.',
-      'water_count': 'Daily updates',
+      'water_title': 'Companies in Liquidation',
+      'water_desc': 'Businesses undergoing court winding up.',
+      'water_count': '3 records',
       'budget_title': 'Government Budget',
       'budget_desc': 'Public budget tracking and market distribution.',
       'budget_count': 'Active issue #101',
@@ -611,7 +699,7 @@ class AppStateNotifier extends ChangeNotifier {
       'alerts_count': '2 active alerts',
       'nav_home': 'Home',
       'nav_towers': 'Towers',
-      'nav_water': 'Water',
+      'nav_water': 'Winding Up',
       'nav_budget': 'Budget',
       'nav_alerts': 'Alerts',
       'nav_directory': 'Directory',
@@ -624,6 +712,20 @@ class AppStateNotifier extends ChangeNotifier {
       'publisher_label': 'Publisher: ',
       'resources_label': ' resources',
       'updated_label': 'Updated: ',
+      'liquidation_title': 'Companies in Liquidation',
+      'liquidation_desc': 'Businesses undergoing court winding up.',
+      'liquidation_count': '3 records',
+      'nav_liquidation': 'Winding Up',
+      'case_id_label': 'Case ID: ',
+      'court_label': 'Court: ',
+      'city_label': 'City: ',
+      'status_active': 'Active Winding Up',
+      'status_frozen': 'Frozen',
+      'status_closed': 'Closed',
+      'closure_reason_prefix': 'Reason: ',
+      'liquidation_search_placeholder': 'Search by Name or Company ID (H.P.)',
+      'view_court_file': 'View Official Court File',
+      'trustee_publisher': 'Ministry of Justice - Corporations Authority',
       'filter_all': 'All',
       'filter_active': 'Supported',
       'filter_inactive': 'Requests',
@@ -686,9 +788,9 @@ class AppStateNotifier extends ChangeNotifier {
       'permit_badge_pending': 'בבדיקה',
       'permit_badge_approved': 'בהקמה',
       'no_results': 'לא נמצאו רשומות',
-      'water_title': 'מפלס הכנרת',
-      'water_desc': 'מדדי מפלס מים בזמן אמת ומדדים עונתיים.',
-      'water_count': 'עדכון יומי',
+      'water_title': 'חברות בפירוק',
+      'water_desc': 'חברות ועסקים בהליכי פירוק בבית משפט.',
+      'water_count': '3 רשומות',
       'budget_title': 'תקציב המדינה',
       'budget_desc': 'מעקב אחר תקציב המדינה וחלוקת השוק.',
       'budget_count': 'נושא פעיל #101',
@@ -697,7 +799,7 @@ class AppStateNotifier extends ChangeNotifier {
       'alerts_count': '2 התראות פעילות',
       'nav_home': 'בית',
       'nav_towers': 'אנטנות',
-      'nav_water': 'כנרת',
+      'nav_water': 'פירוק חברות',
       'nav_budget': 'תקציב',
       'nav_alerts': 'התראות',
       'nav_directory': 'מדריך מאגרים',
@@ -710,6 +812,20 @@ class AppStateNotifier extends ChangeNotifier {
       'publisher_label': 'מפרסם: ',
       'resources_label': ' קבצים',
       'updated_label': 'עודכן: ',
+      'liquidation_title': 'חברות בפירוק',
+      'liquidation_desc': 'חברות ועסקים בהליכי פירוק בבית משפט.',
+      'liquidation_count': '3 רשומות',
+      'nav_liquidation': 'פירוק חברות',
+      'case_id_label': 'מספר תיק: ',
+      'court_label': 'בית משפט: ',
+      'city_label': 'עיר פעילות: ',
+      'status_active': 'פירוק פעיל',
+      'status_frozen': 'הקפאת הליכים',
+      'status_closed': 'סגור',
+      'closure_reason_prefix': 'סיבת סגירה: ',
+      'liquidation_search_placeholder': 'חפש לפי שם או מספר חברה (ח.פ.)',
+      'view_court_file': 'צפה בתיק בית המשפט הרשמי',
+      'trustee_publisher': 'משרד המשפטים - רשות התאגידים',
       'filter_all': 'הכל',
       'filter_active': 'נתמכים',
       'filter_inactive': 'בקשות',
