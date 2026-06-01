@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 
@@ -143,6 +144,18 @@ void main() {
         expect(appState.antennaRecords.isNotEmpty, true);
         expect(appState.permitRecords.isNotEmpty, true);
         expect(appState.permitRecords.first['coordinates'], isNotNull);
+      },
+    );
+
+    test(
+      'FirebaseOptions local configurations are validly formatted to satisfy auth requirements',
+      () {
+        final key = localFirebaseOptions.apiKey;
+        expect(key, startsWith('AIzaSy'));
+        expect(key.length, 39);
+
+        final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{33}$');
+        expect(gcloudKeyPattern.hasMatch(key), isTrue);
       },
     );
   });

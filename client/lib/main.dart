@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:plainsight/core/state/app_state.dart';
@@ -7,6 +9,7 @@ import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.
 import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
 import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
+import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,19 +17,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: 'demo-api-key',
-        authDomain: 'demo-plainsightil.firebaseapp.com',
-        appId: 'demo-app-id',
-        messagingSenderId: 'demo-sender-id',
-        projectId: 'demo-plainsightil',
-      ),
-    );
+    await Firebase.initializeApp(options: localFirebaseOptions);
+    final String host = kIsWeb
+        ? 'localhost'
+        : (Platform.isAndroid ? '10.0.2.2' : 'localhost');
     // Connect to local Firestore emulator
-    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
+    FirebaseFirestore.instance.useFirestoreEmulator(host, 8081);
     // Connect to local Auth emulator
-    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
   } catch (e) {
     debugPrint('Firebase initialization warning: $e');
   }

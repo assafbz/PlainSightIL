@@ -27,7 +27,13 @@ class AppStateNotifier extends ChangeNotifier {
     if (isTesting || !isFirebaseInitialized) return;
     try {
       FirebaseAuth.instance.authStateChanges().listen((user) {
+        final bool userChanged = _currentUser?.uid != user?.uid;
         _currentUser = user;
+        if (userChanged) {
+          // Re-bind Firestore listeners when the authentication state changes
+          // to ensure data is fetched under the updated auth credentials.
+          initPermitMetadataListener();
+        }
         notifyListeners();
       });
     } catch (e) {
@@ -65,6 +71,12 @@ class AppStateNotifier extends ChangeNotifier {
   Future<void> signOut() async {
     _isMockAuthenticated = false;
     _isGuestMode = false;
+    _permitRecords = [];
+    _antennaRecords = [];
+    _directoryRecords = [];
+    _isLoadingPermits = true;
+    _isLoadingAntennas = true;
+    _isLoadingDirectory = true;
     if (isFirebaseInitialized) {
       try {
         await FirebaseAuth.instance.signOut();
@@ -77,6 +89,9 @@ class AppStateNotifier extends ChangeNotifier {
 
   void setGuestMode(bool enabled) {
     _isGuestMode = enabled;
+    if (enabled) {
+      initPermitMetadataListener();
+    }
     notifyListeners();
   }
 
@@ -86,6 +101,7 @@ class AppStateNotifier extends ChangeNotifier {
   bool _isLoadingPermits = true;
   String _permitSyncStatus = 'idle';
   StreamSubscription<QuerySnapshot>? _permitSubscription;
+  StreamSubscription<DocumentSnapshot>? _permitMetadataSubscription;
 
   // Active Antennas Firestore subscription and state
   List<Map<String, dynamic>> _antennaRecords = [];
@@ -195,8 +211,9 @@ class AppStateNotifier extends ChangeNotifier {
       return;
     }
 
+    _permitMetadataSubscription?.cancel();
     try {
-      FirebaseFirestore.instance
+      _permitMetadataSubscription = FirebaseFirestore.instance
           .collection('dataset_metadata')
           .doc('cellular_permit_applications')
           .snapshots()
@@ -551,6 +568,7 @@ class AppStateNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _permitSubscription?.cancel();
+    _permitMetadataSubscription?.cancel();
     _antennaSubscription?.cancel();
     _directorySubscription?.cancel();
     _requestsSubscription?.cancel();
