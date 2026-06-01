@@ -55,6 +55,54 @@ function startServices() {
   });
   children.push(clientProc);
 
+  // Automatic database seeding once emulators are ready
+  let seeded = false;
+  function triggerSeeding() {
+    if (seeded) return;
+    seeded = true;
+    console.log('🌱 Firebase Emulators ready. Triggering database seeding...');
+    
+    const http = require('http');
+    const syncEndpoints = [
+      '/demo-plainsightil/us-central1/manualSyncMetadata',
+      '/demo-plainsightil/us-central1/manualSyncPermitApps',
+      '/demo-plainsightil/us-central1/manualSyncAntennas'
+    ];
+
+    const runSync = (index) => {
+      if (index >= syncEndpoints.length) {
+        console.log('✅ Local database seeding complete!');
+        return;
+      }
+      const path = syncEndpoints[index];
+      console.log(`🌱 Seeding: requesting ${path}...`);
+      
+      const req = http.get({
+        hostname: 'localhost',
+        port: 5002,
+        path: path,
+        timeout: 60000 // 60s timeout
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          console.log(`🌱 Seed response for ${path}: Code ${res.statusCode}`);
+          runSync(index + 1);
+        });
+      });
+
+      req.on('error', (err) => {
+        console.error(`❌ Seeding failed for ${path}: ${err.message}`);
+        runSync(index + 1);
+      });
+    };
+
+    // Wait a couple of seconds to ensure functions emulator is fully serving
+    setTimeout(() => {
+      runSync(0);
+    }, 2000);
+  }
+
   // Handle prefixing helper
   function prefixStream(stream, prefix, colorCode) {
     let buffer = '';
@@ -65,6 +113,9 @@ function startServices() {
       for (const line of lines) {
         if (line.trim()) {
           console.log(`\x1b[${colorCode}m[${prefix}]\x1b[0m ${line}`);
+          if (prefix === 'Backend' && line.includes('All emulators ready!')) {
+            triggerSeeding();
+          }
         }
       }
     });

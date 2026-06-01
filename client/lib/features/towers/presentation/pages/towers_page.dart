@@ -251,8 +251,10 @@ class _TowersScreenState extends State<TowersScreen>
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
       );
       _animatedMapMove(LatLng(position.latitude, position.longitude), 15.0);
     } catch (e) {
