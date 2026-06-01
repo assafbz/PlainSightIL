@@ -13,16 +13,16 @@ void main() async {
   try {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-        apiKey: "demo-api-key",
-        appId: "demo-app-id",
-        messagingSenderId: "demo-sender-id",
-        projectId: "demo-plainsightil",
+        apiKey: 'demo-api-key',
+        appId: 'demo-app-id',
+        messagingSenderId: 'demo-sender-id',
+        projectId: 'demo-plainsightil',
       ),
     );
     // Connect to local Firestore emulator
     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
   } catch (e) {
-    debugPrint("Firebase initialization warning: $e");
+    debugPrint('Firebase initialization warning: $e');
   }
   runApp(const MyApp());
 }
