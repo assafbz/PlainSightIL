@@ -168,6 +168,13 @@ class AppStateNotifier extends ChangeNotifier {
           'Auth state updated. User UID: ${user?.uid}, changed: $userChanged',
         );
         if (userChanged) {
+          // Clear profile and telemetry state to prevent race conditions or incorrect permissions checks
+          _userProfile = null;
+          _apiHealthSubscription?.cancel();
+          _scraperRunsSubscription?.cancel();
+          _apiHealth = {};
+          _scraperRuns = [];
+
           // Re-bind Firestore listeners when the authentication state changes
           // to ensure data is fetched under the updated auth credentials.
           initPermitMetadataListener();
@@ -187,6 +194,10 @@ class AppStateNotifier extends ChangeNotifier {
 
     if (uid == null) {
       _userProfile = null;
+      _apiHealthSubscription?.cancel();
+      _scraperRunsSubscription?.cancel();
+      _apiHealth = {};
+      _scraperRuns = [];
       notifyListeners();
       return;
     }
@@ -199,7 +210,16 @@ class AppStateNotifier extends ChangeNotifier {
               'Profile stream emitted value for UID $uid: $profile',
             );
             if (_userProfile != profile) {
+              final bool wasAdmin = isAdmin;
               _userProfile = profile;
+              if (isAdmin && !wasAdmin) {
+                initTelemetryListeners();
+              } else if (!isAdmin && wasAdmin) {
+                _apiHealthSubscription?.cancel();
+                _scraperRunsSubscription?.cancel();
+                _apiHealth = {};
+                _scraperRuns = [];
+              }
               notifyListeners();
             }
           },
@@ -1089,6 +1109,12 @@ class AppStateNotifier extends ChangeNotifier {
     }
 
     if (!isFirebaseInitialized) {
+      _isLoadingTelemetry = false;
+      notifyListeners();
+      return;
+    }
+
+    if (!isAdmin) {
       _isLoadingTelemetry = false;
       notifyListeners();
       return;
