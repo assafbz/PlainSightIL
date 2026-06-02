@@ -8,6 +8,31 @@ if [ "$SKIP_SDLC" = "1" ] || [ "$SKIP_SDLC" = "true" ]; then
   exit 0
 fi
 
+# ----------------- CREDENTIAL EXPOSURE GUARDRAIL -----------------
+# Scan all staged files for exposed Google API keys (AIzaSy followed by 33 characters)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+KEY_PREFIX="AIza"
+KEY_SUFFIX="Sy"
+API_KEY_PATTERN="${KEY_PREFIX}${KEY_SUFFIX}[a-zA-Z0-9_-]{33}"
+SECRETS_FOUND=0
+
+for file in $STAGED_FILES; do
+  if [ -f "$file" ]; then
+    # Search for the API key pattern, excluding this hook itself
+    if [[ "$file" != *".agents/bin/pre-commit"* ]] && grep -qE "$API_KEY_PATTERN" "$file"; then
+      echo "🛑 SECURITY GATE FAILURE: Exposed Google API Key detected in staged file: $file"
+      echo "Matches pattern: AIzaSy... (length 39)"
+      echo "Please remove the hardcoded key or use environment variables."
+      SECRETS_FOUND=1
+    fi
+  fi
+done
+
+if [ $SECRETS_FOUND -ne 0 ]; then
+  echo "🛑 Commit blocked due to security validation failure."
+  exit 1
+fi
+
 # Get current branch name
 BRANCH_NAME=$(git symbolic-ref --short HEAD 2>/dev/null)
 

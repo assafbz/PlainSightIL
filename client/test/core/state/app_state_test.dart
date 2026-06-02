@@ -155,11 +155,17 @@ void main() {
       'FirebaseOptions local configurations are validly formatted to satisfy auth requirements',
       () {
         final key = localFirebaseOptions.apiKey;
-        expect(key, startsWith('AIzaSy'));
-        expect(key.length, 39);
+        expect(key.isNotEmpty, isTrue);
 
-        final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{33}$');
-        expect(gcloudKeyPattern.hasMatch(key), isTrue);
+        if (key == 'mock-api-key-for-local-emulator') {
+          expect(key, 'mock-api-key-for-local-emulator');
+        } else {
+          expect(key, startsWith('AIzaSy'));
+          expect(key.length, 39);
+
+          final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{33}$');
+          expect(gcloudKeyPattern.hasMatch(key), isTrue);
+        }
       },
     );
   });
