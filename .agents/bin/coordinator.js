@@ -312,7 +312,7 @@ function verifyDeliverable(issueId, filename) {
 // Validate Quality Gates for the transitioning phase
 function validateQualityGate(issueId, currentPhase) {
   if (process.env.SKIP_SDLC === '1' || process.env.SKIP_SDLC === 'true') {
-    console.log('⚠️  Bypassing Quality Gates checks (SKIP_SDLC=1)');
+    console.log('⚠️  Bypassing Quality Gates checks (SKIP_SDLC=1). Note: Skipping SDLC requires HITL approval.');
     return { success: true, failureLogs: '' };
   }
 

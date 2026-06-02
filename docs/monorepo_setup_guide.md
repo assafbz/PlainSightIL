@@ -39,7 +39,7 @@ PlainSightIL uses custom pre-commit and pre-push hooks to enforce SDLC complianc
 chmod +x .agents/bin/install-hooks.sh
 ./.agents/bin/install-hooks.sh
 ```
-*Note: In emergency conditions, SDLC hooks can be bypassed by prepending `SKIP_SDLC=1` to your git command.*
+*Note: In emergency conditions, SDLC hooks can be bypassed by prepending `SKIP_SDLC=1` to your git command (requires HITL approval).*
 
 ### Step 2: Install Backend Dependencies
 ```bash

@@ -3,7 +3,9 @@
 # Antigravity SDLC post-checkout hook
 # Wipes local processes on switch and runs dependency updates if config files change.
 
+# Enable bypass via environment variable (requires HITL approval)
 if [ "$SKIP_SDLC" = "1" ] || [ "$SKIP_SDLC" = "true" ]; then
+  echo "⚠️  Bypassing SDLC validation (SKIP_SDLC=1). Note: Skipping SDLC requires HITL approval."
   exit 0
 fi
 
