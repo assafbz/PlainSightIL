@@ -20,7 +20,7 @@ describe("Doctors Licenses Date Normalization", () => {
     // 7 digits (missing leading zero)
     expect(parseDDMMYYYY(2121993)).toBe("1993-12-02T00:00:00.000Z");
     expect(parseDDMMYYYY("2121993")).toBe("1993-12-02T00:00:00.000Z");
-    
+
     // 8 digits
     expect(parseDDMMYYYY(20081974)).toBe("1974-08-20T00:00:00.000Z");
     expect(parseDDMMYYYY("20081974")).toBe("1974-08-20T00:00:00.000Z");

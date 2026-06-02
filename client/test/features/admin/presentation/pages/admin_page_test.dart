@@ -34,10 +34,11 @@ void main() {
       expect(find.text('Admin Dashboard'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
 
-      // Verify all three supported datasets cards exist initially
+      // Verify all four supported datasets cards exist initially
       expect(find.text('Cellular Antennas'), findsOneWidget);
       expect(find.text('Cellular Permit Applications'), findsOneWidget);
       expect(find.text('Companies in Liquidation'), findsOneWidget);
+      expect(find.text('Doctors Licenses'), findsOneWidget);
 
       // Type query "Permit" in Search Field
       await tester.enterText(find.byType(TextField), 'Permit');
@@ -128,10 +129,10 @@ void main() {
 
     // Verify manual sync buttons exist on the screen
     final syncButtonsFinder = find.byType(ElevatedButton);
-    expect(syncButtonsFinder, findsNWidgets(3));
+    expect(syncButtonsFinder, findsNWidgets(4));
 
     // By default, all buttons show 'Trigger Sync'
-    expect(find.text('Trigger Sync'), findsNWidgets(3));
+    expect(find.text('Trigger Sync'), findsNWidgets(4));
 
     // Tap the first button to trigger manual sync
     await tester.tap(syncButtonsFinder.at(0));
@@ -149,7 +150,7 @@ void main() {
 
     // The mock sync should complete and return to idle with a success SnackBar
     expect(find.text('Syncing...'), findsNothing);
-    expect(find.text('Trigger Sync'), findsNWidgets(3));
+    expect(find.text('Trigger Sync'), findsNWidgets(4));
     expect(
       find.text('Sync completed successfully! Updated 10000 records.'),
       findsOneWidget,

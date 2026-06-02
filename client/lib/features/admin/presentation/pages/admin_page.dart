@@ -140,6 +140,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyEn': 'Ministry of Justice - Corporations Authority',
         'agencyHe': 'משרד המשפטים - רשות התאגידים',
       },
+      {
+        'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+        'titleEn': 'Doctors Licenses',
+        'titleHe': 'רישיונות רופאים',
+        'resourceId': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+        'agencyEn': 'Ministry of Health',
+        'agencyHe': 'משרד הבריאות',
+      },
     ];
 
     return ListenableBuilder(
@@ -787,6 +795,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': 'companies_liquidation',
         'titleEn': 'Companies Liquidation',
         'titleHe': 'מאגר הכונס הרשמי',
+      },
+      {
+        'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+        'titleEn': 'Doctors Licenses',
+        'titleHe': 'רישיונות רופאים',
       },
       {
         'id': 'datasets_metadata',
