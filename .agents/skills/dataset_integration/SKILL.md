@@ -72,6 +72,43 @@ Create a local mapping sheet translating Hebrew keys to clean English CamelCase 
 
 ## 3. Phase 2: Planning & Schema Design (Zero-Downtime Architecture)
 
+### Step 2.0: Naming & Directory Structure Conventions
+
+To maintain a clean, scalable codebase and prevent naming confusion:
+
+#### 1. Database Collection & Document Naming
+* **Firestore Collections**: All raw dataset collections (and their blue/green partitions) MUST be named using their unique resource GUID (e.g., `8935c8e5-ec77-421f-af86-d970583195f8_blue` and `8935c8e5-ec77-421f-af86-d970583195f8_green`).
+* **Metadata Documents**: In the `dataset_metadata` collection, each document ID representing a dataset's metadata MUST be the exact resource GUID (e.g., `8935c8e5-ec77-421f-af86-d970583195f8`).
+
+#### 2. Client-side Code Directory Layout
+All dataset-specific presentation widgets, screens, and models MUST be structured within a unified `features/datasets` folder:
+
+```
+client/lib/features/datasets/
+└── <dataset_name>/
+    ├── data/
+    │   └── models/
+    │       └── <dataset_name>_record_model.dart  (If a custom model is required)
+    ├── pages/
+    │   └── <dataset_name>_page.dart              (Main entry page for the dataset screen)
+    └── widgets/
+        └── <dataset_name>_map_view.dart          (Visualizer widgets specific to the page)
+```
+
+#### 3. Test File Layout
+Widget tests corresponding to visualizer screens must be located in a matching structure under `test/`:
+```
+client/test/features/datasets/
+└── <dataset_name>/
+    └── pages/
+        └── <dataset_name>_page_test.dart
+```
+
+#### 4. General Catalog Directory
+The general list catalog/search screen (where all datasets are displayed together) is a distinct catalog feature and must remain under `features/directory/` (e.g. `DatasetDirectoryScreen`, `DatasetCard`, `DatasetMetadataModel`).
+
+### Step 2.1: The Ingestion Metadata Schema
+
 To support monthly dataset refreshes without causing UI downtime or displaying partially updated (inconsistent) states to users, we implement a **Blue-Green Ingestion (Double Buffering) Pattern** at the database level.
 
 ```mermaid
@@ -89,10 +126,10 @@ flowchart TD
 Create a central collection `dataset_metadata` in Firestore containing pointers to the current active partitions:
 
 ```typescript
-// Document ID: dataset_id (e.g. "cellular_permit_applications")
+// Document ID: resource GUID (e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d")
 export interface DatasetMetadata {
-  id: string;                    // e.g. "cellular_permit_applications"
-  activeCollection: string;      // e.g. "permit_apps_blue" or "permit_apps_green"
+  id: string;                    // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d"
+  activeCollection: string;      // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d_blue" or "ff398c7e-c522-4ee8-a53a-312b188a573d_green"
   lastUpdated: string;           // ISO timestamp of last successful sync
   recordCount: number;           // Total count of records imported
   status: "idle" | "syncing" | "error";
@@ -100,7 +137,7 @@ export interface DatasetMetadata {
 ```
 
 ### Step 2.2: Dual Collections Setup
-Define two collections for your dataset (e.g., `<dataset_name>_blue` and `<dataset_name>_green`). Both must share identical schemas:
+Define two collections for your dataset (e.g., `<resource_guid>_blue` and `<resource_guid>_green`). Both must share identical schemas:
 
 ```typescript
 export interface NormalizedDatasetRecord {
@@ -127,13 +164,13 @@ match /dataset_metadata/{datasetId} {
   allow read: if true;
   allow write: if false;
 }
-match /<dataset_name>_blue/{docId} {
+match /<resource_guid>_blue/{docId} {
   allow read: if true;
   allow write: if false;
   // Prevent scraping abuse (DoS) by enforcing query limits
   allow list: if request.query.limit <= 100;
 }
-match /<dataset_name>_green/{docId} {
+match /<resource_guid>_green/{docId} {
   allow read: if true;
   allow write: if false;
   allow list: if request.query.limit <= 100;
@@ -145,7 +182,7 @@ Apply indexes to both collections in `backend/firestore.indexes.json`:
 ```json
 [
   {
-    "collectionGroup": "<dataset_name>_blue",
+    "collectionGroup": "<resource_guid>_blue",
     "queryScope": "COLLECTION",
     "fields": [
       { "fieldPath": "company.en", "order": "ASCENDING" },
@@ -153,7 +190,7 @@ Apply indexes to both collections in `backend/firestore.indexes.json`:
     ]
   },
   {
-    "collectionGroup": "<dataset_name>_green",
+    "collectionGroup": "<resource_guid>_green",
     "queryScope": "COLLECTION",
     "fields": [
       { "fieldPath": "company.en", "order": "ASCENDING" },
