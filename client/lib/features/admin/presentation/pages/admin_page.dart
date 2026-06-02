@@ -467,6 +467,15 @@ class _AdminPageState extends State<AdminPage> {
                 resourceId,
                 isMonospace: true,
               ),
+              const Divider(color: Color(0x14FFFFFF), height: 20),
+              
+              // Actions row (Trigger Manual Sync) (FR-01)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _buildSyncButton(context, dataset),
+                ],
+              ),
             ],
           ),
         ),
@@ -520,5 +529,118 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ],
     );
+  }
+
+  /// Render a glassmorphic manual sync trigger button (FR-01, FR-03)
+  Widget _buildSyncButton(BuildContext context, Map<String, dynamic> dataset) {
+    final String datasetId = dataset['id'] as String;
+    final String status = dataset['status'] as String;
+    final bool isSyncing = status == 'syncing';
+
+    Color buttonColor;
+    if (isSyncing) {
+      buttonColor = AppColors.textTertiary;
+    } else if (status == 'error') {
+      buttonColor = AppColors.danger;
+    } else {
+      buttonColor = AppColors.primary;
+    }
+
+    final isHeb = widget.appState.locale == 'he';
+    final buttonText = isSyncing
+        ? (isHeb ? 'מסנכרן...' : 'Syncing...')
+        : (isHeb ? 'סנכרן ידנית' : 'Trigger Sync');
+
+    return Semantics(
+      label: isHeb ? 'הפעל סנכרון ידני עבור $datasetId' : 'Trigger manual sync for $datasetId',
+      button: true,
+      enabled: !isSyncing,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 120),
+        child: ElevatedButton.icon(
+          onPressed: isSyncing
+              ? null
+              : () => _handleManualSync(context, datasetId),
+          icon: isSyncing
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.textTertiary),
+                  ),
+                )
+              : const Icon(Icons.sync, size: 18),
+          label: Text(
+            buttonText,
+            style: AppTypography.labelXs(context, color: isSyncing ? AppColors.textTertiary : AppColors.onPrimary).copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isSyncing ? AppColors.surfaceHigh : buttonColor,
+            foregroundColor: AppColors.onPrimary,
+            elevation: isSyncing ? 0 : 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isSyncing ? AppColors.glassBorder : buttonColor.withAlpha(50),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Handle trigger button actions and notify users via SnackBar on completion (FR-04)
+  Future<void> _handleManualSync(BuildContext context, String datasetId) async {
+    final isHeb = widget.appState.locale == 'he';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isHeb ? 'מתחיל סנכרון ידני...' : 'Starting manual sync...',
+        ),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    final result = await widget.appState.triggerManualSync(datasetId);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    if (result['success'] == true) {
+      final int count = result['count'] as int;
+      final String msg = isHeb
+          ? 'הסנכרון הושלם בהצלחה! עודכנו $count רשומות.'
+          : 'Sync completed successfully! Updated $count records.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } else {
+      final String errorMsg = result['message'] as String;
+      final String msg = isHeb
+          ? 'הסנכרון נכשל: $errorMsg'
+          : 'Sync failed: $errorMsg';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.danger,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 }

@@ -11,6 +11,13 @@ void main() {
   testWidgets('AdminPage renders supported datasets list and filters correct records', (
     WidgetTester tester,
   ) async {
+    tester.view.physicalSize = const Size(1200, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final appState = AppStateNotifier();
 
     // Build the AdminPage within a MaterialApp framework
@@ -63,6 +70,13 @@ void main() {
   testWidgets('AdminPage renders Access Denied when user is not admin', (
     WidgetTester tester,
   ) async {
+    tester.view.physicalSize = const Size(1200, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     AppStateNotifier.isTesting = false;
     final appState = AppStateNotifier();
 
@@ -88,5 +102,55 @@ void main() {
 
     // Verify datasets are not rendered
     expect(find.text('Cellular Antennas'), findsNothing);
+  });
+
+  testWidgets('AdminPage manual sync trigger works and changes state', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final appState = AppStateNotifier();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Scaffold(
+            body: AdminPage(appState: appState),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify manual sync buttons exist on the screen
+    final syncButtonsFinder = find.byType(ElevatedButton);
+    expect(syncButtonsFinder, findsNWidgets(3));
+
+    // By default, all buttons show 'Trigger Sync'
+    expect(find.text('Trigger Sync'), findsNWidgets(3));
+
+    // Tap the first button to trigger manual sync
+    await tester.tap(syncButtonsFinder.at(0));
+    
+    // Pump to initiate state change and verify immediate syncing visual feedback
+    await tester.pump();
+    expect(find.text('Syncing...'), findsOneWidget);
+
+    // Wait for the mock Future delay in triggerManualSync (1 second) to complete
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(); // Run microtasks scheduled by Future resolution (calls showSnackBar)
+    // Pump frames to allow SnackBar slide-up animation to complete (without auto-dismissing)
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // The mock sync should complete and return to idle with a success SnackBar
+    expect(find.text('Syncing...'), findsNothing);
+    expect(find.text('Trigger Sync'), findsNWidgets(3));
+    expect(find.text('Sync completed successfully! Updated 10000 records.'), findsOneWidget);
   });
 }
