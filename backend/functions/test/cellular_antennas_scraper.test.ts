@@ -7,7 +7,8 @@ import {
   scrapeAndSyncAntennas,
   convertItmToWgs84,
   isValidIsraelCoordinates,
-} from "../src/scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
+} from "../src/scrapers/cellular_antennas_scraper";
+import { DATASET_IDS } from "../src/utils/constants";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -132,7 +133,7 @@ describe("Scraper and Sync Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "8935c8e5-ec77-421f-af86-d970583195f8") {
+      if (id === DATASET_IDS.CELLULAR_ANTENNAS) {
         return {
           set: mockMetadataSet,
         };
@@ -208,7 +209,7 @@ describe("Scraper and Sync Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(2);
 
-    expect(mockCollection).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
+    expect(mockCollection).toHaveBeenCalledWith(DATASET_IDS.CELLULAR_ANTENNAS);
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(2);
 
@@ -219,10 +220,10 @@ describe("Scraper and Sync Ingestion", () => {
     expect(doc1.lastUpdated).toBeDefined();
 
     // Verify metadata update
-    expect(mockDoc).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.CELLULAR_ANTENNAS);
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "8935c8e5-ec77-421f-af86-d970583195f8",
+        activeCollection: DATASET_IDS.CELLULAR_ANTENNAS,
         status: "idle",
         recordCount: 2,
       }),
@@ -268,7 +269,164 @@ describe("Scraper and Sync Ingestion", () => {
     expect(doc.antennaId).toBe("6793");
     expect(doc.createdAt).toBe(initialCreatedAt);
     expect(doc.lastUpdated).toBeDefined();
-    expect(doc.lastUpdated).not.toBe(initialCreatedAt);
+    expect(doc.updatedAt).toBeDefined();
+  });
+
+  it("should skip writing to Firestore if the existing antenna is identical to the incoming antenna", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      ID: "6793",
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      חברה: "פלאפון",
+      "מס' אתר": "JC1176A",
+      עיר: "אפיקים",
+      "כתובת האתר": "קיבוץ אפיקים",
+      "היתר קרינה": "יש היתר",
+      "טכנולוגיית שידור": "דור 4",
+      "בדיקה תקופתית אחרונה": "15/05/2026",
+    };
+
+    const parsed = parseRecord(rawRecord)!;
+    const existingAntenna = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: parsed.lastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "6793",
+        data: () => existingAntenna,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncAntennas(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should write to Firestore and update lastUpdated if the existing antenna has different data", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      ID: "6793",
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      חברה: "פלאפון",
+      "מס' אתר": "JC1176A",
+      עיר: "אפיקים",
+      "כתובת האתר": "קיבוץ אפיקים",
+      "היתר קרינה": "יש היתר",
+      "טכנולוגיית שידור": "דור 4",
+      "בדיקה תקופתית אחרונה": "15/05/2026",
+    };
+
+    const parsed = parseRecord(rawRecord)!;
+    const existingAntenna = {
+      ...parsed,
+      operatorName: "Partner",
+      company: { he: "פרטנר", en: "Partner" },
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "6793",
+        data: () => existingAntenna,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncAntennas(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.operatorName).toBe("Pelephone");
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).not.toBe(initialLastUpdated);
+    expect(written.updatedAt).toBeDefined();
+  });
+
+  it("should write to Firestore and update updatedAt if ONLY lastUpdated has changed", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      ID: "6793",
+      X_ITM: 255812,
+      Y_ITM: 732929,
+      חברה: "פלאפון",
+      "מס' אתר": "JC1176A",
+      עיר: "אפיקים",
+      "כתובת האתר": "קיבוץ אפיקים",
+      "היתר קרינה": "יש היתר",
+      "טכנולוגיית שידור": "דור 4",
+      "בדיקה תקופתית אחרונה": "15/05/2026",
+    };
+
+    const parsed = parseRecord(rawRecord)!;
+    const existingAntenna = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "6793",
+        data: () => existingAntenna,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncAntennas(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).toBe(parsed.lastUpdated);
+    expect(written.updatedAt).toBeDefined();
   });
 
   it("should handle empty api response gracefully", async () => {

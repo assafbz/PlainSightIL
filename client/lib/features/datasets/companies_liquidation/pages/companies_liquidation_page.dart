@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import '../data/models/liquidation_record_model.dart';
 import '../widgets/liquidation_detail_drawer.dart';
 
@@ -23,7 +24,7 @@ class _CompaniesLiquidationScreenState
   @override
   void initState() {
     super.initState();
-    widget.appState.addRecent('d8715392-287f-49b7-9ae3-f21ec5bf55f3');
+    widget.appState.addRecent(DatasetIds.companiesLiquidation);
   }
 
   @override
@@ -192,7 +193,7 @@ class _CompaniesLiquidationScreenState
                         listenable: widget.appState,
                         builder: (context, _) {
                           final isFav = widget.appState.isFavorite(
-                            'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+                            DatasetIds.companiesLiquidation,
                           );
                           return IconButton(
                             icon: Icon(
@@ -202,7 +203,7 @@ class _CompaniesLiquidationScreenState
                                   : AppColors.textSecondary,
                             ),
                             onPressed: () => widget.appState.toggleFavorite(
-                              'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+                              DatasetIds.companiesLiquidation,
                             ),
                           );
                         },

@@ -162,7 +162,10 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
   - **Documentation Audit**: Check that all new classes, public methods, endpoints, or complex code parts have three-slash (`///`) comments (Dart) or JSDoc comments (TypeScript/JS) in compliance with [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards).
 
 ### 2. Execution & Report Generation
-Execute tests (locally, using testing scripts, or browser automations). Create the QA Validation Report (`QA_REPORT.md`) under `.agents/state/issue_<id>/QA_REPORT.md`:
+Execute unit, widget, and E2E tests. Run the automated checks to verify quality requirements:
+- **Test Existence Check**: Run `node scripts/check-test-existence.js` and confirm it passes.
+- **Coverage Check**: Run `node scripts/check-coverage-thresholds.js --client` or `--backend` depending on modified components and verify that the target thresholds are met.
+Create the QA Validation Report (`QA_REPORT.md`) under `.agents/state/issue_<id>/QA_REPORT.md`:
 
 ```markdown
 # QA Validation Report: [Feature Name] (Issue #[Issue ID])
@@ -179,13 +182,19 @@ Execute tests (locally, using testing scripts, or browser automations). Create t
 | TC-01 | Responsive layout check | iPad Pro (portrait) | Responsive scaling, no overflows | Matches design | PASS |
 | TC-02 | Missing dataset check | Null API payload | Empty state banner displayed | Shows loading forever | FAIL |
 
-## 3. Discovered Defects (Gaps & Bugs)
+## 3. Test Coverage Audit
+Report coverage metrics captured by validation scripts:
+- **Client Coverage achieved**: XX% (Domain/Data target: 90%+, State target: 100%)
+- **Backend Coverage achieved**: YY% (Target: 90%+)
+- **Verification Scripts Outcome**: PASS / FAIL
+
+## 4. Discovered Defects (Gaps & Bugs)
 - **BUG-01 (Severity: High/Med/Low)**: Description, reproduction steps, and links to console errors.
 
-## 4. Regression Audit
+## 5. Regression Audit
 Verify that unrelated components behave correctly after the changes.
 
-## 5. QA Hurdles & Verification Bottlenecks
+## 6. QA Hurdles & Verification Bottlenecks
 Document any verification challenges, emulator limitations, or test setup hurdles encountered during testing. This will be harvested by the final Lessons Learned phase.
 ```
 

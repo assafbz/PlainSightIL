@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
+import { DATASET_IDS } from "./constants";
+import { AppLogger as logger } from "./logger";
 
 /**
  * Tracks execution metrics and computes database operation quota estimates
@@ -36,9 +37,9 @@ export class ScraperTelemetryTracker {
     let firestoreWritesEstimate: number;
 
     switch (this.datasetId) {
-      case "8935c8e5-ec77-421f-af86-d970583195f8":
-      case "ff398c7e-c522-4ee8-a53a-312b188a573d":
-      case "d8715392-287f-49b7-9ae3-f21ec5bf55f3":
+      case DATASET_IDS.CELLULAR_ANTENNAS:
+      case DATASET_IDS.CELLULAR_PERMITS:
+      case DATASET_IDS.COMPANIES_LIQUIDATION:
         // 1 read for existence check and 1 write per record.
         // Plus 1 read for count query and 1 write for metadata document update.
         firestoreReadsEstimate = recordsProcessed + 1;

@@ -64,231 +64,241 @@ class _DatasetCardState extends State<DatasetCard> {
       dateStr = 'N/A';
     }
 
-    return AnimatedScale(
-      scale: _scale,
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOutBack,
-      child: GestureDetector(
-        onTapDown: _onTapDown,
-        onTapUp: _onTapUp,
-        onTapCancel: _onTapCancel,
-        child: GlassmorphicCard(
-          startBorderColor: accentColor,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Publisher Badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceHigh.withAlpha(150),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.glassBorder,
-                          width: 1,
+    return Semantics(
+      label: widget.dataset.title,
+      container: true,
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutBack,
+        child: GestureDetector(
+          onTapDown: _onTapDown,
+          onTapUp: _onTapUp,
+          onTapCancel: _onTapCancel,
+          child: GlassmorphicCard(
+            startBorderColor: accentColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Publisher Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHigh.withAlpha(150),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.glassBorder,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          widget.dataset.publisher,
+                          style: AppTypography.labelXs(
+                            context,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
+                      Row(
+                        children: [
+                          if (widget.onFavoriteToggle != null)
+                            IconButton(
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              icon: Icon(
+                                widget.isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: widget.isFavorite
+                                    ? AppColors.danger
+                                    : AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              onPressed: widget.onFavoriteToggle,
+                            ),
+                          if (isSupported)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.activeBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                widget.translate('badge_active'),
+                                style: AppTypography.labelXs(
+                                  context,
+                                  color: AppColors.activeText,
+                                ),
+                              ),
+                            )
+                          else if (totalRequests > 0)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.bolt,
+                                  size: 14,
+                                  color: AppColors.info,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${widget.translate('requests_label')}$totalRequests',
+                                  style: AppTypography.labelXs(
+                                    context,
+                                    color: AppColors.info,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 2. Title (forced RTL since governmental CKAN is in Hebrew)
+                  Text(
+                    widget.dataset.title,
+                    style: AppTypography.headlineMd(
+                      context,
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+                    textDirection: TextDirection.rtl,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 3. Expandable Description (notes)
+                  if (widget.dataset.notes.isNotEmpty) ...[
+                    Text(
+                      widget.dataset.notes,
+                      style: AppTypography.bodySm(
+                        context,
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: _isExpanded ? 100 : 2,
+                      overflow: _isExpanded
+                          ? TextOverflow.clip
+                          : TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 4),
+                    // Read more toggle button
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
                       child: Text(
-                        widget.dataset.publisher,
+                        _isExpanded
+                            ? (widget.currentLocale == 'he'
+                                  ? 'קרא פחות'
+                                  : 'Read less')
+                            : (widget.currentLocale == 'he'
+                                  ? 'קרא עוד'
+                                  : 'Read more'),
                         style: AppTypography.labelXs(
                           context,
-                          color: AppColors.textSecondary,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
-                    Row(
-                      children: [
-                        if (widget.onFavoriteToggle != null)
-                          IconButton(
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            icon: Icon(
-                              widget.isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: widget.isFavorite
-                                  ? AppColors.danger
-                                  : AppColors.textSecondary,
-                              size: 20,
-                            ),
-                            onPressed: widget.onFavoriteToggle,
+                  ],
+                  const SizedBox(height: 16),
+
+                  // 4. Resource statistics and Last Updated Date
+                  Divider(color: AppColors.glassBorder, height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.insert_drive_file_outlined,
+                            size: 14,
+                            color: AppColors.textTertiary,
                           ),
-                        if (isSupported)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.activeBg,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              widget.translate('badge_active'),
-                              style: AppTypography.labelXs(
-                                context,
-                                color: AppColors.activeText,
+                          const SizedBox(width: 4),
+                          Text(
+                            '${widget.dataset.resourceCount}${widget.translate('resources_label')}',
+                            style: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textTertiary,
+                            ).copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${widget.translate('updated_label')}$dateStr',
+                        style: AppTypography.bodySm(
+                          context,
+                          color: AppColors.textTertiary,
+                        ).copyWith(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 5. Action Area Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: widget.isRequesting
+                        ? Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: accentColor,
+                                strokeWidth: 2,
                               ),
                             ),
                           )
-                        else if (totalRequests > 0)
-                          Row(
-                            children: [
-                              Icon(Icons.bolt, size: 14, color: AppColors.info),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${widget.translate('requests_label')}$totalRequests',
-                                style: AppTypography.labelXs(
-                                  context,
-                                  color: AppColors.info,
+                        : ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentColor.withAlpha(25),
+                              foregroundColor: accentColor,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: accentColor.withAlpha(100),
+                                  width: 1.5,
                                 ),
                               ),
-                            ],
+                            ),
+                            onPressed: widget.onTapAction,
+                            child: Text(
+                              isSupported
+                                  ? widget.translate('open_visualizer')
+                                  : widget.translate('request_integration'),
+                              style:
+                                  AppTypography.labelXs(
+                                    context,
+                                    color: accentColor,
+                                  ).copyWith(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // 2. Title (forced RTL since governmental CKAN is in Hebrew)
-                Text(
-                  widget.dataset.title,
-                  style: AppTypography.headlineMd(
-                    context,
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                  textDirection: TextDirection.rtl,
-                ),
-                const SizedBox(height: 8),
-
-                // 3. Expandable Description (notes)
-                if (widget.dataset.notes.isNotEmpty) ...[
-                  Text(
-                    widget.dataset.notes,
-                    style: AppTypography.bodySm(
-                      context,
-                      color: AppColors.textSecondary,
-                    ),
-                    maxLines: _isExpanded ? 100 : 2,
-                    overflow: _isExpanded
-                        ? TextOverflow.clip
-                        : TextOverflow.ellipsis,
-                    textDirection: TextDirection.rtl,
-                  ),
-                  const SizedBox(height: 4),
-                  // Read more toggle button
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isExpanded = !_isExpanded;
-                      });
-                    },
-                    child: Text(
-                      _isExpanded
-                          ? (widget.currentLocale == 'he'
-                                ? 'קרא פחות'
-                                : 'Read less')
-                          : (widget.currentLocale == 'he'
-                                ? 'קרא עוד'
-                                : 'Read more'),
-                      style: AppTypography.labelXs(
-                        context,
-                        color: AppColors.primary,
-                      ),
-                    ),
                   ),
                 ],
-                const SizedBox(height: 16),
-
-                // 4. Resource statistics and Last Updated Date
-                Divider(color: AppColors.glassBorder, height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.insert_drive_file_outlined,
-                          size: 14,
-                          color: AppColors.textTertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${widget.dataset.resourceCount}${widget.translate('resources_label')}',
-                          style: AppTypography.bodySm(
-                            context,
-                            color: AppColors.textTertiary,
-                          ).copyWith(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      '${widget.translate('updated_label')}$dateStr',
-                      style: AppTypography.bodySm(
-                        context,
-                        color: AppColors.textTertiary,
-                      ).copyWith(fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // 5. Action Area Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: widget.isRequesting
-                      ? Center(
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: accentColor,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        )
-                      : ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentColor.withAlpha(25),
-                            foregroundColor: accentColor,
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: BorderSide(
-                                color: accentColor.withAlpha(100),
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                          onPressed: widget.onTapAction,
-                          child: Text(
-                            isSupported
-                                ? widget.translate('open_visualizer')
-                                : widget.translate('request_integration'),
-                            style:
-                                AppTypography.labelXs(
-                                  context,
-                                  color: accentColor,
-                                ).copyWith(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

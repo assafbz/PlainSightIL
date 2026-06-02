@@ -15,6 +15,13 @@ import 'package:plainsight/core/utils/app_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/permits_notifier.dart';
+import 'package:plainsight/features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
+import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
+import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -120,33 +127,56 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _appState,
-      builder: (context, _) {
-        return MaterialApp(
-          title: 'PlainSightIL',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            scaffoldBackgroundColor: AppColors.baseBg,
-            colorScheme: ColorScheme.dark(
-              primary: AppColors.primary,
-              secondary: AppColors.secondary,
-              surface: AppColors.surface,
-              error: AppColors.danger,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AppStateNotifier>.value(value: _appState),
+        ChangeNotifierProvider<AuthNotifier>.value(
+          value: _appState.authNotifier,
+        ),
+        ChangeNotifierProvider<AntennasNotifier>.value(
+          value: _appState.antennasNotifier,
+        ),
+        ChangeNotifierProvider<PermitsNotifier>.value(
+          value: _appState.permitsNotifier,
+        ),
+        ChangeNotifierProvider<LiquidationNotifier>.value(
+          value: _appState.liquidationNotifier,
+        ),
+        ChangeNotifierProvider<DoctorsNotifier>.value(
+          value: _appState.doctorsNotifier,
+        ),
+        ChangeNotifierProvider<TelemetryNotifier>.value(
+          value: _appState.telemetryNotifier,
+        ),
+      ],
+      child: ListenableBuilder(
+        listenable: _appState,
+        builder: (context, _) {
+          return MaterialApp(
+            title: 'PlainSightIL',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              scaffoldBackgroundColor: AppColors.baseBg,
+              colorScheme: ColorScheme.dark(
+                primary: AppColors.primary,
+                secondary: AppColors.secondary,
+                surface: AppColors.surface,
+                error: AppColors.danger,
+              ),
+              useMaterial3: true,
             ),
-            useMaterial3: true,
-          ),
-          builder: (context, child) {
-            return Directionality(
-              textDirection: _appState.textDirection,
-              child: child!,
-            );
-          },
-          home: (!_appState.isAuthenticated && !_appState.isGuestMode)
-              ? LoginPage(appState: _appState)
-              : AppShell(appState: _appState),
-        );
-      },
+            builder: (context, child) {
+              return Directionality(
+                textDirection: _appState.textDirection,
+                child: child!,
+              );
+            },
+            home: (!_appState.isAuthenticated && !_appState.isGuestMode)
+                ? LoginPage(appState: _appState)
+                : AppShell(appState: _appState),
+          );
+        },
+      ),
     );
   }
 }

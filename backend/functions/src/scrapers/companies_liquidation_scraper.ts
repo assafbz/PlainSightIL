@@ -1,6 +1,8 @@
 import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
+import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 // Translation mapping for case statuses
 const STATUS_TRANSLATIONS: Record<string, string> = {
@@ -49,6 +51,7 @@ export interface CompaniesLiquidationRecord {
   cityOfActivity: string;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // Clean trailing and extra whitespace
@@ -104,6 +107,8 @@ export function parseLiquidationRecord(
   const closureDate = parseDateString(record["תאריך סגירת תיק"]) || null;
   const closureReason = cleanString(record["סיבת סגירה"]) || null;
 
+  const lastUpdated = liquidationOrderDate || submissionDate || new Date().toISOString();
+
   return {
     id,
     companyId,
@@ -117,35 +122,61 @@ export function parseLiquidationRecord(
     closureReason,
     districtCourt,
     cityOfActivity,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated,
   };
 }
 
 export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
-  resourceId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3",
+  resourceId = DATASET_IDS.COMPANIES_LIQUIDATION,
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
   try {
-    const targetCollection = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+    const targetCollection = DATASET_IDS.COMPANIES_LIQUIDATION;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
     const targetRef = db.collection(targetCollection);
     const now = new Date().toISOString();
-
     while (hasMore) {
-      const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
 
-      const response = await axios.get(url);
-      const records: HebrewLiquidationRecord[] = response.data?.result?.records ?? [];
+      let records: HebrewLiquidationRecord[] = [];
+      if (isEmulator) {
+        records = [
+          {
+            "מזהה תיק פירוק חברה": 11111,
+            "שם החברה": 'בשן פרסום ויחסי צבור בע~מ',
+            "מספר זיהוי של החברה": 510000001,
+            "סטטוס תיק": 'פירוק פעיל',
+            "תאריך הגשת הבקשה": '2024-05-12T00:00:00',
+            "תאריך קבלת צו פירוק": '2024-06-15T00:00:00',
+            "בית משפט מחוזי בו מתנהל התיק": 'מחוזי תל אביב',
+            "עיר פעילות חברה": 'תל אביב - יפו'
+          },
+          {
+            "מזהה תיק פירוק חברה": 22222,
+            "שם החברה": 'מלון הגליל בע~מ',
+            "מספר זיהוי של החברה": 510000002,
+            "סטטוס תיק": 'פירוק פעיל',
+            "תאריך הגשת הבקשה": '2024-05-12T00:00:00',
+            "תאריך קבלת צו פירוק": '2024-06-15T00:00:00',
+            "בית משפט מחוזי בו מתנהל התיק": 'מחוזי נצרת',
+            "עיר פעילות חברה": 'טבריה'
+          }
+        ];
+      } else {
+        const response = await axios.get(url);
+        records = response.data?.result?.records ?? [];
+      }
 
       if (records.length === 0) {
         hasMore = false;
@@ -164,29 +195,49 @@ export async function scrapeAndSyncCompaniesLiquidation(
         const chunk = parsedRecords.slice(i, i + 500);
         const docRefs = chunk.map((r) => targetRef.doc(r.id));
 
+        // Lookup existing documents in batch
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
-          if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+          const data = snap.data();
+          if (snap.exists && data) {
+            existingMap.set(snap.id, data);
           }
         }
 
+        // Prepare and write chunk
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
+          } else {
+            r.createdAt = now;
+            r.updatedAt = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
+      }
+
+      if (isEmulator) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;

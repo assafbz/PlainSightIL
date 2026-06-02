@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../../core/constants/dataset_ids.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
 import '../widgets/cellular_antennas_map_view.dart';
@@ -46,7 +47,7 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     if (!AppStateNotifier.isTesting) {
       _radarController.repeat();
     }
-    widget.appState.addRecent('8935c8e5-ec77-421f-af86-d970583195f8');
+    widget.appState.addRecent(DatasetIds.cellularAntennas);
   }
 
   @override
@@ -354,17 +355,14 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
           ListenableBuilder(
             listenable: appState,
             builder: (context, _) {
-              final isFav = appState.isFavorite(
-                '8935c8e5-ec77-421f-af86-d970583195f8',
-              );
+              final isFav = appState.isFavorite(DatasetIds.cellularAntennas);
               return IconButton(
                 icon: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border,
                   color: isFav ? AppColors.danger : AppColors.textSecondary,
                 ),
-                onPressed: () => appState.toggleFavorite(
-                  '8935c8e5-ec77-421f-af86-d970583195f8',
-                ),
+                onPressed: () =>
+                    appState.toggleFavorite(DatasetIds.cellularAntennas),
               );
             },
           ),

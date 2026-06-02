@@ -1,9 +1,11 @@
 import * as admin from "firebase-admin";
 import { GeoPoint } from "firebase-admin/firestore";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
+import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -70,6 +72,7 @@ export interface CellularPermitApplication {
   jurisdiction: string;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApplication | null {
@@ -121,31 +124,32 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
     referenceNumber,
     company,
     permitType,
-    siteNumber,
     locality,
     addressDescription,
     focalPointType,
     coordinates: new GeoPoint(latitude, longitude),
     geohash,
     jurisdiction,
-    lastUpdated: new Date().toISOString(),
+    siteNumber,
+    lastUpdated: submissionDate,
   };
 }
 
 export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
-  resourceId = "ff398c7e-c522-4ee8-a53a-312b188a573d",
+  resourceId = DATASET_IDS.CELLULAR_PERMITS,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
+  const datasetId = DATASET_IDS.CELLULAR_PERMITS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "ff398c7e-c522-4ee8-a53a-312b188a573d";
+    const targetCollection = DATASET_IDS.CELLULAR_PERMITS;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -153,7 +157,8 @@ export async function scrapeAndSyncPermitApplications(
     const now = new Date().toISOString();
 
     while (hasMore) {
-      const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
 
       const response = await axios.get(url);
@@ -182,29 +187,47 @@ export async function scrapeAndSyncPermitApplications(
 
         // Lookup existing documents in batch
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
-          if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+          const data = snap.data();
+          if (snap.exists && data) {
+            existingMap.set(snap.id, data);
           }
         }
 
         // Prepare and write chunk
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
+          } else {
+            r.createdAt = now;
+            r.updatedAt = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
+      }
+
+      if (isEmulator) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;

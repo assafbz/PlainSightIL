@@ -63,5 +63,15 @@ jobs:
         working-directory: client
 
       - name: Run Unit & Widget Tests
-        run: flutter test
+        run: flutter test --coverage
         working-directory: client
+
+      - name: Verify Code Coverage Gateways
+        run: dart run tool/check_coverage.dart
+        working-directory: client
+
+      - name: Run Test Existence Validation
+        run: node scripts/check-test-existence.js
+
+      - name: Verify Client Coverage Thresholds
+        run: node scripts/check-coverage-thresholds.js --client

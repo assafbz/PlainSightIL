@@ -1,15 +1,16 @@
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as functions from "firebase-functions/v1";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "./utils/logger";
 import axios from "axios";
 
-import { scrapeAndSyncAntennas } from "./scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
-import { scrapeAndSyncPermitApplications } from "./scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
+import { scrapeAndSyncAntennas } from "./scrapers/cellular_antennas_scraper";
+import { scrapeAndSyncPermitApplications } from "./scrapers/cellular_permits_scraper";
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
-import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
-import { scrapeAndSyncDoctorsLicenses } from "./scrapers/9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
+import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
+import { DATASET_IDS } from "./utils/constants";
 
 admin.initializeApp();
 
@@ -39,7 +40,7 @@ function handleCors(req: functions.https.Request, res: functions.Response): bool
 async function checkAndLogApiReachability(
   firestoreDb: admin.firestore.Firestore,
 ): Promise<{ isReachable: boolean; statusCode: number; latencyMs: number }> {
-  const url = "https://data.gov.il";
+  const url = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
   const startTime = Date.now();
   try {
     logger.info(`Pinging government open data API at: ${url}`);
@@ -111,7 +112,7 @@ export const scheduledAntennaScraper = functions.pubsub
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledAntennaScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("8935c8e5-ec77-421f-af86-d970583195f8");
+    const tracker = ScraperTelemetryTracker.start(DATASET_IDS.CELLULAR_ANTENNAS);
     try {
       const result = await scrapeAndSyncAntennas(db);
       logger.info("scheduledAntennaScraper completed successfully", {
@@ -212,7 +213,7 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
+  const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
@@ -249,7 +250,7 @@ export const scheduledPermitAppsScraper = functions.pubsub
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledPermitAppsScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("ff398c7e-c522-4ee8-a53a-312b188a573d");
+    const tracker = ScraperTelemetryTracker.start(DATASET_IDS.CELLULAR_PERMITS);
     try {
       const result = await scrapeAndSyncPermitApplications(db);
       logger.info("scheduledPermitAppsScraper completed successfully", {
@@ -274,7 +275,7 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
+  const datasetId = DATASET_IDS.CELLULAR_PERMITS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
@@ -367,7 +368,7 @@ export const scheduledCompaniesLiquidationScraper = functions.pubsub
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledCompaniesLiquidationScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
+    const tracker = ScraperTelemetryTracker.start(DATASET_IDS.COMPANIES_LIQUIDATION);
     try {
       const result = await scrapeAndSyncCompaniesLiquidation(db);
       logger.info("scheduledCompaniesLiquidationScraper completed successfully", {
@@ -392,7 +393,7 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+  const datasetId = DATASET_IDS.COMPANIES_LIQUIDATION;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
@@ -430,7 +431,7 @@ export const scheduledDoctorsLicensesScraper = functions
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledDoctorsLicensesScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("9c64c522-bbc2-48fe-96fb-3b2a8626f59e");
+    const tracker = ScraperTelemetryTracker.start(DATASET_IDS.DOCTORS_LICENSES);
     try {
       const result = await scrapeAndSyncDoctorsLicenses(db);
       logger.info("scheduledDoctorsLicensesScraper completed successfully", {
@@ -457,7 +458,7 @@ export const manualSyncDoctorsLicenses = functions
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+  const datasetId = DATASET_IDS.DOCTORS_LICENSES;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {

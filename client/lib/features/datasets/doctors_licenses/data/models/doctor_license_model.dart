@@ -27,6 +27,15 @@ class DoctorLicenseRecordModel {
   /// Name of the medical specialty (optional Hebrew text)
   final String? specialtyName;
 
+  /// Ingestion timestamp (optional ISO-8601 string)
+  final String? createdAt;
+
+  /// Firestore database modification timestamp (optional ISO-8601 string)
+  final String? updatedAt;
+
+  /// Source metadata modification timestamp (optional ISO-8601 string)
+  final String? lastUpdated;
+
   /// Constructor initializing all fields
   DoctorLicenseRecordModel({
     required this.id,
@@ -38,6 +47,9 @@ class DoctorLicenseRecordModel {
     this.specialtyCertificateNumber,
     this.specialtyRegistrationDate,
     this.specialtyName,
+    this.createdAt,
+    this.updatedAt,
+    this.lastUpdated,
   });
 
   /// Factory constructor to parse a Firestore document mapping into the model.
@@ -54,6 +66,9 @@ class DoctorLicenseRecordModel {
           : null,
       specialtyRegistrationDate: map['specialtyRegistrationDate'] as String?,
       specialtyName: map['specialtyName'] as String?,
+      createdAt: map['createdAt'] as String?,
+      updatedAt: map['updatedAt'] as String?,
+      lastUpdated: map['lastUpdated'] as String?,
     );
   }
 
@@ -69,6 +84,9 @@ class DoctorLicenseRecordModel {
       'specialtyCertificateNumber': specialtyCertificateNumber,
       'specialtyRegistrationDate': specialtyRegistrationDate,
       'specialtyName': specialtyName,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'lastUpdated': lastUpdated,
     };
   }
 }

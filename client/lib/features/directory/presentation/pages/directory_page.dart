@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
@@ -108,22 +109,22 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
   }
 
   void _handleDeepLink(DatasetMetadataModel dataset) {
-    if (dataset.id == '8935c8e5-ec77-421f-af86-d970583195f8' ||
-        dataset.id == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
+    if (dataset.id == DatasetIds.cellularAntennas ||
+        dataset.id == DatasetIds.cellularPermits) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) =>
               CellularAntennasScreen(appState: widget.appState),
         ),
       );
-    } else if (dataset.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
+    } else if (dataset.id == DatasetIds.companiesLiquidation) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) =>
               CompaniesLiquidationScreen(appState: widget.appState),
         ),
       );
-    } else if (dataset.id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
+    } else if (dataset.id == DatasetIds.doctorsLicenses) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) =>
