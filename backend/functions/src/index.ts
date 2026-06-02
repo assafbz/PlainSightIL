@@ -424,8 +424,9 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
 });
 
 // Scheduled Cloud Function for Doctors Licenses - runs weekly on Sunday at 3:00 AM (Israel timezone)
-export const scheduledDoctorsLicensesScraper = functions.pubsub
-  .schedule("0 3 * * 0")
+export const scheduledDoctorsLicensesScraper = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .pubsub.schedule("0 3 * * 0")
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledDoctorsLicensesScraper trigger invoked");
@@ -448,7 +449,9 @@ export const scheduledDoctorsLicensesScraper = functions.pubsub
   });
 
 // HTTPS Triggered Cloud Function for Doctors Licenses - manual sync
-export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, res) => {
+export const manualSyncDoctorsLicenses = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .https.onRequest(async (req, res) => {
   logger.info("manualSyncDoctorsLicenses HTTPS trigger invoked");
   if (handleCors(req, res)) return;
   const auth = await validateAdminRequest(req, res);

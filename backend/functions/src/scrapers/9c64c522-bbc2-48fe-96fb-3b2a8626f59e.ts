@@ -157,6 +157,13 @@ export async function scrapeAndSyncDoctorsLicenses(
 
     // Loop and page through the datastore
     while (hasMore) {
+      // eslint-disable-next-line no-undef
+      if (process.env.FUNCTIONS_EMULATOR === "true" && offset >= 1000) {
+        logger.info("FUNCTIONS_EMULATOR is true: limiting doctors licenses sync to 1000 records.");
+        hasMore = false;
+        break;
+      }
+
       const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching doctors licenses data from: ${url}`);
 
@@ -179,26 +186,12 @@ export async function scrapeAndSyncDoctorsLicenses(
       // Batch set documents in chunks of 500
       for (let i = 0; i < parsedRecords.length; i += 500) {
         const chunk = parsedRecords.slice(i, i + 500);
-        const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-        // Read existing entries to retain their original createdAt timestamp
-        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
-        for (const snap of snapshots) {
-          if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
-          }
-        }
 
         const batch = db.batch();
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
+          r.createdAt = now;
           r.lastUpdated = now;
 
           batch.set(docRef, r);
