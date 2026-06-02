@@ -53,42 +53,33 @@ Document key architectural choices, compromises, or tech debt introduced. This w
 
 ## 3. Codebase File Architecture & Boundaries
 
-The System Architect must respect and design around the modular Clean Architecture boundaries established in the workspace. Below is the mapping of how files are structured and their strict dependency directions.
+The System Architect must respect and design around the modular architecture boundaries established in the workspace. Below is the mapping of how files are structured and their strict dependency directions.
 
-### Clean Architecture File Dependency Diagram
+### Simplified Component Dependency Diagram
 
 ```mermaid
 graph TD
     subgraph Presentation Layer [client/lib/features/X/presentation/]
-        UI[pages/ & widgets/] -->|Listens to / Triggers| Bloc[blocs/ X_bloc.dart]
-    end
-
-    subgraph Domain Layer [client/lib/features/X/domain/]
-        Bloc -->|Invokes| UseCase[usecases/ get_X.dart]
-        UseCase -->|Calls Contract| RepoInterface[repositories/ X_repository.dart]
-        RepoInterface -->|Returns Entity| Entity[entities/ X_entity.dart]
+        UI[pages/ & widgets/] -->|Listens to / Triggers| Notifier[state/ X_notifier.dart]
     end
 
     subgraph Data Layer [client/lib/features/X/data/]
-        RepoImpl[repositories/ X_repository_impl.dart] -.->|Implements| RepoInterface
-        RepoImpl -->|Queries| RemoteDS[datasources/ X_remote_datasource.dart]
-        RepoImpl -->|Queries/Caches| LocalDS[datasources/ X_local_datasource.dart]
-        RemoteDS -->|Maps JSON to| Model[models/ X_model.dart]
-        Model -.->|Extends| Entity
+        Notifier -->|Uses Models| Model[models/ X_model.dart]
+    end
+    
+    subgraph Core Layer [client/lib/core/]
+        Notifier -->|Uses Global State| GlobalState[state/ app_state.dart]
+        GlobalState -->|Reads / Writes| LocalStorage[state/ local_storage.dart]
     end
 
-    %% Dependency Rule: Inner layers must not know about outer layers
-    Presentation Layer --> Domain Layer
-    Data Layer --> Domain Layer
-    
     style Presentation Layer fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
-    style Domain Layer fill:#efebe9,stroke:#5d4037,stroke-width:2px;
     style Data Layer fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    style Core Layer fill:#efebe9,stroke:#5d4037,stroke-width:2px;
 ```
 
 ### End-to-End Ingestion & Caching Data Flow
 
-This diagram illustrates how data flows from external APIs to client UI components, showing the backend scraper and client database files involved:
+This diagram illustrates how data flows from external APIs to client UI components, showing the backend scraper, Firestore collection, and client-side ChangeNotifier state bindings:
 
 ```mermaid
 graph TD
@@ -96,23 +87,19 @@ graph TD
     Functions -->|Format & Parse| Firestore[(Cloud Firestore DB)]
     
     subgraph Client Data Flow
-        Firestore -->|Fetch Snapshots| RemoteDS[X_remote_datasource.dart]
-        RemoteDS -->|JSON Deserialization| Model[X_model.dart]
-        Model --> RepoImpl[X_repository_impl.dart]
-        RepoImpl -->|Write Cache| IsarDB[(Isar Local Cache DB)]
-        IsarDB -->|Read Cached Query| RepoImpl
-        RepoImpl -->|Yield Entities| UseCase[get_X.dart]
-        UseCase -->|State Update| Bloc[X_bloc.dart]
-        Bloc -->|Rebuild Widget| View[X_page.dart]
+        Firestore -->|Firestore Stream Snapshots| GlobalState[app_state.dart]
+        GlobalState -->|Store in Memory / LocalStorage| GlobalState
+        GlobalState -->|Pass Collections| Notifier[X_notifier.dart]
+        Notifier -->|Trigger State Change| Notifier
+        Notifier -->|Rebuild Widget| View[X_page.dart]
     end
 
     style GovAPI fill:#f9f,stroke:#333,stroke-width:2px
     style Firestore fill:#bbf,stroke:#333,stroke-width:2px
-    style IsarDB fill:#dfd,stroke:#333,stroke-width:2px
+    style GlobalState fill:#dfd,stroke:#333,stroke-width:2px
 ```
 
 ### Key Architectural Guidelines
-1. **Domain Isolation**: Files in the `domain/` directory must not import package dependencies of outer layers, such as `flutter`, `isar`, `cloud_firestore`, or `flutter_bloc`.
+1. **ChangeNotifier State Scoping**: Scoped notifiers should inherit/manage specific features rather than bloating the global `AppStateNotifier`.
 2. **Double Buffering / Blue-Green Datasets**: For scrapers and local syncing, use unique dataset identifiers (e.g. `d8715392-287f-49b7-9ae3-f21ec5bf55f3.ts` for scrapers and test suites) to ensure modularity and ease of dataset swaps.
 3. **No Direct imports across Features**: Presentational and data components in feature `A` must never import files from feature `B`. Shared services should be moved to `client/lib/core/`.
-

@@ -11,7 +11,7 @@ You are the QA Engineer Agent. Your mission is to verify that the implemented co
 
 ## 1. End-to-End (E2E) Test Strategy & Plan
 
-The E2E testing strategy for PlainSightIL validates user flows across client-backend boundaries using hermetically sealed local environments. This ensures data processed by the backend (scrapers and Cloud Functions) flows correctly into Firestore, caches locally in the client (Isar DB), and renders properly in the user interface (Flutter Web/Chrome).
+The E2E testing strategy for PlainSightIL validates user flows across client-backend boundaries using hermetically sealed local environments. This ensures data processed by the backend (scrapers and Cloud Functions) flows correctly into Firestore, caches locally in the client (SharedPreferences/Firestore persistence cache), and renders properly in the user interface (Flutter Web/Chrome).
 
 ### 1.1 E2E Testing Workflow
 
@@ -29,7 +29,7 @@ graph TD
         RunTests --> RTL[Bilingual & RTL Mirrors]
         RunTests --> CustomPaint[CustomPainter & Geo Boundaries]
         RunTests --> Search[Search, Filter & Pagination]
-        RunTests --> Offline[Offline Mode & Isar Caches]
+        RunTests --> Offline[Offline Mode & Local Caches]
         RunTests --> A11y[Accessibility & Text Contrast]
     end
     
@@ -111,7 +111,7 @@ The following test matrix must be evaluated for all pull requests:
 | **TC-06** | Bad Coordinates | Pass null or string coordinates for dataset items. | Ignores invalid records safely, does not break Map or Radar CustomPaint. | Skips drawing invalid markers, lists rest. |
 | **TC-07** | Custom Repaint | Scroll or pan map view repeatedly. | Repaints markers efficiently without high CPU utilization or dropped frames. | Frame rendering rate (60/120fps). |
 | **TC-08** | Search & Filter | Enter Hebrew search term into liquidation view. | Correctly filters database items, shows highlighted results. | Input field focus, matching highlight bounds. |
-| **TC-09** | Caching & Offline | Trigger offline state, attempt fetching directory. | Banner shows offline notice, previously cached Isar DB data remains visible. | Alert banner padding, layout alignment. |
+| **TC-09** | Caching & Offline | Trigger offline state, attempt fetching directory. | Banner shows offline notice, previously cached local/Firestore data remains visible. | Alert banner padding, layout alignment. |
 | **TC-10** | Accessibility | Audit app layout with screen readers and contrast tools. | All image elements have semantic labels, touch targets >= 48dp, contrast >= 4.5:1. | Focus ring visibility, target sizes. |
 
 ---
@@ -141,7 +141,7 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
 - **Target Release Builds**: Always run E2E tests against a compiled production build (`flutter build web --release` served statically) to bypass DDC compilation delays.
 - **Context Isolation & State Clearing**: Clear local storage inline once during setup rather than using persistent `page.addInitScript()` callbacks which run on every page reload and wipe session states.
 - **Bypass Assertions**: When validating login bypass, check for the absence of login-specific components (buttons/inputs) rather than general greetings like "Welcome Back" which may also be rendered on dashboard headers.
-- **Offline Caching Validation**: To verify database cache (Isar DB/Firestore offline) retrieval, navigate away and reload the screen while offline rather than asserting on an already-rendered view.
+- **Offline Caching Validation**: To verify database cache (Firestore offline persistence / LocalStorage) retrieval, navigate away and reload the screen while offline rather than asserting on an already-rendered view.
 - **Flutter Web CanvasKit Text Inputs**: Standard Playwright programmatic `.fill()` commands on transparent overlay `<input>` elements will fail to register changes inside Flutter's `TextEditingController` Dart state. To interact with Flutter inputs, first click/focus the input element, execute a robust backspace loop (50 times) to clear the existing text, and then use `page.keyboard.type('New Value')` to dispatch browser keystroke events that Flutter Web captures.
 - **Strict Mode Violations & Announces**: When asserting the presence of text elements that also generate screen-reader announcements (such as a SnackBar text or dialog titles), Playwright's default selector will match multiple elements (e.g. `flt-announcement-polite` and the semantic span). Always append `.first()` to text-based locators to prevent strict mode errors.
 - **Static HTTP Port Swapping**: To prevent static server `serve` from switching to alternative ports if port 8080 is blocked or slow to release, append the `--no-port-switching` option to guarantee consistent test runs.

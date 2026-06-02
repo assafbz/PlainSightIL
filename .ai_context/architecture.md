@@ -8,7 +8,7 @@
 > 
 > The application design system and screen wireframes are defined and synchronized via Stitch. Developers and automated agents should reference these project resources for UI/UX specifications.
 
-This document establishes the technical architecture, component design, data serialization patterns, and domain isolation boundaries for the PlainSightIL application. It serves as the primary ground-truth configuration for automated agents and developers.
+This document establishes the technical architecture, component design, data serialization patterns, and state management conventions for the PlainSightIL application. It serves as the primary ground-truth configuration for automated agents and developers.
 
 ---
 
@@ -19,8 +19,8 @@ PlainSightIL utilizes a decoupled client-server architecture. The backend aggreg
 ### 1.1 Client Stack
 *   **Framework**: **Flutter (Dart)** compiling to native iOS, Android, and WebAssembly targets.
 *   **Rendering Engine**: **Impeller** (forced enablement).
-*   **State Management**: **BLoC (Business Logic Component)**. Ensures unidirectional data flow, separating UI events from business logic. No business logic in presentation files.
-*   **Client Caching**: **Isar Database (NoSQL)**. Local query caching to allow offline operation and near-instant load times without syncing the complete database.
+*   **State Management**: **Provider with ChangeNotifier** (specifically `AppStateNotifier`). Coordinates stream subscriptions and notifies UI elements to rebuild on new events.
+*   **Client Caching**: **SharedPreferences** (for user settings, guest mode, favorites, and recents) paired with **Cloud Firestore native offline persistence** and in-memory caches.
 *   **UI Assets**: Vector rendering with `flutter_svg` and native hardware-accelerated drawing with `CustomPainter`.
 *   **Offline Mock Mode**: Managed via the `AppStateNotifier.isTesting` flag. When `true`, it bypasses live Firestore calls and loads local mock lists to enable rapid widget testing and previewing without launching the Firebase emulator suite. Set `isTesting = false` inside `app_state.dart` to connect to local Firebase emulators.
 
@@ -41,17 +41,14 @@ graph TD
     CloudFunctions -->|Translate & Geohash| CloudFirestore[(Cloud Firestore)]
     
     subgraph Client Application
-        CloudFirestore -->|Paginated Query| ClientRepo[Repository Implementation]
-        ClientRepo -->|Save Cache Grid| IsarDB[(Isar Client Cache)]
-        IsarDB -->|Local Cache Hit| ClientRepo
-        ClientRepo -->|Map Entities| UseCases[Domain Use Cases]
-        UseCases -->|Yield State| BlocState[BLoC State Machine]
-        BlocState -->|Update View| ViewLayer[Presentation Layer]
+        CloudFirestore -->|Stream/Fetch Snapshots| AppState[AppStateNotifier / Provider]
+        AppState -->|Read/Write Session Details| LocalStorage[LocalStorage / SharedPreferences]
+        AppState -->|Bind / Rebuild| ViewLayer[Presentation Layer]
     end
     
     style GovPortal fill:#f9f,stroke:#333,stroke-width:2px
     style CloudFirestore fill:#bbf,stroke:#333,stroke-width:2px
-    style IsarDB fill:#dfd,stroke:#333,stroke-width:2px
+    style LocalStorage fill:#dfd,stroke:#333,stroke-width:2px
 ```
 
 ### 2.1 Backend Ingestion Workflow (Daily Sync)
@@ -61,12 +58,10 @@ graph TD
 4. **Load**: Firestore documents are created or updated.
 
 ### 2.2 Client Query & Cache Workflow
-1. **Initiate**: The UI invokes a use case via a BLoC event (e.g., `FetchAntennasInViewport`).
-2. **Check Cache**: The repository queries **Isar DB** for matching cached grids within the last 2 hours.
-    - *Cache Hit*: Read local records instantly. Yield state.
-    - *Cache Miss*: Fetch paginated geo-range snapshots from **Firestore**.
-3. **Cache Update**: Write remote records to **Isar DB** with a fresh timestamp.
-4. **Fallback Handling**: If offline and no local cache is found, load bundled fallback static JSON assets to ensure the app UI remains functional.
+1. **Initiate**: The UI listens to or triggers state modifications in the `AppStateNotifier` via the `Provider` pattern.
+2. **Check Cache**: The client queries **Cloud Firestore** which natively handles offline persistence.
+3. **Preferences / Recents Update**: The app reads and writes user-specific flags (e.g., guest mode, favorites, recents) to **SharedPreferences** via the unified `LocalStorage` wrapper.
+4. **Fallback Handling**: If offline and Firebase is not initialized (or in mock testing mode), load bundled fallback static JSON assets directly to ensure the app UI remains functional.
 
 ---
 
@@ -76,33 +71,28 @@ The interaction sequence between the client layers and remote/local data sources
 
 ```mermaid
 sequenceDiagram
-    participant UI as Presentation Layer (UI)
-    participant Repo as Repository Implementation
-    participant Local as Local Client Cache (Isar)
+    participant UI as UI View (Presentation)
+    participant State as AppStateNotifier (Provider)
+    participant Local as LocalStorage (SharedPreferences)
     participant Firestore as Cloud Firestore DB
-    participant LocalAssets as Bundled Fallback JSON
+    participant Mock as Bundled Static JSON
 
-    UI->>Repo: FetchTowersInRadius(lat, lng, radius)
-    Repo->>Local: CheckCachedQueryResults(lat, lng, radius)
-    alt Cache hit and fresh (< 2 hours)
-        Local-->>Repo: Return Cached subset
-        Repo-->>UI: Deliver Data (Instant Render)
-    else Cache miss / expired
-        Repo->>Firestore: Fetch documents in geohash bounds (paginated)
-        alt Network Success
-            Firestore-->>Repo: Return Document Snapshots
-            Repo->>Local: Store query result subset + timestamp
-            Repo-->>UI: Deliver Clean Data
-        alt Network Failure / Offline
-            Repo->>Local: CheckCachedQueryResults(lat, lng, radius) (any status)
-            alt Local cache exists
-                Local-->>Repo: Return Stale Cache
-                Repo-->>UI: Deliver Data + Stale warning
-            else No cache exists
-                Repo->>LocalAssets: Load static mock JSON (bundled)
-                LocalAssets-->>Repo: Return mock data
-                Repo-->>UI: Deliver Mock Data + Offline Banner
-            end
+    UI->xState: Listen to state / call action (e.g. initPermitMetadataListener)
+    alt isTesting Mode (Mock)
+        State->>State: Load hardcoded lists
+        State-->>UI: notifyListeners() (Render Mock Data)
+    else Production Mode (Real Firebase)
+        State->>Local: Read favorites / recents / guestMode
+        Local-->>State: Return preferences
+        State->>Firestore: Bind Stream Subscriptions (collection snapshots)
+        alt Network Available
+            Firestore-->>State: Emit Query Snapshot (real-time data)
+            State->>State: Store records in-memory
+            State-->>UI: notifyListeners() (Render Fresh Data)
+        else Network Offline
+            Firestore-->>State: Emit Cached Firestore Snapshot (offline persistence)
+            State->>State: Store stale records in-memory
+            State-->>UI: notifyListeners() (Render Cached Data + Offline Banner)
         end
     end
 ```
@@ -190,75 +180,76 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
 }
 ```
 
-
-### 4.2 Client Isar Database Model (Cached Query Ranges)
-The client application caches previously retrieved coordinate grids to speed up map panning.
+### 4.2 Client Local Storage Interface (SharedPreferences Wrapper)
+The client application persists state flags, user favorites, and recents across restarts using the `SharedPreferences` plugin via a unified, platform-conditional `LocalStorage` interface.
 
 ```dart
-@collection
-class CachedGeoQuery {
-  Id id = Isar.autoIncrement;
-
-  @Index(type: IndexType.value)
-  final String queryHash; // Hashed value of lat/lng rounded to 3 decimal places + radius
-
-  final DateTime cachedAt;
-  final List<String> antennaDocumentIds;
-
-  CachedGeoQuery({
-    required this.queryHash,
-    required this.cachedAt,
-    required this.antennaDocumentIds,
-  });
+/// Platform-independent abstract contract for local storage
+abstract class LocalStorageImpl {
+  Future<void> init();
+  List<String> getFavorites();
+  Future<void> saveFavorites(List<String> favorites);
+  List<String> getRecents();
+  Future<void> saveRecents(List<String> recents);
+  bool getGuestMode();
+  Future<void> saveGuestMode(bool enabled);
+  Future<void> clearAll();
+  String? getLastSavedBranch();
+  Future<void> saveLastSavedBranch(String branch);
 }
 ```
 
 ---
 
-## 5. Unidirectional State Management (BLoC)
+## 5. State Management & Data Streaming (Provider)
 
-Business logic is managed via **BLoC**. The state of each dataset module transitions deterministically based on incoming user events.
+Business logic and Firestore stream subscriptions are managed via the **Provider** pattern using `ChangeNotifier` to notify widgets of state changes.
 
 ### 5.1 State Transitions Diagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Initial
-    Initial --> Loading : FetchDataset (within current view bounds)
-    Loading --> Loaded : Data fetched successfully
-    Loading --> Failure : Fetch failed & no cache
-    Loaded --> Loading : User pans map / changes filters
+    [*] --> Initial : isTesting / initPermitMetadataListener()
+    Initial --> Loading : Fetching Firestore Snapshots
+    Loading --> Loaded : Snapshot emitted / Data populated in-memory
+    Loading --> Failure : Firestore error triggered
+    Loaded --> Loading : Refresh / Active Collection swaps
     Failure --> Loading : Retry
 ```
 
-### 5.2 Example Bloc Interface
+### 5.2 AppStateNotifier Core Interface
 
 ```dart
-// Events
-abstract class AntennaEvent {}
-class FetchAntennasInViewport extends AntennaEvent {
-  final double centerLatitude;
-  final double centerLongitude;
-  final double radiusInMeters;
-  FetchAntennasInViewport({
-    required this.centerLatitude,
-    required this.centerLongitude,
-    required this.radiusInMeters,
-  });
-}
+class AppStateNotifier extends ChangeNotifier {
+  // Authentication & Settings
+  User? _currentUser;
+  bool _isGuestMode = false;
+  bool _isMockAuthenticated = false;
 
-// States
-abstract class AntennaState {}
-class AntennaInitial extends AntennaState {}
-class AntennaLoading extends AntennaState {}
-class AntennaLoaded extends AntennaState {
-  final List<CellularAntenna> visibleAntennas;
-  final bool isFromOfflineCache;
-  AntennaLoaded({required this.visibleAntennas, required this.isFromOfflineCache});
-}
-class AntennaFailure extends AntennaState {
-  final String message;
-  AntennaFailure(this.message);
+  // In-Memory Dataset Buffers
+  List<Map<String, dynamic>> _permitRecords = [];
+  List<Map<String, dynamic>> _antennaRecords = [];
+  List<DatasetMetadataModel> _directoryRecords = [];
+
+  // Loading Flags
+  bool _isLoadingPermits = true;
+  bool _isLoadingAntennas = true;
+  bool _isLoadingDirectory = true;
+
+  // Initialize and bind real-time listeners
+  void initPermitMetadataListener() {
+    // Spawns listeners for all active datasets
+    initAntennaListener();
+    initDirectoryListener();
+    initLiquidationListener();
+    initDoctorsListener();
+    initAdminMetadataListener();
+  }
+
+  // Notifies all listening widgets to rebuild
+  void updateState() {
+    notifyListeners();
+  }
 }
 ```
 
@@ -275,30 +266,22 @@ Strict file and directory structure isolates framework code from core business r
 *   `.agents/` - SDLC agent definitions, custom prompts, and workflows.
 
 ### 6.2 Client Component Boundaries
-Features are modularized under `client/lib/features/[feature_name]/` and must implement **Clean Architecture**:
+Features are modularized under `client/lib/features/[feature_name]/` (or `client/lib/features/datasets/[dataset_name]/`) using a simplified clean architecture structure.
 
 ```
 client/lib/features/[feature_name]/
 │
-├── data/                             # Data Layer (Depends on Domain)
-│   ├── datasources/                  # Remote Firestore SDK & Local Isar DB wrappers
-│   ├── models/                       # JSON serialization/deserialization classes
-│   └── repositories/                 # Repository implementations coordinating remote/local data
+├── data/                             # Data Layer
+│   └── models/                       # JSON serialization/deserialization models
 │
-├── domain/                           # Domain Layer (Pure Dart, No External UI/DB Dependencies)
-│   ├── entities/                     # Plain Dart models for core business objects
-│   ├── repositories/                 # Abstract contracts specifying data interfaces
-│   └── usecases/                     # Specific application business flow controllers
-│
-└── presentation/                     # Presentation Layer (Depends on Domain)
-    ├── blocs/                        # BLoC / Cubit state managers
-    ├── pages/                        # Screen layouts and routing anchors
-    └── widgets/                      # Specific visual elements, bottom sheets, maps
+└── presentation/                     # Presentation Layer
+    ├── pages/                        # Screen views and scaffold containers
+    └── widgets/                      # Specific visual cards, bottom drawers, and maps
 ```
 
-### 6.3 Strict Modularity Rules
-*   **Dependency Direction**: Data and Presentation layers depend on the Domain layer. The Domain layer must **never** depend on external packages, UI frameworks, databases, or state management frameworks.
-*   **No Cross-Feature Imports**: A feature's internal components (e.g., in `features/cellular_antennas/`) must never directly import files from another feature (e.g., `features/water_level/`). Shared services must reside in `client/lib/core/`.
+### 6.3 Strict Modularity Rules & State Scoping
+*   **Centralized vs Scoped State**: Global states, authentication, and dataset listeners are currently coordinated by the monolithic `AppStateNotifier` in `core/state/app_state.dart`. In the future, this state will be modularized and split into feature-specific scoped Notifiers (e.g. `AntennasNotifier`) placed under their respective presentation layers.
+*   **No Cross-Feature Imports**: A feature's internal components (e.g., in `features/datasets/cellular_antennas/`) must never directly import files from another feature (e.g., `features/datasets/companies_liquidation/`). Shared resources and global styling tokens must reside in `client/lib/core/`.
 *   **RTL/LTR Geometry Independence**: Absolute horizontal coordinates (e.g., `left` / `right`) are strictly banned in padding, margins, borders, and alignments. All layouts must use relative direction wrappers:
     - Use `AlignmentDirectional` instead of `Alignment`.
     - Use `EdgeInsetsDirectional` instead of `EdgeInsets`.
@@ -311,13 +294,12 @@ client/lib/features/[feature_name]/
 
 Every time a developer or agent adds a new dataset to PlainSightIL, they must perform the following actions:
 
-1.  **Define Entities & Models**: Write clean Dart entities representing the logical business entity (in `domain/entities`), and matching data serializable models with custom key parsers (in `data/models`).
-2.  **Setup Cloud Data Syncer**: Write a new Cloud Scheduler cron task inside the Firebase Functions codebase to scrape the target dataset from `data.gov.il`, clean/translate key value structures, compute Geohashes, and write records to Cloud Firestore.
-3.  **Define Cloud Index Rules**: Set up compound index configurations in Firestore (e.g. `geohash ASC + permitType ASC`) for query optimizations.
-4.  **Create Client Repositories & Usecases**: Write client data querying layer to fetch paginated boundaries, write subsets locally to Isar, and map results to clean structures.
-5.  **Build BLoC Events & States**: Establish logical data flows.
-6.  **Create UI Presentation Panels**:
-    *   Assemble a visual canvas (e.g. Map, concentric circular gauge, SVG chart).
-    *   Build a bottom sheet panel mapping to collapsed/half/expanded layouts.
-    *   Ensure all widgets support logical alignments (`Directional` classes).
-7.  **Enforce Quality Standards**: Verify that the code follows all conventions and passes all test coverage specifications outlined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md).
+1.  **Define Data Models**: Write matching Dart data serializable models with custom key parsers (in `data/models/`).
+2.  **Setup Cloud Data Syncer**: Write a new Cloud Scheduler cron task inside the Firebase Functions codebase to scrape the target dataset from `data.gov.il`, clean/translate key-value structures, compute Geohashes, and write records to Cloud Firestore.
+3.  **Define Cloud Index Rules**: Set up index configurations in Firestore (e.g. `geohash ASC + lastUpdated DESC`) for query optimizations.
+4.  **Register State Listener**: Add the dataset properties, stream subscriptions, and loader flags to `AppStateNotifier` (or a feature-scoped Notifier), ensuring dynamic updates.
+5.  **Create UI Presentation Panels**:
+    *   Assemble a visual canvas (e.g. Map with markers, detail lists, custom charts).
+    *   Build a detail bottom sheet panel matching collapsed/half/expanded layouts.
+    *   Ensure all widgets support logical direction alignments (`Directional` classes).
+6.  **Enforce Quality Standards**: Verify that the code follows all conventions and passes all test coverage specifications outlined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md).
