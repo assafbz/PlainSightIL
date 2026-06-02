@@ -19,7 +19,6 @@ void main() {
       });
 
       final appState = AppStateNotifier();
-
       // Build the AdminPage within a MaterialApp framework
       await tester.pumpWidget(
         MaterialApp(
