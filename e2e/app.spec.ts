@@ -201,4 +201,117 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await expect(page.getByText('Continue as Guest')).not.toBeVisible();
     await expect(page.getByText('Sign in with Google')).not.toBeVisible();
   });
+
+  test('E2E-PROF-01: Edit User Profile Flow', async () => {
+    // Clear storage and reload to return to the Login Page
+    console.log('Clearing storage and reloading to log out...');
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+    await page.goto('http://localhost:8080/?enable-accessibility=true');
+
+    // Re-enable accessibility on page reload
+    const placeholder = page.locator('flt-semantics-placeholder').first();
+    await expect(placeholder).toBeAttached({ timeout: 60000 });
+    await placeholder.dispatchEvent('click');
+
+    // Assert we are back on the Login screen
+    await expect(page.getByText('Welcome Back')).toBeVisible({ timeout: 15000 });
+
+    // Click "Sign in with Google" and catch the Firebase Auth Emulator popup
+    console.log('Clicking Sign in with Google...');
+    const [popup] = await Promise.all([
+      page.waitForEvent('popup'),
+      page.getByText('Sign in with Google').click(),
+    ]);
+    await popup.waitForLoadState();
+
+    // Authenticate via Firebase Auth Emulator popup
+    console.log('Authenticating in the emulator popup...');
+    await popup.waitForTimeout(1000);
+    console.log('--- POPUP HTML CONTENT START ---');
+    console.log(await popup.content());
+    console.log('--- POPUP HTML CONTENT END ---');
+    
+    // Wait for either the "Add new account" button OR the email input field to appear
+    await Promise.race([
+      popup.waitForSelector('button:has-text("Add new account")', { timeout: 15000 }).catch(() => null),
+      popup.waitForSelector('input#email-input', { timeout: 15000 }).catch(() => null)
+    ]);
+
+    // Click "Add new account" if it is visible
+    const addAccountBtn = popup.getByRole('button', { name: 'Add new account' });
+    if (await addAccountBtn.isVisible()) {
+      await addAccountBtn.click();
+    }
+
+    // In Firebase Auth Emulator, locate email input and fill it
+    const emailInput = popup.locator('input#email-input');
+    await expect(emailInput).toBeVisible({ timeout: 15000 });
+    await emailInput.fill('assaf-e2e@plainsight.il');
+
+    // Locate display name input and fill it
+    const nameInput = popup.locator('input#display-name-input');
+    await expect(nameInput).toBeVisible({ timeout: 10000 });
+    await nameInput.fill('Assaf E2E');
+
+    // Click submit in popup (Add account or Sign-in)
+    const submitBtn = popup.locator('button#submit-btn, button:has-text("Add account"), button:has-text("Sign in")').first();
+    await submitBtn.click();
+
+    // Verify main page redirects to Dashboard
+    console.log('Waiting for login redirection...');
+    await expect(page.getByText('Democratizing Civic Data')).toBeVisible({ timeout: 20000 });
+
+    // Open navigation drawer
+    console.log('Opening navigation drawer...');
+    const menuBtn = page.getByLabel('Open navigation menu');
+    await expect(menuBtn).toBeVisible({ timeout: 10000 });
+    await menuBtn.click();
+
+    // Verify user profile card in the drawer displays fallback details (since Firestore profile does not exist yet)
+    await expect(page.getByText('Assaf E2E')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('assaf-e2e@plainsight.il')).toBeVisible();
+
+    // Tap on the user profile card to open Profile Settings Page
+    console.log('Opening Profile Settings...');
+    await page.getByText('Assaf E2E').click();
+
+    // Verify Profile Settings Page displays fallback values in TextFields
+    const inputs = page.locator('input[type="text"], input[type="email"]');
+    await expect(inputs).toHaveCount(4, { timeout: 10000 });
+
+    // Edit First Name and Last Name
+    console.log('Editing first and last name...');
+    await inputs.nth(0).click();
+    for (let i = 0; i < 50; i++) {
+      await page.keyboard.press('Backspace');
+    }
+    await page.keyboard.type('AssafUpdated');
+
+    await inputs.nth(1).click();
+    for (let i = 0; i < 50; i++) {
+      await page.keyboard.press('Backspace');
+    }
+    await page.keyboard.type('E2EUpdated');
+
+    // Click "Save Profile" button
+    console.log('Saving profile...');
+    const saveBtn = page.getByText('Save Profile');
+    await expect(saveBtn).toBeVisible();
+    await saveBtn.click();
+
+    // Verify success SnackBar / feedback
+    await expect(page.getByText('Profile updated successfully!').first()).toBeVisible({ timeout: 15000 });
+
+    // Click Back to return to Dashboard
+    await page.getByRole('button', { name: 'Back' }).first().click();
+
+    // Re-open navigation drawer
+    await menuBtn.click();
+
+    // Verify drawer now shows the updated name
+    await expect(page.getByText('AssafUpdated E2EUpdated').first()).toBeVisible({ timeout: 10000 });
+  });
 });

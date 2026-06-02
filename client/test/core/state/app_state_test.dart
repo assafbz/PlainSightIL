@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
+import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -107,6 +108,9 @@ void main() {
       expect(appState.translate('nav_home'), 'Home');
       expect(appState.translate('badge_active'), 'Active');
       expect(appState.translate('badge_roadmap'), 'Roadmap');
+      expect(appState.translate('profile_settings_title'), 'Profile Settings');
+      expect(appState.translate('save_profile'), 'Save Profile');
+      expect(appState.translate('first_name'), 'First Name');
 
       // Change locale to Hebrew and check translation
       appState.setLocale('he');
@@ -115,6 +119,9 @@ void main() {
       expect(appState.translate('nav_home'), 'בית');
       expect(appState.translate('badge_active'), 'פעיל');
       expect(appState.translate('badge_roadmap'), 'בקרוב');
+      expect(appState.translate('profile_settings_title'), 'הגדרות פרופיל');
+      expect(appState.translate('save_profile'), 'שמור פרופיל');
+      expect(appState.translate('first_name'), 'שם פרטי');
     });
 
     test('translate returns the key itself if no translation is found', () {
@@ -162,5 +169,45 @@ void main() {
         expect(gcloudKeyPattern.hasMatch(key), isTrue);
       },
     );
+
+    test(
+      'retrieve user profile updates state when listener triggered',
+      () async {
+        AppStateNotifier.isTesting = true;
+        final appState = AppStateNotifier();
+
+        // Wait for stream event propagation
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(appState.userProfile, isNotNull);
+        expect(appState.userProfile?.firstName, 'Assaf');
+        expect(appState.userProfile?.email, 'assaf@plainsight.il');
+      },
+    );
+
+    test('updateUserProfile calls repository and updates state', () async {
+      AppStateNotifier.isTesting = true;
+      final appState = AppStateNotifier();
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final UserProfile originalProfile = appState.userProfile!;
+      final UserProfile updatedProfile = originalProfile.copyWith(
+        firstName: 'NewFirstName',
+        lastName: 'NewLastName',
+      );
+
+      var listenerCalled = false;
+      appState.addListener(() {
+        listenerCalled = true;
+      });
+
+      await appState.updateUserProfile(updatedProfile);
+
+      // Wait for stream to emit updated profile
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(appState.userProfile?.firstName, 'NewFirstName');
+      expect(appState.userProfile?.lastName, 'NewLastName');
+      expect(listenerCalled, isTrue);
+    });
   });
 }

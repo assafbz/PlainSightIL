@@ -8,7 +8,9 @@ import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
 import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
+import 'package:plainsight/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
+import 'package:plainsight/core/utils/app_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -24,8 +26,8 @@ void main() async {
     FirebaseFirestore.instance.useFirestoreEmulator(host, 8081);
     // Connect to local Auth emulator
     await FirebaseAuth.instance.useAuthEmulator(host, 9099);
-  } catch (e) {
-    debugPrint('Firebase initialization warning: $e');
+  } catch (e, stack) {
+    AppLogger.error('Firebase initialization failure', e, stack);
   }
   runApp(const MyApp());
 }
@@ -162,15 +164,20 @@ class AppShell extends StatelessWidget {
         children: [
           Row(
             children: [
-              Builder(
-                builder: (context) {
-                  return IconButton(
-                    icon: Icon(Icons.menu, color: AppColors.primary),
-                    onPressed: () {
-                      Scaffold.of(context).openDrawer();
-                    },
-                  );
-                },
+              Semantics(
+                label: 'Open navigation menu',
+                container: true,
+                child: Builder(
+                  builder: (context) {
+                    return IconButton(
+                      tooltip: 'Open navigation menu',
+                      icon: Icon(Icons.menu, color: AppColors.primary),
+                      onPressed: () {
+                        Scaffold.of(context).openDrawer();
+                      },
+                    );
+                  },
+                ),
               ),
               const SizedBox(width: 8),
               Text(
@@ -360,80 +367,85 @@ class NavigationDrawerWidget extends StatelessWidget {
         ? (screenWidth * 0.85).clamp(0.0, 304.0)
         : 304.0;
 
-    return Drawer(
-      width: drawerWidth,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.glassBg,
-          border: Border.all(color: AppColors.glassBorder, width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: const Color.fromRGBO(0, 0, 0, 0.35),
-              blurRadius: 32.0,
-              spreadRadius: 0.0,
-              offset: Offset(isRtl ? -8.0 : 8.0, 0.0),
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        return Drawer(
+          width: drawerWidth,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.glassBg,
+              border: Border.all(color: AppColors.glassBorder, width: 1.0),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color.fromRGBO(0, 0, 0, 0.35),
+                  blurRadius: 32.0,
+                  spreadRadius: 0.0,
+                  offset: Offset(isRtl ? -8.0 : 8.0, 0.0),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
-            child: SafeArea(
-              left: false,
-              right: false,
-              child: Column(
-                children: [
-                  // 1. Header Zone
-                  _buildHeader(context),
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+                child: SafeArea(
+                  left: false,
+                  right: false,
+                  child: Column(
+                    children: [
+                      // 1. Header Zone
+                      _buildHeader(context),
 
-                  // User Profile info
-                  _buildUserProfile(context),
+                      // User Profile info
+                      _buildUserProfile(context),
 
-                  // 2. Scrollable Body
-                  Expanded(
-                    child: RepaintBoundary(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          _buildNavItem(
-                            context,
-                            index: 0,
-                            icon: Icons.home,
-                            titleKey: 'nav_home',
-                            isActive: appState.activeTab == 0,
-                            isRoadmap: false,
+                      // 2. Scrollable Body
+                      Expanded(
+                        child: RepaintBoundary(
+                          child: ListView(
+                            padding: EdgeInsets.zero,
+                            children: [
+                              _buildNavItem(
+                                context,
+                                index: 0,
+                                icon: Icons.home,
+                                titleKey: 'nav_home',
+                                isActive: appState.activeTab == 0,
+                                isRoadmap: false,
+                              ),
+                              _buildNavItem(
+                                context,
+                                index: 1,
+                                icon: Icons.folder_open,
+                                titleKey: 'nav_directory',
+                                isActive: appState.activeTab == 1,
+                                isRoadmap: false,
+                              ),
+                              _buildNavItem(
+                                context,
+                                index: 2,
+                                icon: Icons.notifications,
+                                titleKey: 'alerts_title',
+                                isActive: appState.activeTab == 2,
+                                isRoadmap: true,
+                              ),
+                            ],
                           ),
-                          _buildNavItem(
-                            context,
-                            index: 1,
-                            icon: Icons.folder_open,
-                            titleKey: 'nav_directory',
-                            isActive: appState.activeTab == 1,
-                            isRoadmap: false,
-                          ),
-                          _buildNavItem(
-                            context,
-                            index: 2,
-                            icon: Icons.notifications,
-                            titleKey: 'alerts_title',
-                            isActive: appState.activeTab == 2,
-                            isRoadmap: true,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
 
-                  // 3. Footer Zone
-                  _buildFooter(context),
-                ],
+                      // 3. Footer Zone
+                      _buildFooter(context),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -487,66 +499,114 @@ class NavigationDrawerWidget extends StatelessWidget {
       );
     }
 
+    final profile = appState.userProfile;
     final displayName =
-        appState.currentUser?.displayName ??
-        appState.mockUser?['name'] ??
-        'User';
-    final email =
-        appState.currentUser?.email ?? appState.mockUser?['email'] ?? '';
+        (profile != null &&
+            (profile.firstName.isNotEmpty || profile.lastName.isNotEmpty))
+        ? '${profile.firstName} ${profile.lastName}'.trim()
+        : (appState.currentUser?.displayName ??
+              appState.mockUser?['name'] ??
+              'User');
+    final email = (profile != null && profile.email.isNotEmpty)
+        ? profile.email
+        : (appState.currentUser?.email ?? appState.mockUser?['email'] ?? '');
     final photoUrl = appState.currentUser?.photoURL;
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
+    return Card(
+      color: Colors.transparent,
+      elevation: 0,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.glassGlow,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
-            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-            child: photoUrl == null
-                ? Text(
-                    initial,
-                    style: TextStyle(
-                      color: AppColors.secondary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: AppTypography.bodySm(
-                    context,
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (email.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    email,
-                    style: AppTypography.labelXs(
-                      context,
-                      color: AppColors.textSecondary,
-                    ).copyWith(fontSize: 10),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
+        onTap: () {
+          Navigator.of(context).pop(); // Close drawer
+          Navigator.of(context).push(
+            PageRouteBuilder<void>(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  ProfileSettingsPage(appState: appState),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    final slideTransition =
+                        Tween<Offset>(
+                          begin: const Offset(0.0, 0.1),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.fastOutSlowIn,
+                          ),
+                        );
+                    final fadeTransition = Tween<double>(
+                      begin: 0.0,
+                      end: 1.0,
+                    ).animate(animation);
+                    return SlideTransition(
+                      position: slideTransition,
+                      child: FadeTransition(
+                        opacity: fadeTransition,
+                        child: child,
+                      ),
+                    );
+                  },
+              transitionDuration: const Duration(milliseconds: 300),
             ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.glassGlow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.glassBorder),
           ),
-        ],
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        initial,
+                        style: TextStyle(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      style: AppTypography.bodySm(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (email.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        email,
+                        style: AppTypography.labelXs(
+                          context,
+                          color: AppColors.textSecondary,
+                        ).copyWith(fontSize: 10),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
