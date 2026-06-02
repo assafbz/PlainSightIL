@@ -9,6 +9,7 @@ import { scrapeAndSyncPermitApplications } from "./scrapers/cellular_permits_scr
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
 import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
+import { scrapeAndSyncBankAtms } from "./scrapers/21fde05f-62e3-401b-81cf-5c385862026d";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 
@@ -484,6 +485,68 @@ export const manualSyncDoctorsLicenses = functions
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Doctors licenses sync failed",
+      error: err.message || String(error),
+    });
+  }
+});
+
+// Scheduled Cloud Function for Bank ATMs - runs weekly on Sunday at 4:00 AM (Israel timezone)
+export const scheduledBankAtmsScraper = functions.pubsub
+  .schedule("0 4 * * 0")
+  .timeZone("Asia/Jerusalem")
+  .onRun(async () => {
+    logger.info("scheduledBankAtmsScraper trigger invoked");
+    const tracker = ScraperTelemetryTracker.start("21fde05f-62e3-401b-81cf-5c385862026d");
+    try {
+      const result = await scrapeAndSyncBankAtms(db);
+      logger.info("scheduledBankAtmsScraper completed successfully", {
+        count: result.count,
+      });
+      await tracker.complete(db, result.count);
+    } catch (error) {
+      const err = error as Error;
+      logger.error("scheduledBankAtmsScraper execution failed", {
+        error: err.message,
+        stack: err.stack,
+      });
+      await tracker.fail(db, err);
+      throw error;
+    }
+  });
+
+// HTTPS Triggered Cloud Function for Bank ATMs - manual sync
+export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => {
+  logger.info("manualSyncBankAtms HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
+  const datasetId = "21fde05f-62e3-401b-81cf-5c385862026d";
+  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
+  const tracker = ScraperTelemetryTracker.start(datasetId);
+  try {
+    // Set status to syncing in Firestore immediately
+    await metadataRef.set({ status: "syncing" }, { merge: true });
+
+    const result = await scrapeAndSyncBankAtms(db);
+    logger.info("manualSyncBankAtms sync completed successfully", {
+      count: result.count,
+    });
+    await tracker.complete(db, result.count);
+    res.status(200).json({
+      message: "Bank ATMs sync completed successfully",
+      count: result.count,
+    });
+  } catch (error) {
+    const err = error as Error;
+    logger.error("manualSyncBankAtms sync failed", {
+      error: err.message,
+      stack: err.stack,
+    });
+    await metadataRef.set({ status: "error" }, { merge: true });
+    await tracker.fail(db, err);
+    res.status(500).json({
+      message: "Bank ATMs sync failed",
       error: err.message || String(error),
     });
   }

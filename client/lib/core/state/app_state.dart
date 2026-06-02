@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
+import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 import '../../features/auth/presentation/notifiers/auth_notifier.dart';
 import '../../features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
@@ -283,6 +284,10 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'Licensed / Active',
       'doctor_unlicensed': 'Muted / Inactive',
       'doctors_publisher': 'Ministry of Health - Medical Professions Registry',
+      'atm_title': 'Bank ATMs',
+      'atm_desc': 'ATM locations across Israel from the Bank of Israel.',
+      'atm_search_placeholder': 'Search by city or bank...',
+      'atm_publisher': 'Bank of Israel',
       'trustee_publisher': 'Ministry of Justice - Corporations Authority',
       'filter_all': 'All',
       'filter_active': 'Supported',
@@ -439,6 +444,10 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'מורשה / פעיל',
       'doctor_unlicensed': 'לא מורשה',
       'doctors_publisher': 'משרד הבריאות - האגף לרישוי מקצועות רפואיים',
+      'atm_title': 'כספומטים',
+      'atm_desc': 'מיקומי כספומטים בנקאיים ברחבי ישראל.',
+      'atm_search_placeholder': 'חיפוש לפי עיר או בנק...',
+      'atm_publisher': 'בנק ישראל',
       'trustee_publisher': 'משרד המשפטים - רשות התאגידים',
       'filter_all': 'הכל',
       'filter_active': 'נתמכים',
