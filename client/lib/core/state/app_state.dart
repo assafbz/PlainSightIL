@@ -1689,7 +1689,7 @@ class AppStateNotifier extends ChangeNotifier {
       'admin_desc': 'מעקב וניהול מאגרי מידע אזרחיים נתמכים.',
       'search_datasets': 'חפש מאגרי מידע...',
       'filter_status_all': 'כל הסטטוסים',
-      'filter_status_idle': 'בלתי פעיל',
+      'filter_status_idle': 'פעיל',
       'filter_status_syncing': 'מסנכרן',
       'filter_status_error': 'שגיאה',
       'dataset_records': 'רשומות: ',
