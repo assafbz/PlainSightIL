@@ -201,7 +201,7 @@ export async function saveAntennasToFirestore(
   db: admin.firestore.Firestore,
   antennas: CellularAntenna[],
 ): Promise<void> {
-  const collectionRef = db.collection("cellular_antennas");
+  const collectionRef = db.collection("8935c8e5-ec77-421f-af86-d970583195f8");
   const now = new Date().toISOString();
 
   // Process in chunks of 500
@@ -242,11 +242,11 @@ export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
   resourceIdOrUrl: string = "8935c8e5-ec77-421f-af86-d970583195f8",
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "cellular_antennas";
+  const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "cellular_antennas";
+    const targetCollection = "8935c8e5-ec77-421f-af86-d970583195f8";
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     // Paginated API fetch from data.gov.il datastore search

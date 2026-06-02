@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import '../../data/models/liquidation_record_model.dart';
+import '../data/models/liquidation_record_model.dart';
 
 class LiquidationDetailDrawer extends StatelessWidget {
   final LiquidationRecordModel record;

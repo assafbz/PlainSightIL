@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
-import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
-import 'package:plainsight/features/directory/presentation/pages/liquidation_page.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
+import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -43,13 +43,13 @@ class DashboardScreen extends StatelessWidget {
         id == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => TowersScreen(appState: appState),
+          builder: (context) => CellularAntennasScreen(appState: appState),
         ),
       );
     } else if (id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => LiquidationScreen(appState: appState),
+          builder: (context) => CompaniesLiquidationScreen(appState: appState),
         ),
       );
     }

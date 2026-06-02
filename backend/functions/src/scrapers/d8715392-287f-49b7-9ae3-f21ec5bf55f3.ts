@@ -129,7 +129,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "companies_liquidation";
+    const targetCollection = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     let offset = 0;

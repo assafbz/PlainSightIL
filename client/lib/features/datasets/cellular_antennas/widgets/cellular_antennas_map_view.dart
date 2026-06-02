@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
 
-class TowersMapView extends StatefulWidget {
+class CellularAntennasMapView extends StatefulWidget {
   final AppStateNotifier appState;
   final List<Map<String, dynamic>> records;
   final String? selectedRecordId;
@@ -14,7 +14,7 @@ class TowersMapView extends StatefulWidget {
   final void Function(Map<String, dynamic> record) onMarkerTap;
   final bool showAntennas;
 
-  const TowersMapView({
+  const CellularAntennasMapView({
     super.key,
     required this.appState,
     required this.records,
@@ -25,10 +25,11 @@ class TowersMapView extends StatefulWidget {
   });
 
   @override
-  State<TowersMapView> createState() => _TowersMapViewState();
+  State<CellularAntennasMapView> createState() =>
+      _CellularAntennasMapViewState();
 }
 
-class _TowersMapViewState extends State<TowersMapView> {
+class _CellularAntennasMapViewState extends State<CellularAntennasMapView> {
   @override
   Widget build(BuildContext context) {
     // 1. Coordinate bounds validation: discard any records with latitude outside [-90, 90] or longitude outside [-180, 180]

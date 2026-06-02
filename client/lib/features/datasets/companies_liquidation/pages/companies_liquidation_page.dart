@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import '../../data/models/liquidation_record_model.dart';
+import '../data/models/liquidation_record_model.dart';
 import '../widgets/liquidation_detail_drawer.dart';
 
-class LiquidationScreen extends StatefulWidget {
+class CompaniesLiquidationScreen extends StatefulWidget {
   final AppStateNotifier appState;
 
-  const LiquidationScreen({super.key, required this.appState});
+  const CompaniesLiquidationScreen({super.key, required this.appState});
 
   @override
-  State<LiquidationScreen> createState() => _LiquidationScreenState();
+  State<CompaniesLiquidationScreen> createState() =>
+      _CompaniesLiquidationScreenState();
 }
 
-class _LiquidationScreenState extends State<LiquidationScreen> {
+class _CompaniesLiquidationScreenState
+    extends State<CompaniesLiquidationScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   int _selectedFilterIndex = 0; // 0: All, 1: Active, 2: Closed
