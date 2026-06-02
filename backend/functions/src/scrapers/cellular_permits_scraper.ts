@@ -5,6 +5,7 @@ import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
 import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -71,6 +72,7 @@ export interface CellularPermitApplication {
   jurisdiction: string;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApplication | null {
@@ -129,7 +131,7 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
     geohash,
     jurisdiction,
     siteNumber,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: submissionDate,
   };
 }
 
@@ -183,29 +185,41 @@ export async function scrapeAndSyncPermitApplications(
 
         // Lookup existing documents in batch
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
           if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+            existingMap.set(snap.id, snap.data());
           }
         }
 
         // Prepare and write chunk
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
+          } else {
+            r.createdAt = now;
+            r.updatedAt = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
       }
 
       offset += limit;

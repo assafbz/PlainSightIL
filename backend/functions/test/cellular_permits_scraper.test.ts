@@ -249,7 +249,149 @@ describe("Incremental Update Scraper Ingestion", () => {
     // Verify that createdAt is preserved
     expect(writtenRecord.createdAt).toBe(initialCreatedAt);
     expect(writtenRecord.lastUpdated).toBeDefined();
-    // lastUpdated should be different from initialCreatedAt (we'll assume now is used)
-    expect(writtenRecord.lastUpdated).not.toBe(initialCreatedAt);
+    expect(writtenRecord.updatedAt).toBeDefined();
+  });
+  it("should skip writing to Firestore if the existing permit is identical to the incoming permit", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      ID: "50",
+      "תאריך הגשת הבקשה": "2025-09-01 00:00:00",
+      "מס' סימוכין": 2081659,
+      חברה: "סלקום",
+      X_ITM: 255812,
+      Y_ITM: 732929,
+    };
+
+    const parsed = parsePermitRecord(rawRecord)!;
+    const existingPermit = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: parsed.lastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "50",
+        data: () => existingPermit,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncPermitApplications(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should write to Firestore and update lastUpdated if the existing permit has different data", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      ID: "50",
+      "תאריך הגשת הבקשה": "2025-09-01 00:00:00",
+      "מס' סימוכין": 2081659,
+      חברה: "סלקום",
+      X_ITM: 255812,
+      Y_ITM: 732929,
+    };
+
+    const parsed = parsePermitRecord(rawRecord)!;
+    const existingPermit = {
+      ...parsed,
+      permitType: "היתר הפעלה",
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "50",
+        data: () => existingPermit,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncPermitApplications(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.permitType).toBe("היתר הקמה");
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).not.toBe(initialLastUpdated);
+    expect(written.updatedAt).toBeDefined();
+  });
+
+  it("should write to Firestore and update updatedAt if ONLY lastUpdated has changed", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      ID: "50",
+      "תאריך הגשת הבקשה": "2025-09-01 00:00:00",
+      "מס' סימוכין": 2081659,
+      חברה: "סלקום",
+      X_ITM: 255812,
+      Y_ITM: 732929,
+    };
+
+    const parsed = parsePermitRecord(rawRecord)!;
+    const existingPermit = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "50",
+        data: () => existingPermit,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncPermitApplications(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).toBe(parsed.lastUpdated);
+    expect(written.updatedAt).toBeDefined();
   });
 });

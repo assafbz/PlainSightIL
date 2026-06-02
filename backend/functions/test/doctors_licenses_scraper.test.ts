@@ -197,4 +197,186 @@ describe("Doctors Licenses Ingest Sync Process", () => {
       { merge: true },
     );
   });
+
+  it("should preserve initial createdAt timestamp if the record already exists", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "1",
+        data: () => ({ createdAt: initialCreatedAt }),
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 1,
+              "שם פרטי": "מריו ה",
+              "שם משפחה": "קורוב",
+              "מספר רישיון רופא": 4267,
+              "תאריך רישום רישיון": 28071969,
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncDoctorsLicenses(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).toBeDefined();
+    expect(written.updatedAt).toBeDefined();
+  });
+
+  it("should skip writing if the record already exists and is identical", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      _id: 1,
+      "שם פרטי": "מריו ה",
+      "שם משפחה": "קורוב",
+      "מספר רישיון רופא": 4267,
+      "תאריך רישום רישיון": 28071969,
+    };
+
+    const parsed = parseDoctorRecord(rawRecord)!;
+    const existing = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: parsed.lastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "1",
+        data: () => existing,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncDoctorsLicenses(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should write and update lastUpdated if the record exists but has different data", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      _id: 1,
+      "שם פרטי": "מריו ה",
+      "שם משפחה": "קורוב",
+      "מספר רישיון רופא": 4267,
+      "תאריך רישום רישיון": 28071969,
+    };
+
+    const parsed = parseDoctorRecord(rawRecord)!;
+    const existing = {
+      ...parsed,
+      lastName: "אחר",
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "1",
+        data: () => existing,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncDoctorsLicenses(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.lastName).toBe("קורוב");
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).not.toBe(initialLastUpdated);
+    expect(written.updatedAt).toBeDefined();
+  });
+
+  it("should write and update updatedAt if ONLY lastUpdated has changed", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      _id: 1,
+      "שם פרטי": "מריו ה",
+      "שם משפחה": "קורוב",
+      "מספר רישיון רופא": 4267,
+      "תאריך רישום רישיון": 28071969,
+    };
+
+    const parsed = parseDoctorRecord(rawRecord)!;
+    const existing = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "1",
+        data: () => existing,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncDoctorsLicenses(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).toBe(parsed.lastUpdated);
+    expect(written.updatedAt).toBeDefined();
+  });
 });

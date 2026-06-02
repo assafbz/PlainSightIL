@@ -5,6 +5,7 @@ import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
 import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -79,6 +80,7 @@ export interface CellularAntenna {
   addressHebrew: string;
   addressEnglish: string;
   createdAt?: string;
+  updatedAt?: string;
   lastUpdated?: string;
 }
 
@@ -195,6 +197,7 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
     lastTestDate,
     addressHebrew,
     addressEnglish,
+    lastUpdated: lastTestDate,
   };
 }
 
@@ -214,28 +217,39 @@ export async function saveAntennasToFirestore(
 
     // Lookup existing documents in batch
     const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-    const existingCreatedAtMap = new Map<string, string>();
+    const existingMap = new Map<string, admin.firestore.DocumentData>();
     for (const snap of snapshots) {
       if (snap.exists) {
-        const data = snap.data();
-        if (data && data.createdAt) {
-          existingCreatedAtMap.set(snap.id, data.createdAt);
-        }
+        existingMap.set(snap.id, snap.data());
       }
     }
 
     // Prepare and write chunk
     const batch = db.batch();
+    let hasWrites = false;
     for (const a of chunk) {
       const docRef = collectionRef.doc(a.antennaId);
-      const existingCreatedAt = existingCreatedAtMap.get(a.antennaId);
+      const existingData = existingMap.get(a.antennaId);
 
-      a.createdAt = existingCreatedAt || now;
-      a.lastUpdated = now;
+      a.lastUpdated = a.lastUpdated || now;
+      if (existingData) {
+        const isIdentical = areRecordsEqual(existingData, a);
+        if (isIdentical) {
+          continue;
+        }
+        a.createdAt = existingData.createdAt || now;
+        a.updatedAt = now;
+      } else {
+        a.createdAt = now;
+        a.updatedAt = now;
+      }
 
       batch.set(docRef, a);
+      hasWrites = true;
     }
-    await batch.commit();
+    if (hasWrites) {
+      await batch.commit();
+    }
   }
 }
 
