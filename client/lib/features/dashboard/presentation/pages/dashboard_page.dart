@@ -3,6 +3,7 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
+import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -20,6 +21,8 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('water_title');
     } else if (item.name == 'government_budget') {
       return appState.translate('budget_title');
+    } else if (item.id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
+      return appState.translate('doctors_title');
     }
     return item.title;
   }
@@ -34,6 +37,8 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('water_desc');
     } else if (item.name == 'government_budget') {
       return appState.translate('budget_desc');
+    } else if (item.id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
+      return appState.translate('doctors_desc');
     }
     return item.notes;
   }
@@ -50,6 +55,12 @@ class DashboardScreen extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => CompaniesLiquidationScreen(appState: appState),
+        ),
+      );
+    } else if (id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => DoctorsLicensesScreen(appState: appState),
         ),
       );
     }
@@ -106,6 +117,13 @@ class DashboardScreen extends StatelessWidget {
     return Column(
       children: favRecords.map((item) {
         final isLiquidation = item.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3';
+        final isDoctors = item.id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e';
+        final icon = isDoctors
+            ? Icons.badge_outlined
+            : (isLiquidation ? Icons.gavel : Icons.cell_tower);
+        final accentColor = isLiquidation
+            ? AppColors.danger
+            : AppColors.primary;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
@@ -113,8 +131,8 @@ class DashboardScreen extends StatelessWidget {
             title: _getDatasetTitle(item),
             desc: _getDatasetDesc(item),
             badge: item.publisher,
-            icon: isLiquidation ? Icons.gavel : Icons.cell_tower,
-            accentColor: isLiquidation ? AppColors.danger : AppColors.primary,
+            icon: icon,
+            accentColor: accentColor,
             onTap: () => _openDataset(context, item.id),
           ),
         );
@@ -145,9 +163,13 @@ class DashboardScreen extends StatelessWidget {
         children: recentRecords.map((item) {
           final isLiquidation =
               item.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3';
+          final isDoctors = item.id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e';
           final accentColor = isLiquidation
               ? AppColors.danger
               : AppColors.primary;
+          final icon = isDoctors
+              ? Icons.badge_outlined
+              : (isLiquidation ? Icons.gavel : Icons.cell_tower);
           return Container(
             width: 200,
             margin: const EdgeInsetsDirectional.only(end: 12.0),
@@ -161,11 +183,7 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          isLiquidation ? Icons.gavel : Icons.cell_tower,
-                          color: accentColor,
-                          size: 16,
-                        ),
+                        Icon(icon, color: accentColor, size: 16),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -215,6 +233,13 @@ class DashboardScreen extends StatelessWidget {
     return Column(
       children: supported.map((item) {
         final isLiquidation = item.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3';
+        final isDoctors = item.id == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e';
+        final icon = isDoctors
+            ? Icons.badge_outlined
+            : (isLiquidation ? Icons.gavel : Icons.cell_tower);
+        final accentColor = isLiquidation
+            ? AppColors.danger
+            : AppColors.primary;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
@@ -222,8 +247,8 @@ class DashboardScreen extends StatelessWidget {
             title: _getDatasetTitle(item),
             desc: _getDatasetDesc(item),
             badge: item.publisher,
-            icon: isLiquidation ? Icons.gavel : Icons.cell_tower,
-            accentColor: isLiquidation ? AppColors.danger : AppColors.primary,
+            icon: icon,
+            accentColor: accentColor,
             onTap: () => _openDataset(context, item.id),
           ),
         );
