@@ -10,10 +10,12 @@ class CompaniesLiquidationScreen extends StatefulWidget {
   const CompaniesLiquidationScreen({super.key, required this.appState});
 
   @override
-  State<CompaniesLiquidationScreen> createState() => _CompaniesLiquidationScreenState();
+  State<CompaniesLiquidationScreen> createState() =>
+      _CompaniesLiquidationScreenState();
 }
 
-class _CompaniesLiquidationScreenState extends State<CompaniesLiquidationScreen> {
+class _CompaniesLiquidationScreenState
+    extends State<CompaniesLiquidationScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   int _selectedFilterIndex = 0; // 0: All, 1: Active, 2: Closed

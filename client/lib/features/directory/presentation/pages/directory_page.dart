@@ -111,13 +111,15 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         dataset.id == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => CellularAntennasScreen(appState: widget.appState),
+          builder: (context) =>
+              CellularAntennasScreen(appState: widget.appState),
         ),
       );
     } else if (dataset.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => CompaniesLiquidationScreen(appState: widget.appState),
+          builder: (context) =>
+              CompaniesLiquidationScreen(appState: widget.appState),
         ),
       );
     }

@@ -25,7 +25,8 @@ class CellularAntennasMapView extends StatefulWidget {
   });
 
   @override
-  State<CellularAntennasMapView> createState() => _CellularAntennasMapViewState();
+  State<CellularAntennasMapView> createState() =>
+      _CellularAntennasMapViewState();
 }
 
 class _CellularAntennasMapViewState extends State<CellularAntennasMapView> {
