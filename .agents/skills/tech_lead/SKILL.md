@@ -24,12 +24,12 @@ List of absolute files that will be created or edited:
 Detail the concrete coding actions:
 - `[ ]` Task 1: Initialize component and markup structure
 - `[ ]` Task 2: Implement and refine styling in Dart widgets using HSL colors and glassmorphic designs
-- `[ ]` Task 3: Implement state and business logic (using BLoCs, Cubits, or the app state notifier)
+- `[ ]` Task 3: Implement state and business logic (using Provider, ChangeNotifiers, or the app state notifier)
 
 ## 3. Function & Module Signatures
 Declare the variables, functions, and modules to be introduced:
 - `class MyWidget extends StatelessWidget`: describe interface and parameters
-- BLoC event/state class declarations
+- ChangeNotifier / State Notifier class declarations
 
 ## 4. Documentation Checklist
 Verify and enforce in-code documentation targets:

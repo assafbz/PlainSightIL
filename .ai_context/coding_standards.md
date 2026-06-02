@@ -14,7 +14,7 @@ Consistent syntax structures ensure that code remains highly readable and easily
 *   **Naming Conventions**:
     *   **Classes, Enums, Mixins**: `PascalCase` (e.g., `CellularAntennaCard`).
     *   **Methods, Variables, Constants**: `camelCase` (e.g., `antennaId`, `fetchCoordinates()`).
-    *   **Directories, Files, Packages, Assets**: `snake_case` (e.g., `cellular_antennas/`, `antennas_bloc.dart`).
+    *   **Directories, Files, Packages, Assets**: `snake_case` (e.g., `cellular_antennas/`, `app_state.dart`).
 
 ### 1.2 Backend-Side (Node.js / TypeScript)
 *   **Formatting**: Prettier is used for backend code formatting. Double quotes and semicolons are required.
@@ -29,7 +29,7 @@ A robust testing hierarchy is enforced to guarantee system stability and prevent
 ### 2.1 Code Coverage Rules
 *   **No Uncovered Logic**: Feature additions must include corresponding tests.
 *   **Domain & Data Layers**: 90%+ unit test coverage required.
-*   **Presentation Layer**: Cubits/BLoCs require 100% flow coverage (testing all event-to-state routes).
+*   **Presentation Layer**: ChangeNotifier and state Notifiers require 100% flow coverage (testing all notifyListeners pathways).
 
 ### 2.2 Test Structure & Patterns
 *   **Unit Tests**: Must isolate the unit under test. Use **`mocktail`** or **`mockito`** for mocking dependencies (repositories, data sources).
@@ -68,9 +68,9 @@ Exceptions must be intercepted at the boundaries of the system to prevent raw cr
 ### 3.1 Exception Mapping Architecture
 *   **Data Source Failures**: Remote API/database queries throwing exceptions (e.g., `FirebaseException`, `SocketException`) must be caught at the **Data Source** level and rethrown as custom, unified exceptions:
     - `ServerException`: Database/API connection timeouts or failures.
-    - `CacheException`: Local Isar read/write corruption or failures.
+    - `CacheException`: Local storage or SharedPreferences read/write corruption or failures.
 *   **Repository Failures**: Repositories catch custom exceptions and return a functional functional-programming container: **`Either<Failure, Success>`** using the `fpdart` or `dartz` patterns.
-*   **State Failures**: BLoCs must map `Failure` types to specific failure states (e.g., `AntennaFailure(message: '...')`) for display in the UI as styled snackbars or banners.
+*   **State Failures**: ChangeNotifier classes must map `Failure` types to specific failure state fields or flags (e.g., set `_errorMessage` or loading status) for display in the UI as styled snackbars or banners.
 
 ```dart
 // Custom Failure definition in domain/errors/failures.dart
