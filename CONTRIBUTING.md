@@ -97,7 +97,7 @@ chmod +x .agents/bin/install-hooks.sh
 ./.agents/bin/install-hooks.sh
 ```
 
-To bypass SDLC validation in emergency situations, you can prepend `SKIP_SDLC=1` to your git command (e.g., `SKIP_SDLC=1 git commit -m "Emergency fix"`).
+To bypass SDLC validation in emergency situations (requires HITL approval), you can prepend `SKIP_SDLC=1` to your git command (e.g., `SKIP_SDLC=1 git commit -m "Emergency fix"`).
 
 ---
 
