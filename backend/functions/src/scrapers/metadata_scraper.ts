@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
 
@@ -59,7 +59,8 @@ export async function scrapeAndSyncDatasetMetadata(
 
     // Query CKAN package_search to fetch all packages.
     // Since there are ~1200 datasets, fetching rows=1500 in one request is efficient and avoids rate limit issues.
-    const url = "https://data.gov.il/api/3/action/package_search?rows=1500";
+    const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+    const url = `${baseUrl}/api/3/action/package_search?rows=1500`;
     logger.info(`Fetching CKAN package list from: ${url}`);
 
     const response = await axios.get(url);

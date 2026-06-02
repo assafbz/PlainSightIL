@@ -112,7 +112,9 @@ class _DatasetCardState extends State<DatasetCard> {
                           if (widget.onFavoriteToggle != null)
                             IconButton(
                               constraints: const BoxConstraints(),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
                               icon: Icon(
                                 widget.isFavorite
                                     ? Icons.favorite
@@ -145,7 +147,11 @@ class _DatasetCardState extends State<DatasetCard> {
                           else if (totalRequests > 0)
                             Row(
                               children: [
-                                Icon(Icons.bolt, size: 14, color: AppColors.info),
+                                Icon(
+                                  Icons.bolt,
+                                  size: 14,
+                                  color: AppColors.info,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
                                   '${widget.translate('requests_label')}$totalRequests',
@@ -161,7 +167,7 @@ class _DatasetCardState extends State<DatasetCard> {
                     ],
                   ),
                   const SizedBox(height: 12),
-  
+
                   // 2. Title (forced RTL since governmental CKAN is in Hebrew)
                   Text(
                     widget.dataset.title,
@@ -172,7 +178,7 @@ class _DatasetCardState extends State<DatasetCard> {
                     textDirection: TextDirection.rtl,
                   ),
                   const SizedBox(height: 8),
-  
+
                   // 3. Expandable Description (notes)
                   if (widget.dataset.notes.isNotEmpty) ...[
                     Text(
@@ -211,7 +217,7 @@ class _DatasetCardState extends State<DatasetCard> {
                     ),
                   ],
                   const SizedBox(height: 16),
-  
+
                   // 4. Resource statistics and Last Updated Date
                   Divider(color: AppColors.glassBorder, height: 1),
                   const SizedBox(height: 12),
@@ -245,7 +251,7 @@ class _DatasetCardState extends State<DatasetCard> {
                     ],
                   ),
                   const SizedBox(height: 16),
-  
+
                   // 5. Action Area Button
                   SizedBox(
                     width: double.infinity,
@@ -272,7 +278,7 @@ class _DatasetCardState extends State<DatasetCard> {
                                 side: BorderSide(
                                   color: accentColor.withAlpha(100),
                                   width: 1.5,
-                               ),
+                                ),
                               ),
                             ),
                             onPressed: widget.onTapAction,

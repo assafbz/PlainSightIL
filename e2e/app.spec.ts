@@ -17,6 +17,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     test.setTimeout(180000);
     // Create page and set console listeners
     page = await browser.newPage();
+    await page.setViewportSize({ width: 1280, height: 1200 });
     page.on('console', msg => console.log(`[Browser Console] ${msg.type()}: ${msg.text()}`));
     page.on('pageerror', err => console.log(`[Browser Page Error] ${err.stack || err.message}`));
 
@@ -154,14 +155,19 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await expect(searchInput).toBeVisible({ timeout: 10000 });
 
     // Fill search with "פרסום"
-    await searchInput.fill('פרסום');
+    await searchInput.click();
+    await page.keyboard.type('פרסום');
 
     // Assert "בשן פרסום ויחסי צבור בע~מ" is visible and other companies are filtered out
     await expect(page.getByText('בשן פרסום ויחסי צבור בע~מ').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('מלון הגליל בע~מ').first()).not.toBeVisible();
 
     // Clear the search field
-    await searchInput.fill('');
+    await searchInput.click();
+    const isMac = process.platform === 'darwin';
+    const modifier = isMac ? 'Meta' : 'Control';
+    await page.keyboard.press(`${modifier}+A`);
+    await page.keyboard.press('Backspace');
 
     // Assert other companies are restored
     await expect(page.getByText('מלון הגליל בע~מ').first()).toBeVisible({ timeout: 10000 });
@@ -187,6 +193,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     // Open the liquidation visualizer again while offline
     const card = page.locator('[aria-label*="מאגר הכונס הרשמי"], [aria-label*="הכונס הרשמי"]').first();
     await expect(card).toBeVisible({ timeout: 10000 });
+    await card.scrollIntoViewIfNeeded();
     await card.getByText('Open Visualizer').first().click();
 
     // Assert previously loaded cache items are retrieved and visible offline

@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as functions from "firebase-functions/v1";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "./utils/logger";
 import axios from "axios";
 
 import { scrapeAndSyncAntennas } from "./scrapers/cellular_antennas_scraper";
@@ -40,7 +40,7 @@ function handleCors(req: functions.https.Request, res: functions.Response): bool
 async function checkAndLogApiReachability(
   firestoreDb: admin.firestore.Firestore,
 ): Promise<{ isReachable: boolean; statusCode: number; latencyMs: number }> {
-  const url = "https://data.gov.il";
+  const url = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
   const startTime = Date.now();
   try {
     logger.info(`Pinging government open data API at: ${url}`);

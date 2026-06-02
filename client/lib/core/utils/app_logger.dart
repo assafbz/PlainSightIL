@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 /// Supported severity levels for logging.
 enum LogLevel {
@@ -67,6 +69,30 @@ class AppLogger {
     }
 
     debugPrint(output);
+
+    // Forward warnings and errors to Firebase Crashlytics when available
+    if (level == LogLevel.warning || level == LogLevel.error) {
+      try {
+        if (Firebase.apps.isNotEmpty) {
+          final crashlytics = FirebaseCrashlytics.instance;
+          if (level == LogLevel.error) {
+            crashlytics.recordError(
+              error ?? Exception(message),
+              stackTrace,
+              reason: '[$caller] $message',
+              printDetails: false,
+            );
+          } else {
+            crashlytics.log('[$levelTag] [$caller] $message');
+            if (error != null) {
+              crashlytics.log('Error context: $error');
+            }
+          }
+        }
+      } catch (_) {
+        // Fall back silently if Firebase or Crashlytics is not initialized or fails (e.g. in test mode)
+      }
+    }
   }
 
   /// Parses the current execution stack trace to resolve the caller method.

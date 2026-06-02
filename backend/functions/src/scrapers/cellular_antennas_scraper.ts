@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { GeoPoint } from "firebase-admin/firestore";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
@@ -265,9 +265,10 @@ export async function scrapeAndSyncAntennas(
     const targetCollection = DATASET_IDS.CELLULAR_ANTENNAS;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -277,9 +278,10 @@ export async function scrapeAndSyncAntennas(
     const isUrl = resourceIdOrUrl.startsWith("http");
 
     while (hasMore) {
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
       const url = isUrl
         ? resourceIdOrUrl
-        : `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
+        : `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
 
       logger.info(`Fetching data from: ${url}`);
       const response = await axios.get(url);
@@ -305,7 +307,7 @@ export async function scrapeAndSyncAntennas(
         processedCount += parsedRecords.length;
       }
 
-      if (isUrl) {
+      if (isEmulator || isUrl) {
         hasMore = false;
       } else {
         offset += limit;
