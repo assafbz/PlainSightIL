@@ -308,7 +308,8 @@ class AppStateNotifier extends ChangeNotifier {
   bool _isLoadingAdminMetadata = true;
   StreamSubscription<QuerySnapshot>? _adminMetadataSubscription;
 
-  Map<String, Map<String, dynamic>> get datasetMetadataMap => _datasetMetadataMap;
+  Map<String, Map<String, dynamic>> get datasetMetadataMap =>
+      _datasetMetadataMap;
   bool get isLoadingAdminMetadata => _isLoadingAdminMetadata;
 
   List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
