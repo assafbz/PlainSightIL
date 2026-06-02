@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'local_storage.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
+import '../constants/dataset_ids.dart';
+import '../constants/mock_data.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
@@ -249,7 +251,7 @@ class AppStateNotifier extends ChangeNotifier {
   bool get isAdmin => _isMockAuthenticated || (_userProfile?.role == 'admin');
 
   Map<String, String>? get mockUser => _isMockAuthenticated
-      ? {'name': 'Assaf Benzaken', 'email': 'assaf@plainsight.il'}
+      ? MockData.userMap
       : null;
 
   Future<void> signInWithGoogle() async {
@@ -406,56 +408,7 @@ class AppStateNotifier extends ChangeNotifier {
 
     if (isTesting) {
       _permitSyncStatus = 'idle';
-      _permitRecords = [
-        {
-          'id': '1',
-          'referenceNumber': 2081659,
-          'company': {'he': 'סלקום', 'en': 'Cellcom'},
-          'permitType': 'היתר הקמה',
-          'siteNumber': 'NN1845A',
-          'locality': 'אפיקים',
-          'addressDescription': 'קיבוץ אפיקים',
-          'focalPointType': 'קרקעי',
-          'jurisdiction': 'עמק הירדן',
-          'coordinates': const GeoPoint(32.6789, 35.5788),
-        },
-        {
-          'id': '2',
-          'referenceNumber': 2081660,
-          'company': {'he': 'פרטנר', 'en': 'Partner'},
-          'permitType': 'היתר הפעלה',
-          'siteNumber': 'PT1234B',
-          'locality': 'תל אביב - יפו',
-          'addressDescription': 'דיזנגוף 100',
-          'focalPointType': 'גג',
-          'jurisdiction': 'תל אביב',
-          'coordinates': const GeoPoint(32.0795, 34.7738),
-        },
-        {
-          'id': '3',
-          'referenceNumber': 2081661,
-          'company': {'he': 'הוט מובייל', 'en': 'Hot Mobile'},
-          'permitType': 'היתר הקמה',
-          'siteNumber': 'HT9876C',
-          'locality': 'חיפה',
-          'addressDescription': 'הרצל 12',
-          'focalPointType': 'קרקעי',
-          'jurisdiction': 'חיפה',
-          'coordinates': const GeoPoint(32.8090, 34.9890),
-        },
-        {
-          'id': '4',
-          'referenceNumber': 2081662,
-          'company': {'he': 'פלאפון', 'en': 'Pelephone'},
-          'permitType': 'היתר הקמה',
-          'siteNumber': 'PL4567D',
-          'locality': 'ירושלים',
-          'addressDescription': 'יפו 50',
-          'focalPointType': 'קרקעי',
-          'jurisdiction': 'ירושלים',
-          'coordinates': const GeoPoint(31.7833, 35.2167),
-        },
-      ];
+      _permitRecords = MockData.permits;
       _isLoadingPermits = false;
       notifyListeners();
       return;
@@ -476,7 +429,7 @@ class AppStateNotifier extends ChangeNotifier {
     try {
       _permitMetadataSubscription = FirebaseFirestore.instance
           .collection('dataset_metadata')
-          .doc('ff398c7e-c522-4ee8-a53a-312b188a573d')
+          .doc(DatasetIds.cellularPermits)
           .snapshots()
           .listen(
             (metaSnapshot) {
@@ -565,40 +518,7 @@ class AppStateNotifier extends ChangeNotifier {
   void initAntennaListener() {
     _antennaSubscription?.cancel();
     if (isTesting) {
-      _antennaRecords = [
-        {
-          'antennaId': 'CELL-100',
-          'addressHebrew': 'דיזנגוף 50, תל אביב',
-          'addressEnglish': 'Dizengoff 50, Tel Aviv',
-          'operatorName': 'Pelephone',
-          'radiationFrequency': 1800,
-          'coordinates': const GeoPoint(32.0782, 34.7741),
-        },
-        {
-          'antennaId': 'CELL-101',
-          'addressHebrew': 'בן יהודה 80, תל אביב',
-          'addressEnglish': 'Ben Yehuda 80, Tel Aviv',
-          'operatorName': 'Partner',
-          'radiationFrequency': 3500,
-          'coordinates': const GeoPoint(32.0831, 34.7725),
-        },
-        {
-          'antennaId': 'CELL-102',
-          'addressHebrew': 'קיבוץ אפיקים, עמק הירדן',
-          'addressEnglish': 'Kibbutz Afikim, Jordan Valley',
-          'operatorName': 'Cellcom',
-          'radiationFrequency': 2100,
-          'coordinates': const GeoPoint(32.6795, 35.5792),
-        },
-        {
-          'antennaId': 'CELL-103',
-          'addressHebrew': 'שדרות רוטשילד 15, תל אביב',
-          'addressEnglish': 'Rothschild Blvd 15, Tel Aviv',
-          'operatorName': 'Hot Mobile',
-          'radiationFrequency': 1800,
-          'coordinates': const GeoPoint(32.0635, 34.7712),
-        },
-      ];
+      _antennaRecords = MockData.antennas;
       _isLoadingAntennas = false;
       notifyListeners();
       return;
@@ -613,7 +533,7 @@ class AppStateNotifier extends ChangeNotifier {
     AppLogger.info('Initializing cellular antennas listener');
     try {
       _antennaSubscription = FirebaseFirestore.instance
-          .collection('8935c8e5-ec77-421f-af86-d970583195f8')
+          .collection(DatasetIds.cellularAntennas)
           .snapshots()
           .listen(
             (snapshot) {
@@ -645,71 +565,8 @@ class AppStateNotifier extends ChangeNotifier {
     _requestsSubscription?.cancel();
 
     if (isTesting) {
-      _directoryRecords = [
-        DatasetMetadataModel(
-          id: '8935c8e5-ec77-421f-af86-d970583195f8',
-          datasetId: '995eb826-c471-4572-8fd3-39d92a3a9603',
-          name: 'active_antennas',
-          title: 'אנטנות סלולריות פעילות',
-          notes: 'רשימת מוקדי שידור סלולריים פעילים ובדיקות קרינה שנערכו להם.',
-          publisher: 'המשרד להגנת הסביבה',
-          resourceCount: 3,
-          lastUpdated: DateTime(2026, 5, 30),
-          tags: ['אנטנות', 'סלולר', 'קרינה'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: 'ff398c7e-c522-4ee8-a53a-312b188a573d',
-          datasetId: '4e9111d8-e842-40ec-b587-629e684e85ac',
-          name: 'cellular_permit_applications',
-          title: 'בקשות להיתרי הקמה של אנטנות',
-          notes:
-              'היתרי הקמה והפעלה למוקדי שידור סלולריים הנמצאים בהליכי אישור.',
-          publisher: 'המשרד להגנת הסביבה',
-          resourceCount: 1,
-          lastUpdated: DateTime(2026, 5, 29),
-          tags: ['היתרים', 'הקמה', 'סלולר'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
-          name: 'pr2018',
-          title: 'מאגר הכונס הרשמי',
-          notes:
-              'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
-          publisher: 'רשות התאגידים',
-          resourceCount: 3,
-          lastUpdated: DateTime(2026, 6, 1),
-          tags: ['פירוק', 'חברות', 'רשות התאגידים', 'משפט'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          datasetId: '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          name: 'doctors_licenses',
-          title: 'רישיונות רופאים',
-          notes: 'מאגר מורשי תעסוקה ברפואה בישראל כולל מספרי רישיון והתמחויות.',
-          publisher: 'משרד הבריאות',
-          resourceCount: 1,
-          lastUpdated: DateTime(2026, 6, 2),
-          tags: ['רופאים', 'רישיון', 'בריאות', 'התמחות'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: 'government-budget-dataset-id',
-          datasetId: 'government-budget-dataset-id',
-          name: 'government_budget',
-          title: 'ספר התקציב ונתוני הוצאות',
-          notes: 'ספר התקציב הפתוח ונתוני ביצוע תקציב הממשלה.',
-          publisher: 'משרד האוצר',
-          resourceCount: 12,
-          lastUpdated: DateTime(2026, 5, 25),
-          tags: ['תקציב', 'אוצר', 'הוצאות'],
-          isSupported: false,
-        ),
-      ];
-      _datasetRequestCounts = {'government-budget-dataset-id': 18};
+      _directoryRecords = MockData.directory;
+      _datasetRequestCounts = MockData.datasetRequestCounts;
       _isLoadingDirectory = false;
       notifyListeners();
       return;
@@ -777,41 +634,7 @@ class AppStateNotifier extends ChangeNotifier {
     _liquidationSubscription?.cancel();
 
     if (isTesting) {
-      _liquidationRecords = [
-        LiquidationRecordModel(
-          liquidationCaseId: 12345,
-          cityOfActivity: 'תל אביב - יפו',
-          caseStatus: const {'he': 'פירוק פעיל', 'en': 'Active Winding Up'},
-          submissionDate: '2024-05-12T00:00:00.000Z',
-          liquidationOrderDate: '2024-06-15T00:00:00.000Z',
-          districtCourt: 'מחוזי תל אביב',
-          companyName: 'אלברט לוי הנדסה בע"מ',
-          companyId: 512345678,
-        ),
-        LiquidationRecordModel(
-          liquidationCaseId: 12346,
-          cityOfActivity: 'חיפה',
-          caseStatus: const {'he': 'הקפאת הליכים', 'en': 'Frozen'},
-          submissionDate: '2024-03-10T00:00:00.000Z',
-          liquidationOrderDate: '2024-04-12T00:00:00.000Z',
-          cancellationFreezeDate: '2024-04-20T00:00:00.000Z',
-          districtCourt: 'מחוזי חיפה',
-          companyName: 'משה שירותי בנייה בע"מ',
-          companyId: 512345679,
-        ),
-        LiquidationRecordModel(
-          liquidationCaseId: 12347,
-          cityOfActivity: 'ירושלים',
-          caseStatus: const {'he': 'סגור', 'en': 'Closed'},
-          submissionDate: '2023-08-15T00:00:00.000Z',
-          liquidationOrderDate: '2023-09-20T00:00:00.000Z',
-          closureDate: '2024-01-10T00:00:00.000Z',
-          closureReason: 'הסדר נושים',
-          districtCourt: 'מחוזי ירושלים',
-          companyName: 'ישראל קומפני בע"מ',
-          companyId: 512345680,
-        ),
-      ];
+      _liquidationRecords = MockData.liquidations;
       _isLoadingLiquidation = false;
       notifyListeners();
       return;
@@ -826,7 +649,7 @@ class AppStateNotifier extends ChangeNotifier {
     AppLogger.info('Initializing companies liquidation listener');
     try {
       _liquidationSubscription = FirebaseFirestore.instance
-          .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
+          .collection(DatasetIds.companiesLiquidation)
           .limit(100)
           .snapshots()
           .listen(
@@ -860,38 +683,7 @@ class AppStateNotifier extends ChangeNotifier {
   void initDoctorsListener() {
     _doctorsSubscription?.cancel();
     if (isTesting) {
-      _doctorRecords = [
-        DoctorLicenseRecordModel(
-          id: '1',
-          idNum: 1,
-          firstName: 'מריו ה',
-          lastName: 'קורוב',
-          licenseNumber: 4267,
-          licenseRegistrationDate: '1969-07-28T00:00:00.000Z',
-        ),
-        DoctorLicenseRecordModel(
-          id: '2',
-          idNum: 2,
-          firstName: 'אברהם',
-          lastName: 'שטיינברג',
-          licenseNumber: 11116,
-          licenseRegistrationDate: '1974-08-20T00:00:00.000Z',
-          specialtyCertificateNumber: 7656,
-          specialtyRegistrationDate: '1983-06-21T00:00:00.000Z',
-          specialtyName: 'רפואת ילדים',
-        ),
-        DoctorLicenseRecordModel(
-          id: '3',
-          idNum: 3,
-          firstName: 'אברהם',
-          lastName: 'שטיינברג',
-          licenseNumber: 11116,
-          licenseRegistrationDate: '1974-08-20T00:00:00.000Z',
-          specialtyCertificateNumber: 13230,
-          specialtyRegistrationDate: '1993-12-02T00:00:00.000Z',
-          specialtyName: 'נוירולוגיית ילדים',
-        ),
-      ];
+      _doctorRecords = MockData.doctors;
       _isLoadingDoctors = false;
       notifyListeners();
       return;
@@ -906,7 +698,7 @@ class AppStateNotifier extends ChangeNotifier {
     AppLogger.info('Initializing doctors licenses listener');
     try {
       _doctorsSubscription = FirebaseFirestore.instance
-          .collection('9c64c522-bbc2-48fe-96fb-3b2a8626f59e')
+          .collection(DatasetIds.doctorsLicenses)
           .limit(100)
           .snapshots()
           .listen(
@@ -941,32 +733,7 @@ class AppStateNotifier extends ChangeNotifier {
     _adminMetadataSubscription?.cancel();
     initTelemetryListeners();
     if (isTesting) {
-      _datasetMetadataMap = {
-        '8935c8e5-ec77-421f-af86-d970583195f8': {
-          'id': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'recordCount': 9840,
-          'lastUpdated': '2026-05-30T12:00:00Z',
-          'status': 'idle',
-        },
-        'ff398c7e-c522-4ee8-a53a-312b188a573d': {
-          'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
-          'recordCount': 120,
-          'lastUpdated': '2026-05-29T14:30:00Z',
-          'status': 'idle',
-        },
-        'd8715392-287f-49b7-9ae3-f21ec5bf55f3': {
-          'id': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          'recordCount': 3,
-          'lastUpdated': '2026-06-01T09:15:00Z',
-          'status': 'idle',
-        },
-        '9c64c522-bbc2-48fe-96fb-3b2a8626f59e': {
-          'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          'recordCount': 100,
-          'lastUpdated': '2026-06-02T17:00:00Z',
-          'status': 'idle',
-        },
-      };
+      _datasetMetadataMap = MockData.datasetMetadata;
       _isLoadingAdminMetadata = false;
       notifyListeners();
       return;
@@ -1011,98 +778,8 @@ class AppStateNotifier extends ChangeNotifier {
     _scraperRunsSubscription?.cancel();
 
     if (isTesting) {
-      _apiHealth = {
-        'url': 'https://data.gov.il',
-        'isReachable': true,
-        'statusCode': 200,
-        'latencyMs': 142,
-        'lastChecked': DateTime.now()
-            .subtract(const Duration(minutes: 2))
-            .toIso8601String(),
-      };
-      _scraperRuns = [
-        {
-          'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 1))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 1, seconds: 5))
-              .toIso8601String(),
-          'durationMs': 4800,
-          'status': 'success',
-          'recordsProcessed': 9840,
-          'firestoreReadsEstimate': 9841,
-          'firestoreWritesEstimate': 9841,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 2))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 2, seconds: 1))
-              .toIso8601String(),
-          'durationMs': 1200,
-          'status': 'success',
-          'recordsProcessed': 3,
-          'firestoreReadsEstimate': 4,
-          'firestoreWritesEstimate': 4,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 1, minutes: 30))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 1, minutes: 29))
-              .toIso8601String(),
-          'durationMs': 3200,
-          'status': 'success',
-          'recordsProcessed': 100,
-          'firestoreReadsEstimate': 0,
-          'firestoreWritesEstimate': 100,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': 'datasets_metadata',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 3))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 3, seconds: 12))
-              .toIso8601String(),
-          'durationMs': 12500,
-          'status': 'success',
-          'recordsProcessed': 1250,
-          'firestoreReadsEstimate': 0,
-          'firestoreWritesEstimate': 1250,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 4))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 4, seconds: 4))
-              .toIso8601String(),
-          'durationMs': 3800,
-          'status': 'error',
-          'recordsProcessed': 0,
-          'firestoreReadsEstimate': 0,
-          'firestoreWritesEstimate': 0,
-          'errorMessage': 'manualSyncAntennas: 502 Bad Gateway',
-          'errorStack':
-              'Error: 502 Bad Gateway\n    at scrapeAndSyncAntennas (/src/scrapers/antennas.ts:269:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)',
-        },
-      ];
+      _apiHealth = MockData.apiHealth;
+      _scraperRuns = MockData.scraperRuns;
       _isLoadingTelemetry = false;
       notifyListeners();
       return;
@@ -1332,13 +1009,13 @@ class AppStateNotifier extends ChangeNotifier {
       }
 
       String functionName;
-      if (datasetId == '8935c8e5-ec77-421f-af86-d970583195f8') {
+      if (datasetId == DatasetIds.cellularAntennas) {
         functionName = 'manualSyncAntennas';
-      } else if (datasetId == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
+      } else if (datasetId == DatasetIds.cellularPermits) {
         functionName = 'manualSyncPermitApps';
-      } else if (datasetId == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
+      } else if (datasetId == DatasetIds.companiesLiquidation) {
         functionName = 'manualSyncCompaniesLiquidation';
-      } else if (datasetId == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
+      } else if (datasetId == DatasetIds.doctorsLicenses) {
         functionName = 'manualSyncDoctorsLicenses';
       } else {
         throw Exception('Unknown dataset ID: $datasetId');

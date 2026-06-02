@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import axios from "axios";
+import { DATASET_IDS } from "../utils/constants";
 
 // Translation mapping for case statuses
 const STATUS_TRANSLATIONS: Record<string, string> = {
@@ -123,13 +124,13 @@ export function parseLiquidationRecord(
 
 export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
-  resourceId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3",
+  resourceId = DATASET_IDS.COMPANIES_LIQUIDATION,
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+    const targetCollection = DATASET_IDS.COMPANIES_LIQUIDATION;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     let offset = 0;

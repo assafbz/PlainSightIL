@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import '../data/models/doctor_license_model.dart';
 import '../widgets/doctor_detail_drawer.dart';
 
@@ -25,7 +26,7 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
   void initState() {
     super.initState();
     // Register the dataset in recent history
-    widget.appState.addRecent('9c64c522-bbc2-48fe-96fb-3b2a8626f59e');
+    widget.appState.addRecent(DatasetIds.doctorsLicenses);
   }
 
   @override
@@ -201,7 +202,7 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                         listenable: widget.appState,
                         builder: (context, _) {
                           final isFav = widget.appState.isFavorite(
-                            '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+                            DatasetIds.doctorsLicenses,
                           );
                           return IconButton(
                             icon: Icon(
@@ -211,7 +212,7 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                                   : AppColors.textSecondary,
                             ),
                             onPressed: () => widget.appState.toggleFavorite(
-                              '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+                              DatasetIds.doctorsLicenses,
                             ),
                           );
                         },

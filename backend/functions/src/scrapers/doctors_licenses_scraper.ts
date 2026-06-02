@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import axios from "axios";
+import { DATASET_IDS } from "../utils/constants";
 
 /**
  * Interface representing the raw record layout received from data.gov.il CKAN datastore API.
@@ -138,13 +139,13 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
  */
 export async function scrapeAndSyncDoctorsLicenses(
   db: admin.firestore.Firestore,
-  resourceId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e",
+  resourceId = DATASET_IDS.DOCTORS_LICENSES,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+  const datasetId = DATASET_IDS.DOCTORS_LICENSES;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+    const targetCollection = DATASET_IDS.DOCTORS_LICENSES;
     logger.info(`Starting doctors licenses sync. Target collection: ${targetCollection}`);
 
     let offset = 0;

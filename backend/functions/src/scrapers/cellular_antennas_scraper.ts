@@ -4,6 +4,7 @@ import { logger } from "firebase-functions";
 import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
+import { DATASET_IDS } from "../utils/constants";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -201,7 +202,7 @@ export async function saveAntennasToFirestore(
   db: admin.firestore.Firestore,
   antennas: CellularAntenna[],
 ): Promise<void> {
-  const collectionRef = db.collection("8935c8e5-ec77-421f-af86-d970583195f8");
+  const collectionRef = db.collection(DATASET_IDS.CELLULAR_ANTENNAS);
   const now = new Date().toISOString();
 
   // Process in chunks of 500
@@ -240,13 +241,13 @@ export async function saveAntennasToFirestore(
 
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
-  resourceIdOrUrl: string = "8935c8e5-ec77-421f-af86-d970583195f8",
+  resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
+  const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "8935c8e5-ec77-421f-af86-d970583195f8";
+    const targetCollection = DATASET_IDS.CELLULAR_ANTENNAS;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     // Paginated API fetch from data.gov.il datastore search
