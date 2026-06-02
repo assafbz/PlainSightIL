@@ -967,11 +967,27 @@ class _AdminPageState extends State<AdminPage> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () async {
-                  await widget.appState.triggerApiHealthCheck();
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(widget.appState.translate('check_now')),
+                onPressed: widget.appState.isCheckingApiHealth
+                    ? null
+                    : () async {
+                        await widget.appState.triggerApiHealthCheck();
+                      },
+                icon: widget.appState.isCheckingApiHealth
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white70),
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  widget.appState.isCheckingApiHealth
+                      ? widget.appState.translate('checking')
+                      : widget.appState.translate('check_now'),
+                ),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: AppColors.onPrimary,
                   backgroundColor: AppColors.primary.withAlpha(30),
