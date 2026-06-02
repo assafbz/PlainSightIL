@@ -665,6 +665,18 @@ class AppStateNotifier extends ChangeNotifier {
           isSupported: true,
         ),
         DatasetMetadataModel(
+          id: '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+          datasetId: '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+          name: 'doctors_licenses',
+          title: 'רישיונות רופאים',
+          notes: 'מאגר מורשי תעסוקה ברפואה בישראל כולל מספרי רישיון והתמחויות.',
+          publisher: 'משרד הבריאות',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 2),
+          tags: ['רופאים', 'רישיון', 'בריאות', 'התמחות'],
+          isSupported: true,
+        ),
+        DatasetMetadataModel(
           id: 'government-budget-dataset-id',
           datasetId: 'government-budget-dataset-id',
           name: 'government_budget',
@@ -928,6 +940,12 @@ class AppStateNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-01T09:15:00Z',
           'status': 'idle',
         },
+        '9c64c522-bbc2-48fe-96fb-3b2a8626f59e': {
+          'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+          'recordCount': 100,
+          'lastUpdated': '2026-06-02T17:00:00Z',
+          'status': 'idle',
+        },
       };
       _isLoadingAdminMetadata = false;
       notifyListeners();
@@ -1012,6 +1030,22 @@ class AppStateNotifier extends ChangeNotifier {
           'recordsProcessed': 3,
           'firestoreReadsEstimate': 4,
           'firestoreWritesEstimate': 4,
+          'errorMessage': '',
+          'errorStack': '',
+        },
+        {
+          'datasetId': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 1, minutes: 30))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 1, minutes: 29))
+              .toIso8601String(),
+          'durationMs': 3200,
+          'status': 'success',
+          'recordsProcessed': 100,
+          'firestoreReadsEstimate': 0,
+          'firestoreWritesEstimate': 100,
           'errorMessage': '',
           'errorStack': '',
         },
