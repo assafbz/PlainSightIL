@@ -36,9 +36,9 @@ export class ScraperTelemetryTracker {
     let firestoreWritesEstimate: number;
 
     switch (this.datasetId) {
-      case "cellular_antennas":
-      case "cellular_permit_applications":
-      case "companies_liquidation":
+      case "8935c8e5-ec77-421f-af86-d970583195f8":
+      case "ff398c7e-c522-4ee8-a53a-312b188a573d":
+      case "d8715392-287f-49b7-9ae3-f21ec5bf55f3":
         // 1 read for existence check and 1 write per record.
         // Plus 1 read for count query and 1 write for metadata document update.
         firestoreReadsEstimate = recordsProcessed + 1;

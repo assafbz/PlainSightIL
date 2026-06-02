@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'local_storage.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
-import 'dart:io' show Platform;
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/directory/data/models/liquidation_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
@@ -447,7 +446,7 @@ class AppStateNotifier extends ChangeNotifier {
     try {
       _permitMetadataSubscription = FirebaseFirestore.instance
           .collection('dataset_metadata')
-          .doc('cellular_permit_applications')
+          .doc('ff398c7e-c522-4ee8-a53a-312b188a573d')
           .snapshots()
           .listen(
             (metaSnapshot) {
@@ -584,7 +583,7 @@ class AppStateNotifier extends ChangeNotifier {
     AppLogger.info('Initializing cellular antennas listener');
     try {
       _antennaSubscription = FirebaseFirestore.instance
-          .collection('cellular_antennas')
+          .collection('8935c8e5-ec77-421f-af86-d970583195f8')
           .snapshots()
           .listen(
             (snapshot) {
@@ -785,7 +784,7 @@ class AppStateNotifier extends ChangeNotifier {
     AppLogger.info('Initializing companies liquidation listener');
     try {
       _liquidationSubscription = FirebaseFirestore.instance
-          .collection('companies_liquidation')
+          .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
           .limit(100)
           .snapshots()
           .listen(
@@ -821,14 +820,14 @@ class AppStateNotifier extends ChangeNotifier {
     initTelemetryListeners();
     if (isTesting) {
       _datasetMetadataMap = {
-        'cellular_antennas': {
-          'id': 'cellular_antennas',
+        '8935c8e5-ec77-421f-af86-d970583195f8': {
+          'id': '8935c8e5-ec77-421f-af86-d970583195f8',
           'recordCount': 9840,
           'lastUpdated': '2026-05-30T12:00:00Z',
           'status': 'idle',
         },
-        'cellular_permit_applications': {
-          'id': 'cellular_permit_applications',
+        'ff398c7e-c522-4ee8-a53a-312b188a573d': {
+          'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
           'recordCount': 120,
           'lastUpdated': '2026-05-29T14:30:00Z',
           'status': 'idle',
@@ -895,7 +894,7 @@ class AppStateNotifier extends ChangeNotifier {
       };
       _scraperRuns = [
         {
-          'datasetId': 'cellular_antennas',
+          'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
           'startTime': DateTime.now()
               .subtract(const Duration(hours: 1))
               .toIso8601String(),
@@ -911,7 +910,7 @@ class AppStateNotifier extends ChangeNotifier {
           'errorStack': '',
         },
         {
-          'datasetId': 'companies_liquidation',
+          'datasetId': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
           'startTime': DateTime.now()
               .subtract(const Duration(hours: 2))
               .toIso8601String(),
@@ -943,7 +942,7 @@ class AppStateNotifier extends ChangeNotifier {
           'errorStack': '',
         },
         {
-          'datasetId': 'cellular_antennas',
+          'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
           'startTime': DateTime.now()
               .subtract(const Duration(hours: 4))
               .toIso8601String(),
@@ -1183,9 +1182,9 @@ class AppStateNotifier extends ChangeNotifier {
       }
 
       String functionName;
-      if (datasetId == 'cellular_antennas') {
+      if (datasetId == '8935c8e5-ec77-421f-af86-d970583195f8') {
         functionName = 'manualSyncAntennas';
-      } else if (datasetId == 'cellular_permit_applications') {
+      } else if (datasetId == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
         functionName = 'manualSyncPermitApps';
       } else if (datasetId == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
         functionName = 'manualSyncCompaniesLiquidation';

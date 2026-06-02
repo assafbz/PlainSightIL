@@ -136,11 +136,11 @@ export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
   resourceId = "ff398c7e-c522-4ee8-a53a-312b188a573d",
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "cellular_permit_applications";
+  const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "cellular_permit_applications";
+    const targetCollection = "ff398c7e-c522-4ee8-a53a-312b188a573d";
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     // Paginated API fetch from data.gov.il datastore search

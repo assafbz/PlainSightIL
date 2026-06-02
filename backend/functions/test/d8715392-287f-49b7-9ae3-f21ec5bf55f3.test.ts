@@ -180,7 +180,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    expect(mockCollection).toHaveBeenCalledWith("companies_liquidation");
+    expect(mockCollection).toHaveBeenCalledWith("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
 
@@ -192,7 +192,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     expect(mockDoc).toHaveBeenCalledWith("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "companies_liquidation",
+        activeCollection: "d8715392-287f-49b7-9ae3-f21ec5bf55f3",
         status: "idle",
         recordCount: 1,
       }),

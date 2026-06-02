@@ -117,7 +117,7 @@ class _AdminPageState extends State<AdminPage> {
     // Hardcoded dataset metadata declarations that are active on the client
     final List<Map<String, String>> datasetsSpec = [
       {
-        'id': 'cellular_antennas',
+        'id': '8935c8e5-ec77-421f-af86-d970583195f8',
         'titleEn': 'Cellular Antennas',
         'titleHe': 'אנטנות סלולריות פעילות',
         'resourceId': '8935c8e5-ec77-421f-af86-d970583195f8',
@@ -125,7 +125,7 @@ class _AdminPageState extends State<AdminPage> {
         'agencyHe': 'המשרד להגנת הסביבה',
       },
       {
-        'id': 'cellular_permit_applications',
+        'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
         'titleEn': 'Cellular Permit Applications',
         'titleHe': 'בקשות להיתרי הקמה של אנטנות',
         'resourceId': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
@@ -774,12 +774,12 @@ class _AdminPageState extends State<AdminPage> {
 
     final List<Map<String, String>> specs = [
       {
-        'id': 'cellular_antennas',
+        'id': '8935c8e5-ec77-421f-af86-d970583195f8',
         'titleEn': 'Cellular Antennas',
         'titleHe': 'אנטנות סלולריות פעילות',
       },
       {
-        'id': 'cellular_permit_applications',
+        'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
         'titleEn': 'Cellular Permits',
         'titleHe': 'בקשות להיתרי הקמה',
       },

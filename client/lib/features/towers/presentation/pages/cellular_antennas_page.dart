@@ -7,19 +7,19 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
-import '../widgets/towers_map_view.dart';
+import '../widgets/cellular_antennas_map_view.dart';
 import '../widgets/map_controls_overlay.dart';
 
-class TowersScreen extends StatefulWidget {
+class CellularAntennasScreen extends StatefulWidget {
   final AppStateNotifier appState;
 
-  const TowersScreen({super.key, required this.appState});
+  const CellularAntennasScreen({super.key, required this.appState});
 
   @override
-  State<TowersScreen> createState() => _TowersScreenState();
+  State<CellularAntennasScreen> createState() => _CellularAntennasScreenState();
 }
 
-class _TowersScreenState extends State<TowersScreen>
+class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     with TickerProviderStateMixin {
   int _selectedFilterIndex =
       0; // 0: Active Towers (Default), 1: Construction Permits
@@ -382,7 +382,7 @@ class _TowersScreenState extends State<TowersScreen>
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: _showMap
-                    ? TowersMapView(
+                    ? CellularAntennasMapView(
                         key: const ValueKey('map_view'),
                         appState: widget.appState,
                         records: _getFilteredRecords(),

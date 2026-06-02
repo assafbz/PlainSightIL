@@ -18,7 +18,7 @@ const db = admin.firestore();
  * Helper to configure CORS headers and automatically resolve preflight OPTIONS requests.
  * Returns true if the request was an OPTIONS request and has been completed.
  */
-function handleCors(req: functions.https.Request, res: any): boolean {
+function handleCors(req: functions.https.Request, res: functions.Response): boolean {
   res.set("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") {
     res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -110,7 +110,7 @@ export const scheduledAntennaScraper = functions.pubsub
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledAntennaScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("cellular_antennas");
+    const tracker = ScraperTelemetryTracker.start("8935c8e5-ec77-421f-af86-d970583195f8");
     try {
       const result = await scrapeAndSyncAntennas(db);
       logger.info("scheduledAntennaScraper completed successfully", {
@@ -211,7 +211,7 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "cellular_antennas";
+  const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
@@ -248,7 +248,7 @@ export const scheduledPermitAppsScraper = functions.pubsub
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledPermitAppsScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("cellular_permit_applications");
+    const tracker = ScraperTelemetryTracker.start("ff398c7e-c522-4ee8-a53a-312b188a573d");
     try {
       const result = await scrapeAndSyncPermitApplications(db);
       logger.info("scheduledPermitAppsScraper completed successfully", {
@@ -273,7 +273,7 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "cellular_permit_applications";
+  const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
@@ -366,7 +366,7 @@ export const scheduledCompaniesLiquidationScraper = functions.pubsub
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
     logger.info("scheduledCompaniesLiquidationScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("companies_liquidation");
+    const tracker = ScraperTelemetryTracker.start("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
     try {
       const result = await scrapeAndSyncCompaniesLiquidation(db);
       logger.info("scheduledCompaniesLiquidationScraper completed successfully", {
@@ -393,7 +393,7 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
 
   const datasetId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-  const tracker = ScraperTelemetryTracker.start("companies_liquidation");
+  const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
     await metadataRef.set({ status: "syncing" }, { merge: true });

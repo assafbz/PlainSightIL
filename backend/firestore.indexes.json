@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "cellular_antennas",
+      "collectionGroup": "8935c8e5-ec77-421f-af86-d970583195f8",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -43,7 +43,7 @@
       ]
     },
     {
-      "collectionGroup": "cellular_permit_applications",
+      "collectionGroup": "ff398c7e-c522-4ee8-a53a-312b188a573d",
       "queryScope": "COLLECTION",
       "fields": [
         {

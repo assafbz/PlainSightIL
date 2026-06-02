@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
-import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
-import 'package:plainsight/features/directory/presentation/pages/liquidation_page.dart';
+import 'package:plainsight/features/towers/presentation/pages/cellular_antennas_page.dart';
+import 'package:plainsight/features/directory/presentation/pages/companies_liquidation_page.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
@@ -111,13 +111,13 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         dataset.id == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => TowersScreen(appState: widget.appState),
+          builder: (context) => CellularAntennasScreen(appState: widget.appState),
         ),
       );
     } else if (dataset.id == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => LiquidationScreen(appState: widget.appState),
+          builder: (context) => CompaniesLiquidationScreen(appState: widget.appState),
         ),
       );
     }

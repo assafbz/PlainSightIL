@@ -132,7 +132,7 @@ describe("Scraper and Sync Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "cellular_antennas") {
+      if (id === "8935c8e5-ec77-421f-af86-d970583195f8") {
         return {
           set: mockMetadataSet,
         };
@@ -208,7 +208,7 @@ describe("Scraper and Sync Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(2);
 
-    expect(mockCollection).toHaveBeenCalledWith("cellular_antennas");
+    expect(mockCollection).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(2);
 
@@ -219,10 +219,10 @@ describe("Scraper and Sync Ingestion", () => {
     expect(doc1.lastUpdated).toBeDefined();
 
     // Verify metadata update
-    expect(mockDoc).toHaveBeenCalledWith("cellular_antennas");
+    expect(mockDoc).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "cellular_antennas",
+        activeCollection: "8935c8e5-ec77-421f-af86-d970583195f8",
         status: "idle",
         recordCount: 2,
       }),

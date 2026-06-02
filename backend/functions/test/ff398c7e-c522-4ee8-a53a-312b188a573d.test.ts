@@ -114,7 +114,7 @@ describe("Incremental Update Scraper Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "cellular_permit_applications") {
+      if (id === "ff398c7e-c522-4ee8-a53a-312b188a573d") {
         return {
           set: mockMetadataSet,
         };
@@ -184,7 +184,7 @@ describe("Incremental Update Scraper Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    expect(mockCollection).toHaveBeenCalledWith("cellular_permit_applications");
+    expect(mockCollection).toHaveBeenCalledWith("ff398c7e-c522-4ee8-a53a-312b188a573d");
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
 
@@ -195,10 +195,10 @@ describe("Incremental Update Scraper Ingestion", () => {
     expect(writtenRecord.lastUpdated).toBeDefined();
 
     // Verify metadata update
-    expect(mockDoc).toHaveBeenCalledWith("cellular_permit_applications");
+    expect(mockDoc).toHaveBeenCalledWith("ff398c7e-c522-4ee8-a53a-312b188a573d");
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "cellular_permit_applications",
+        activeCollection: "ff398c7e-c522-4ee8-a53a-312b188a573d",
         status: "idle",
         recordCount: 1,
       }),

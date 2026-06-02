@@ -5,8 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import 'package:plainsight/features/towers/presentation/pages/towers_page.dart';
-import 'package:plainsight/features/towers/presentation/widgets/towers_map_view.dart';
+import 'package:plainsight/features/towers/presentation/pages/cellular_antennas_page.dart';
+import 'package:plainsight/features/towers/presentation/widgets/cellular_antennas_map_view.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +33,7 @@ void main() {
         .setMockMethodCallHandler(geolocatorChannel, null);
   });
 
-  group('TowersScreen & TowersMapView Widget Tests', () {
+  group('CellularAntennasScreen & CellularAntennasMapView Widget Tests', () {
     testWidgets('Toggles between radar and map views', (
       WidgetTester tester,
     ) async {
@@ -42,13 +42,13 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: TowersScreen(appState: appState)),
+          home: Scaffold(body: CellularAntennasScreen(appState: appState)),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Initially shows TowersMapView and NOT RadarView (CustomPaint)
-      expect(find.byType(TowersMapView), findsOneWidget);
+      // Initially shows CellularAntennasMapView and NOT RadarView (CustomPaint)
+      expect(find.byType(CellularAntennasMapView), findsOneWidget);
       expect(find.byKey(const ValueKey('radar_view')), findsNothing);
 
       // Tap on the Radar toggle option
@@ -57,12 +57,12 @@ void main() {
       await tester.tap(radarToggleFinder);
       await tester.pumpAndSettle();
 
-      // Now it should show RadarView (uses CustomPaint) and NOT TowersMapView
+      // Now it should show RadarView (uses CustomPaint) and NOT CellularAntennasMapView
       expect(find.byType(CustomPaint), findsWidgets);
-      expect(find.byType(TowersMapView), findsNothing);
+      expect(find.byType(CellularAntennasMapView), findsNothing);
     });
 
-    testWidgets('TowersMapView discards invalid coordinates', (
+    testWidgets('CellularAntennasMapView discards invalid coordinates', (
       WidgetTester tester,
     ) async {
       final appState = AppStateNotifier();
@@ -79,7 +79,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: TowersMapView(
+            body: CellularAntennasMapView(
               appState: appState,
               records: records,
               selectedRecordId: null,
@@ -112,7 +112,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: TowersScreen(appState: appState)),
+          home: Scaffold(body: CellularAntennasScreen(appState: appState)),
         ),
       );
       await tester.pumpAndSettle();
@@ -145,7 +145,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: TowersScreen(appState: appState)),
+          home: Scaffold(body: CellularAntennasScreen(appState: appState)),
         ),
       );
       await tester.pumpAndSettle();
