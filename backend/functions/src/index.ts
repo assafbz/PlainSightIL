@@ -8,6 +8,7 @@ import { scrapeAndSyncAntennas } from "./scrapers/8935c8e5-ec77-421f-af86-d97058
 import { scrapeAndSyncPermitApplications } from "./scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+import { scrapeAndSyncDoctorsLicenses } from "./scrapers/9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 
 admin.initializeApp();
@@ -417,6 +418,68 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Companies in liquidation sync failed",
+      error: err.message || String(error),
+    });
+  }
+});
+
+// Scheduled Cloud Function for Doctors Licenses - runs weekly on Sunday at 3:00 AM (Israel timezone)
+export const scheduledDoctorsLicensesScraper = functions.pubsub
+  .schedule("0 3 * * 0")
+  .timeZone("Asia/Jerusalem")
+  .onRun(async () => {
+    logger.info("scheduledDoctorsLicensesScraper trigger invoked");
+    const tracker = ScraperTelemetryTracker.start("9c64c522-bbc2-48fe-96fb-3b2a8626f59e");
+    try {
+      const result = await scrapeAndSyncDoctorsLicenses(db);
+      logger.info("scheduledDoctorsLicensesScraper completed successfully", {
+        count: result.count,
+      });
+      await tracker.complete(db, result.count);
+    } catch (error) {
+      const err = error as Error;
+      logger.error("scheduledDoctorsLicensesScraper execution failed", {
+        error: err.message,
+        stack: err.stack,
+      });
+      await tracker.fail(db, err);
+      throw error;
+    }
+  });
+
+// HTTPS Triggered Cloud Function for Doctors Licenses - manual sync
+export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, res) => {
+  logger.info("manualSyncDoctorsLicenses HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
+  const datasetId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
+  const tracker = ScraperTelemetryTracker.start(datasetId);
+  try {
+    // Set status to syncing in Firestore immediately
+    await metadataRef.set({ status: "syncing" }, { merge: true });
+
+    const result = await scrapeAndSyncDoctorsLicenses(db);
+    logger.info("manualSyncDoctorsLicenses sync completed successfully", {
+      count: result.count,
+    });
+    await tracker.complete(db, result.count);
+    res.status(200).json({
+      message: "Doctors licenses sync completed successfully",
+      count: result.count,
+    });
+  } catch (error) {
+    const err = error as Error;
+    logger.error("manualSyncDoctorsLicenses sync failed", {
+      error: err.message,
+      stack: err.stack,
+    });
+    await metadataRef.set({ status: "error" }, { merge: true });
+    await tracker.fail(db, err);
+    res.status(500).json({
+      message: "Doctors licenses sync failed",
       error: err.message || String(error),
     });
   }

@@ -29,6 +29,11 @@ service cloud.firestore {
       allow write: if false;
       allow list: if request.query.limit <= 100;
     }
+    match /9c64c522-bbc2-48fe-96fb-3b2a8626f59e/{docId} {
+      allow read: if true;
+      allow write: if false;
+      allow list: if request.query.limit <= 100;
+    }
     match /datasets_metadata/{document} {
       allow read: if true;
       allow write: if false;

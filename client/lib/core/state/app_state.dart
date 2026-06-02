@@ -11,6 +11,7 @@ import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
+import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 import '../../features/profile/domain/repositories/user_profile_repository.dart';
 import '../../features/profile/domain/usecases/get_user_profile.dart';
@@ -323,6 +324,14 @@ class AppStateNotifier extends ChangeNotifier {
   List<LiquidationRecordModel> get liquidationRecords => _liquidationRecords;
   bool get isLoadingLiquidation => _isLoadingLiquidation;
 
+  // Doctors Licenses state fields
+  List<DoctorLicenseRecordModel> _doctorRecords = [];
+  bool _isLoadingDoctors = true;
+  StreamSubscription<QuerySnapshot>? _doctorsSubscription;
+
+  List<DoctorLicenseRecordModel> get doctorRecords => _doctorRecords;
+  bool get isLoadingDoctors => _isLoadingDoctors;
+
   // Admin Metadata state fields
   Map<String, Map<String, dynamic>> _datasetMetadataMap = {};
   bool _isLoadingAdminMetadata = true;
@@ -372,6 +381,7 @@ class AppStateNotifier extends ChangeNotifier {
     initAntennaListener();
     initDirectoryListener();
     initLiquidationListener();
+    initDoctorsListener();
     initAdminMetadataListener();
 
     if (isTesting) {
@@ -814,6 +824,86 @@ class AppStateNotifier extends ChangeNotifier {
     }
   }
 
+  /// Initialize doctors licenses snapshots listener
+  void initDoctorsListener() {
+    _doctorsSubscription?.cancel();
+    if (isTesting) {
+      _doctorRecords = [
+        DoctorLicenseRecordModel(
+          id: '1',
+          idNum: 1,
+          firstName: 'מריו ה',
+          lastName: 'קורוב',
+          licenseNumber: 4267,
+          licenseRegistrationDate: '1969-07-28T00:00:00.000Z',
+        ),
+        DoctorLicenseRecordModel(
+          id: '2',
+          idNum: 2,
+          firstName: 'אברהם',
+          lastName: 'שטיינברג',
+          licenseNumber: 11116,
+          licenseRegistrationDate: '1974-08-20T00:00:00.000Z',
+          specialtyCertificateNumber: 7656,
+          specialtyRegistrationDate: '1983-06-21T00:00:00.000Z',
+          specialtyName: 'רפואת ילדים',
+        ),
+        DoctorLicenseRecordModel(
+          id: '3',
+          idNum: 3,
+          firstName: 'אברהם',
+          lastName: 'שטיינברג',
+          licenseNumber: 11116,
+          licenseRegistrationDate: '1974-08-20T00:00:00.000Z',
+          specialtyCertificateNumber: 13230,
+          specialtyRegistrationDate: '1993-12-02T00:00:00.000Z',
+          specialtyName: 'נוירולוגיית ילדים',
+        ),
+      ];
+      _isLoadingDoctors = false;
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) {
+      _isLoadingDoctors = false;
+      notifyListeners();
+      return;
+    }
+
+    AppLogger.info('Initializing doctors licenses listener');
+    try {
+      _doctorsSubscription = FirebaseFirestore.instance
+          .collection('9c64c522-bbc2-48fe-96fb-3b2a8626f59e')
+          .limit(100)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              AppLogger.info(
+                'Doctors licenses fetched from Firestore: ${snapshot.docs.length} records',
+              );
+              _doctorRecords = snapshot.docs
+                  .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data()))
+                  .toList();
+              _isLoadingDoctors = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingDoctors = false;
+              notifyListeners();
+              AppLogger.error(
+                'Firestore doctors collection listener error',
+                err,
+              );
+            },
+          );
+    } catch (e) {
+      _isLoadingDoctors = false;
+      notifyListeners();
+      AppLogger.error('Failed to initialize doctors listener', e);
+    }
+  }
+
   /// Initialize real-time snapshot listener on dataset_metadata collection
   void initAdminMetadataListener() {
     _adminMetadataSubscription?.cancel();
@@ -1188,6 +1278,8 @@ class AppStateNotifier extends ChangeNotifier {
         functionName = 'manualSyncPermitApps';
       } else if (datasetId == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
         functionName = 'manualSyncCompaniesLiquidation';
+      } else if (datasetId == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
+        functionName = 'manualSyncDoctorsLicenses';
       } else {
         throw Exception('Unknown dataset ID: $datasetId');
       }
@@ -1264,6 +1356,7 @@ class AppStateNotifier extends ChangeNotifier {
     _directorySubscription?.cancel();
     _requestsSubscription?.cancel();
     _liquidationSubscription?.cancel();
+    _doctorsSubscription?.cancel();
     _adminMetadataSubscription?.cancel();
     _profileSubscription?.cancel();
     _apiHealthSubscription?.cancel();
@@ -1333,6 +1426,19 @@ class AppStateNotifier extends ChangeNotifier {
       'closure_reason_prefix': 'Reason: ',
       'liquidation_search_placeholder': 'Search by Name or Company ID (H.P.)',
       'view_court_file': 'View Official Court File',
+      'doctors_title': 'Doctors Licenses',
+      'doctors_desc':
+          'Israeli medical practitioner licenses and specialties registry.',
+      'doctors_count': '3 records',
+      'nav_doctors': 'Doctors Licenses',
+      'doctors_search_placeholder': 'Search by Name or License Number',
+      'license_num_label': 'License: #',
+      'license_date_label': 'License Date: ',
+      'specialty_cert_label': 'Specialty Cert: #',
+      'specialty_date_label': 'Specialty Date: ',
+      'doctor_licensed': 'Licensed / Active',
+      'doctor_unlicensed': 'Muted / Inactive',
+      'doctors_publisher': 'Ministry of Health - Medical Professions Registry',
       'trustee_publisher': 'Ministry of Justice - Corporations Authority',
       'filter_all': 'All',
       'filter_active': 'Supported',
@@ -1476,6 +1582,18 @@ class AppStateNotifier extends ChangeNotifier {
       'closure_reason_prefix': 'סיבת סגירה: ',
       'liquidation_search_placeholder': 'חפש לפי שם או מספר חברה (ח.פ.)',
       'view_court_file': 'צפה בתיק בית המשפט הרשמי',
+      'doctors_title': 'רישיונות רופאים',
+      'doctors_desc': 'מאגר רישיונות רופאים והתמחויות רפואיות בישראל.',
+      'doctors_count': '3 רשומות',
+      'nav_doctors': 'רישיונות רופאים',
+      'doctors_search_placeholder': 'חפש לפי שם או מספר רישיון',
+      'license_num_label': 'מספר רישיון: ',
+      'license_date_label': 'תאריך רישום רישיון: ',
+      'specialty_cert_label': 'מספר תעודת התמחות: ',
+      'specialty_date_label': 'תאריך רישום התמחות: ',
+      'doctor_licensed': 'מורשה / פעיל',
+      'doctor_unlicensed': 'לא מורשה',
+      'doctors_publisher': 'משרד הבריאות - האגף לרישוי מקצועות רפואיים',
       'trustee_publisher': 'משרד המשפטים - רשות התאגידים',
       'filter_all': 'הכל',
       'filter_active': 'נתמכים',
