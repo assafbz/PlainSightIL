@@ -383,6 +383,155 @@ function validateQualityGate(issueId, currentPhase) {
   }
 }
 
+// --- GITHUB INTEGRATION HELPERS ---
+
+const PHASE_KEYWORDS = {
+  discovery: ['Executive Summary', 'Open Questions', 'Obstacles'],
+  ui_ux_design: ['Visual Theme', 'Constraints & Hurdles'],
+  architecture_design: ['Architectural Summary', 'Performance & Security', 'Implementation Decisions'],
+  security_audit: ['Threat Modeling', 'Audit Findings', 'Security Hurdles'],
+  blueprinting: ['Blueprinting Observations'],
+  qa_validation: ['Test Summary', 'Discovered Defects', 'QA Hurdles'],
+  lessons_learned: ['Executive Summary', 'Pitfalls', 'Future Cycles']
+};
+
+function getDeliverableFilename(phase) {
+  const mapping = {
+    discovery: 'PRD.md',
+    ui_ux_design: 'DESIGN.md',
+    architecture_design: 'TDD.md',
+    security_audit: 'SECURITY.md',
+    blueprinting: 'BLUEPRINT.md',
+    qa_validation: 'QA_REPORT.md',
+    lessons_learned: 'LESSONS_LEARNED.md'
+  };
+  return mapping[phase];
+}
+
+function parseSections(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+  const content = fs.readFileSync(filePath, 'utf8');
+  const sections = {};
+  let currentHeader = '';
+  let currentLines = [];
+
+  content.split('\n').forEach(line => {
+    const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      if (currentHeader) {
+        sections[currentHeader] = currentLines.join('\n').trim();
+      }
+      currentHeader = headerMatch[2].trim();
+      currentLines = [];
+    } else {
+      if (currentHeader) {
+        currentLines.push(line);
+      }
+    }
+  });
+  if (currentHeader) {
+    sections[currentHeader] = currentLines.join('\n').trim();
+  }
+  return sections;
+}
+
+function extractFindings(phase, issueId) {
+  const filename = getDeliverableFilename(phase);
+  if (!filename) {
+    if (phase === 'implementation') {
+      return `- All automated checks passed successfully (Client formatting, Flutter analysis, Unit tests, and TypeScript compilation).\n- Code changes have been verified locally.`;
+    }
+    return '';
+  }
+
+  const filePath = path.join(ROOT_DIR, 'state', `issue_${issueId}`, filename);
+  if (!fs.existsSync(filePath)) {
+    return `*No deliverable file found at .agents/state/issue_${issueId}/${filename}*`;
+  }
+
+  try {
+    const sections = parseSections(filePath);
+    const keywords = PHASE_KEYWORDS[phase] || [];
+    const extracted = [];
+
+    for (const [header, content] of Object.entries(sections)) {
+      const match = keywords.some(keyword => header.toLowerCase().includes(keyword.toLowerCase()));
+      if (match) {
+        extracted.push(`##### ${header}\n\n${content}`);
+      }
+    }
+
+    if (extracted.length === 0) {
+      // Fallback: If no headers matched, return first 1000 characters
+      const content = fs.readFileSync(filePath, 'utf8');
+      return `*Could not match specific sections. Summary of deliverable:*\n\n${content.substring(0, 1000)}${content.length > 1000 ? '...' : ''}`;
+    }
+
+    return extracted.join('\n\n');
+  } catch (e) {
+    return `*Error reading/parsing findings: ${e.message}*`;
+  }
+}
+
+function runGitHubCommand(command) {
+  try {
+    execSync(command, { stdio: 'pipe' });
+    return true;
+  } catch (e) {
+    console.warn(`⚠️ Warning: GitHub command failed: ${command}\nError: ${e.message}`);
+    return false;
+  }
+}
+
+function ensureLabelExists(labelName) {
+  const createCmd = `gh label create "${labelName}" --color "ededed" --force`;
+  runGitHubCommand(createCmd);
+}
+
+function updateGitHubIssue(issueId, prevLabel, newLabel, commentBody) {
+  if (process.env.SKIP_GITHUB === '1' || process.env.SKIP_GITHUB === 'true') {
+    console.log('⚠️ Skipping GitHub integration (SKIP_GITHUB=1)');
+    return;
+  }
+
+  console.log(`🔄 Syncing with GitHub Issue #${issueId}...`);
+
+  // 1. Update labels
+  let labelFlags = '';
+  if (prevLabel) {
+    ensureLabelExists(prevLabel);
+    labelFlags += ` --remove-label "${prevLabel}"`;
+  }
+  if (newLabel) {
+    ensureLabelExists(newLabel);
+    labelFlags += ` --add-label "${newLabel}"`;
+  }
+
+  if (labelFlags) {
+    const editCmd = `gh issue edit ${issueId}${labelFlags}`;
+    runGitHubCommand(editCmd);
+  }
+
+  // 2. Post comment
+  if (commentBody) {
+    const tempDir = path.join(ROOT_DIR, 'state', `issue_${issueId}`);
+    ensureDir(tempDir);
+    const tempCommentPath = path.join(tempDir, '.temp_github_comment.md');
+    fs.writeFileSync(tempCommentPath, commentBody, 'utf8');
+
+    const commentCmd = `gh issue comment ${issueId} --body-file "${tempCommentPath}"`;
+    const success = runGitHubCommand(commentCmd);
+
+    try {
+      fs.unlinkSync(tempCommentPath);
+    } catch (e) {}
+
+    if (success) {
+      console.log(`✅ Posted SDLC progress comment to GitHub Issue #${issueId}`);
+    }
+  }
+}
+
 // Transition Issue to next phase
 function transitionIssue(issueIdStr, comment = '') {
   const issueId = Number(issueIdStr);
@@ -458,6 +607,20 @@ function transitionIssue(issueIdStr, comment = '') {
     fs.writeFileSync(filePath, serialized, 'utf8');
     
     console.log(`❌ Auto-rejected Issue #${issueId} due to verification failures. Re-assigned to senior_developer.`);
+
+    // --- GITHUB SYNC ON QUALITY GATE FAILURE ---
+    const prevPhaseInfo = phases.find(p => p.id === activePhase);
+    const prevLabel = prevPhaseInfo ? prevPhaseInfo.label : null;
+    const devLabelInfo = phases.find(p => p.id === 'implementation');
+    const devLabel = devLabelInfo ? devLabelInfo.label : 'status:development';
+
+    let commentBody = `### ❌ Quality Gate Verification FAILED in \`${activePhase}\`\n`;
+    commentBody += `- **Status**: \`blueprint-revision\`\n`;
+    commentBody += `- **Assignee**: \`senior_developer\`\n\n`;
+    commentBody += `#### 📋 Diagnostics & Failure Logs:\n\n\`\`\`text\n${gateResult.failureLogs}\n\`\`\`\n`;
+
+    updateGitHubIssue(issueId, prevLabel, devLabel, commentBody);
+    
     return;
   }
 
@@ -482,13 +645,14 @@ function transitionIssue(issueIdStr, comment = '') {
   
   // Apply update
   const prevPhaseId = metadata.current_phase;
+  const prevPhaseInfo = phases.find(p => p.id === prevPhaseId);
+  const prevLabel = prevPhaseInfo ? prevPhaseInfo.label : null;
+
   metadata.current_phase = nextPhase.id;
   metadata.assigned_agent = nextPhase.assignee;
   metadata.status = 'in-progress';
   
   // Reset approval tags for next phase gates
-  // In a real framework, we'd check if nextPhase requires HITL and set:
-  // metadata.hitl_approval_required = nextPhase.hitl_gate;
   if (nextPhase.id === 'architecture_design' || nextPhase.id === 'merge_approval' || nextPhase.id === 'security_audit' || nextPhase.id === 'ui_ux_design') {
     metadata.hitl_approval_required = true;
     metadata.hitl_approved_by = '';
@@ -522,6 +686,21 @@ function transitionIssue(issueIdStr, comment = '') {
   console.log(`New Phase:  ${metadata.current_phase}`);
   console.log(`Assignee:   ${metadata.assigned_agent}`);
   console.log(`HITL Block: ${metadata.hitl_approval_required ? 'YES 🛑' : 'NO ✅'}`);
+
+  // --- GITHUB SYNC ON SUCCESSFUL TRANSITION ---
+  let commentBody = `### 🚀 SDLC Stage Transition: \`${prevPhaseId}\` ➔ \`${nextPhase.id}\`\n`;
+  commentBody += `- **Assignee**: \`${nextPhase.assignee}\`\n`;
+  commentBody += `- **Status**: \`in-progress\`\n`;
+  if (comment) {
+    commentBody += `- **Notes**: ${comment}\n`;
+  }
+  
+  const findings = extractFindings(prevPhaseId, issueId);
+  if (findings) {
+    commentBody += `\n#### 📋 Key Findings & Recommendations from \`${prevPhaseId}\`:\n\n${findings}\n`;
+  }
+
+  updateGitHubIssue(issueId, prevLabel, nextPhase.label, commentBody);
 }
 
 // Add Feedback Comment (rejection/revision loop)
@@ -540,6 +719,11 @@ function failReview(issueIdStr, rejectionNotes) {
   // Rejection loop behavior: QA/Tech Lead rejects code implementation
   // Transitions current phase back to implementation and assigns to Senior Developer
   const prevPhase = metadata.current_phase;
+  const type = metadata.type || 'feature';
+  const phases = getWorkflowPhases(type);
+  const prevPhaseInfo = phases.find(p => p.id === prevPhase);
+  const prevLabel = prevPhaseInfo ? prevPhaseInfo.label : null;
+
   metadata.current_phase = 'implementation';
   metadata.assigned_agent = 'senior_developer';
   metadata.status = 'blueprint-revision';
@@ -571,6 +755,17 @@ function failReview(issueIdStr, rejectionNotes) {
   fs.writeFileSync(filePath, serialized, 'utf8');
 
   console.log(`❌ Issue #${issueId} review rejected! Assigned back to Senior Developer.`);
+
+  // --- GITHUB SYNC ON REJECTION ---
+  const devLabelInfo = phases.find(p => p.id === 'implementation');
+  const devLabel = devLabelInfo ? devLabelInfo.label : 'status:development';
+
+  let commentBody = `### ❌ Review REJECTED in \`${prevPhase}\`\n`;
+  commentBody += `- **Status**: \`blueprint-revision\`\n`;
+  commentBody += `- **Assignee**: \`senior_developer\`\n\n`;
+  commentBody += `#### 🔄 Rejection Feedback:\n${rejectionNotes}\n`;
+
+  updateGitHubIssue(issueId, prevLabel, devLabel, commentBody);
 }
 
 // Help Menu
