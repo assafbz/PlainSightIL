@@ -155,14 +155,19 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await expect(searchInput).toBeVisible({ timeout: 10000 });
 
     // Fill search with "פרסום"
-    await searchInput.fill('פרסום');
+    await searchInput.click();
+    await page.keyboard.type('פרסום');
 
     // Assert "בשן פרסום ויחסי צבור בע~מ" is visible and other companies are filtered out
     await expect(page.getByText('בשן פרסום ויחסי צבור בע~מ').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('מלון הגליל בע~מ').first()).not.toBeVisible();
 
     // Clear the search field
-    await searchInput.fill('');
+    await searchInput.click();
+    const isMac = process.platform === 'darwin';
+    const modifier = isMac ? 'Meta' : 'Control';
+    await page.keyboard.press(`${modifier}+A`);
+    await page.keyboard.press('Backspace');
 
     // Assert other companies are restored
     await expect(page.getByText('מלון הגליל בע~מ').first()).toBeVisible({ timeout: 10000 });

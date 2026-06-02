@@ -144,14 +144,39 @@ export async function scrapeAndSyncCompaniesLiquidation(
 
     const targetRef = db.collection(targetCollection);
     const now = new Date().toISOString();
-
     while (hasMore) {
       const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
       const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
 
-      const response = await axios.get(url);
-      const records: HebrewLiquidationRecord[] = response.data?.result?.records ?? [];
+      let records: HebrewLiquidationRecord[] = [];
+      if (isEmulator) {
+        records = [
+          {
+            "מזהה תיק פירוק חברה": 11111,
+            "שם החברה": 'בשן פרסום ויחסי צבור בע~מ',
+            "מספר זיהוי של החברה": 510000001,
+            "סטטוס תיק": 'פירוק פעיל',
+            "תאריך הגשת הבקשה": '2024-05-12T00:00:00',
+            "תאריך קבלת צו פירוק": '2024-06-15T00:00:00',
+            "בית משפט מחוזי בו מתנהל התיק": 'מחוזי תל אביב',
+            "עיר פעילות חברה": 'תל אביב - יפו'
+          },
+          {
+            "מזהה תיק פירוק חברה": 22222,
+            "שם החברה": 'מלון הגליל בע~מ',
+            "מספר זיהוי של החברה": 510000002,
+            "סטטוס תיק": 'פירוק פעיל',
+            "תאריך הגשת הבקשה": '2024-05-12T00:00:00',
+            "תאריך קבלת צו פירוק": '2024-06-15T00:00:00',
+            "בית משפט מחוזי בו מתנהל התיק": 'מחוזי נצרת',
+            "עיר פעילות חברה": 'טבריה'
+          }
+        ];
+      } else {
+        const response = await axios.get(url);
+        records = response.data?.result?.records ?? [];
+      }
 
       if (records.length === 0) {
         hasMore = false;
