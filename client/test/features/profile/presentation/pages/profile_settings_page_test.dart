@@ -52,6 +52,56 @@ void main() {
     );
 
     testWidgets(
+      'ProfileSettingsPage inherits correct Directionality from MaterialApp builder based on appState locale',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ListenableBuilder(
+            listenable: appState,
+            builder: (context, _) {
+              return MaterialApp(
+                builder: (context, child) {
+                  return Directionality(
+                    textDirection: appState.textDirection,
+                    child: child!,
+                  );
+                },
+                home: ProfileSettingsPage(appState: appState),
+              );
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Initially it should be English (LTR)
+        expect(appState.locale, 'en');
+        final Directionality dirLtr = tester.widget<Directionality>(
+          find
+              .ancestor(
+                of: find.byType(ProfileSettingsPage),
+                matching: find.byType(Directionality),
+              )
+              .first,
+        );
+        expect(dirLtr.textDirection, TextDirection.ltr);
+
+        // 2. Change locale to Hebrew (RTL)
+        appState.setLocale('he');
+        await tester.pumpAndSettle();
+
+        // Verify Directionality is now RTL
+        final Directionality dirRtl = tester.widget<Directionality>(
+          find
+              .ancestor(
+                of: find.byType(ProfileSettingsPage),
+                matching: find.byType(Directionality),
+              )
+              .first,
+        );
+        expect(dirRtl.textDirection, TextDirection.rtl);
+      },
+    );
+
+    testWidgets(
       'NavigationDrawerWidget displays name from userProfile when populated and live-updates',
       (WidgetTester tester) async {
         // Initialize with default profile

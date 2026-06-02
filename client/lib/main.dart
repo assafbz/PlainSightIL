@@ -9,6 +9,7 @@ import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
 import 'package:plainsight/features/auth/presentation/pages/login_page.dart';
 import 'package:plainsight/features/profile/presentation/pages/profile_settings_page.dart';
+import 'package:plainsight/features/admin/presentation/pages/admin_page.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -72,12 +73,15 @@ class _MyAppState extends State<MyApp> {
             ),
             useMaterial3: true,
           ),
-          home: Directionality(
-            textDirection: _appState.textDirection,
-            child: (!_appState.isAuthenticated && !_appState.isGuestMode)
-                ? LoginPage(appState: _appState)
-                : AppShell(appState: _appState),
-          ),
+          builder: (context, child) {
+            return Directionality(
+              textDirection: _appState.textDirection,
+              child: child!,
+            );
+          },
+          home: (!_appState.isAuthenticated && !_appState.isGuestMode)
+              ? LoginPage(appState: _appState)
+              : AppShell(appState: _appState),
         );
       },
     );
@@ -431,6 +435,13 @@ class NavigationDrawerWidget extends StatelessWidget {
                                 isActive: appState.activeTab == 2,
                                 isRoadmap: true,
                               ),
+                              if (appState.isAdmin) ...[
+                                const Divider(
+                                  color: Color(0x14FFFFFF),
+                                  height: 16,
+                                ),
+                                _buildAdminNavItem(context),
+                              ],
                             ],
                           ),
                         ),
@@ -605,6 +616,66 @@ class NavigationDrawerWidget extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminNavItem(BuildContext context) {
+    final title = appState.translate('nav_admin');
+    final labelColor = AppColors.primary;
+    final itemTextStyle = AppTypography.getTextStyle(
+      context,
+      fontSize: appState.locale == 'he' ? 16 : 15,
+      fontWeight: FontWeight.w600,
+      color: labelColor,
+    );
+
+    return Semantics(
+      label: 'Navigate to $title',
+      button: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          key: const ValueKey('drawer_admin_button'),
+          onTap: () {
+            Navigator.of(context).pop(); // Close drawer
+            Navigator.of(context).push(
+              PageRouteBuilder<void>(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    AdminPage(appState: appState),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+              ),
+            );
+          },
+          child: Container(
+            height: 56,
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: labelColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(title, style: itemTextStyle)),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textTertiary,
+                  size: 18,
+                ),
+              ],
+            ),
           ),
         ),
       ),
