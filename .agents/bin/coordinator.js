@@ -70,8 +70,130 @@ function serializeMarkdownState(metadata, body) {
   return yamlText + body;
 }
 
+// Simple parser to extract lifecycle_paths YAML block from AGENTS.md
+function parseAgentsConfig() {
+  if (!fs.existsSync(CONFIG_FILE)) {
+    throw new Error(`Config file not found at ${CONFIG_FILE}`);
+  }
+  const content = fs.readFileSync(CONFIG_FILE, 'utf8');
+  const yamlMatch = content.match(/lifecycle_paths:\s*\n([\s\S]*?)(?=\n\n\w|\n#|\n---|\n```)/);
+  if (!yamlMatch) {
+    throw new Error("Could not find lifecycle_paths in AGENTS.md");
+  }
+  
+  const yamlLines = yamlMatch[1].split('\n');
+  const workflows = {};
+  let currentType = null;
+  let currentPhase = null;
+  
+  yamlLines.forEach(line => {
+    const cleanLine = line.trim();
+    if (!cleanLine || cleanLine.startsWith('#')) return;
+    
+    const typeMatch = line.match(/^  ([a-zA-Z0-9_-]+):\s*$/);
+    if (typeMatch) {
+      currentType = typeMatch[1];
+      workflows[currentType] = [];
+      currentPhase = null;
+      return;
+    }
+    
+    const idMatch = cleanLine.match(/^-\s*id:\s*["']?([a-zA-Z0-9_-]+)["']?/);
+    if (idMatch) {
+      currentPhase = { id: idMatch[1] };
+      if (currentType && workflows[currentType]) {
+        workflows[currentType].push(currentPhase);
+      }
+      return;
+    }
+    
+    if (currentPhase) {
+      const colonIndex = cleanLine.indexOf(':');
+      if (colonIndex > 0) {
+        const key = cleanLine.substring(0, colonIndex).trim();
+        let value = cleanLine.substring(colonIndex + 1).split('#')[0].trim();
+        
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.substring(1, value.length - 1);
+        }
+        
+        if (value === 'true') value = true;
+        else if (value === 'false') value = false;
+        
+        currentPhase[key] = value;
+      }
+    }
+  });
+  
+  return workflows;
+}
+
+// Simple parser to extract personas YAML block from AGENTS.md
+function parsePersonasConfig() {
+  if (!fs.existsSync(CONFIG_FILE)) {
+    return {};
+  }
+  const content = fs.readFileSync(CONFIG_FILE, 'utf8');
+  const yamlMatch = content.match(/personas:\s*\n([\s\S]*?)(?=\n\n\w|\n#|\n---|\n```)/);
+  if (!yamlMatch) {
+    return {};
+  }
+  
+  const yamlLines = yamlMatch[1].split('\n');
+  const personas = {};
+  let currentPersona = null;
+  
+  yamlLines.forEach(line => {
+    const cleanLine = line.trim();
+    if (!cleanLine || cleanLine.startsWith('#')) return;
+    
+    const personaMatch = line.match(/^  ([a-zA-Z0-9_-]+):\s*$/);
+    if (personaMatch) {
+      currentPersona = personaMatch[1];
+      personas[currentPersona] = {};
+      return;
+    }
+    
+    if (currentPersona) {
+      const colonIndex = cleanLine.indexOf(':');
+      if (colonIndex > 0) {
+        const key = cleanLine.substring(0, colonIndex).trim();
+        let value = cleanLine.substring(colonIndex + 1).split('#')[0].trim();
+        
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.substring(1, value.length - 1);
+        }
+        
+        personas[currentPersona][key] = value;
+      }
+    }
+  });
+  
+  return personas;
+}
+
 // Get the issue life cycle path from AGENTS.md
 function getWorkflowPhases(issueType) {
+  try {
+    const workflows = parseAgentsConfig();
+    const personas = parsePersonasConfig();
+    
+    const parsedPhases = workflows[issueType];
+    if (parsedPhases && parsedPhases.length > 0) {
+      return parsedPhases.map(phase => {
+        const persona = personas[phase.assignee];
+        return {
+          id: phase.id,
+          assignee: phase.assignee,
+          label: (persona && persona.git_label) || (phase.id === 'triage' ? `type:${issueType}` : 'status:blocked'),
+          hitl_gate: phase.hitl_gate === true
+        };
+      });
+    }
+  } catch (e) {
+    console.warn("⚠️ Warning: Failed to parse AGENTS.md dynamically, falling back to static defaults.", e.message);
+  }
+
   // Simple fallback structure mapping the approved workflow phases in AGENTS.md
   const defaultPhases = {
     feature: [
@@ -153,16 +275,20 @@ function getChangedFiles() {
   }
 }
 
-// Utility: run a shell validation command in cwd
+// Utility: run a shell validation command in cwd and capture output
 function runCheck(command, cwd, description) {
   console.log(`⏳ Running ${description}... (${command})`);
   try {
-    execSync(command, { cwd, stdio: 'inherit' });
+    const output = execSync(command, { cwd, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
     console.log(`✅ ${description} passed.`);
-    return true;
+    return { success: true, logs: output };
   } catch (error) {
     console.error(`❌ ${description} FAILED!`);
-    return false;
+    const stdout = error.stdout ? error.stdout.toString() : '';
+    const stderr = error.stderr ? error.stderr.toString() : '';
+    const logs = stdout + '\n' + stderr;
+    console.error(logs); // Ensure logs are output to console for visual feedback
+    return { success: false, logs: logs };
   }
 }
 
@@ -170,27 +296,28 @@ function runCheck(command, cwd, description) {
 function verifyDeliverable(issueId, filename) {
   const deliverablePath = path.join(ROOT_DIR, 'state', `issue_${issueId}`, filename);
   if (!fs.existsSync(deliverablePath)) {
-    console.error(`🛑 QUALITY GATE FAILURE: Missing required deliverable '${filename}'!`);
-    console.error(`Expected file: .agents/state/issue_${issueId}/${filename}`);
-    return false;
+    const errMsg = `🛑 QUALITY GATE FAILURE: Missing required deliverable '${filename}'!\nExpected file: .agents/state/issue_${issueId}/${filename}`;
+    console.error(errMsg);
+    return { success: false, failureLogs: errMsg };
   }
   const stats = fs.statSync(deliverablePath);
   if (stats.size < 50) {
-    console.error(`🛑 QUALITY GATE FAILURE: Deliverable '${filename}' appears empty or is just a placeholder.`);
-    console.error(`File path: .agents/state/issue_${issueId}/${filename}`);
-    return false;
+    const errMsg = `🛑 QUALITY GATE FAILURE: Deliverable '${filename}' appears empty or is just a placeholder.\nFile path: .agents/state/issue_${issueId}/${filename}`;
+    console.error(errMsg);
+    return { success: false, failureLogs: errMsg };
   }
-  return true;
+  return { success: true, failureLogs: '' };
 }
 
 // Validate Quality Gates for the transitioning phase
 function validateQualityGate(issueId, currentPhase) {
   if (process.env.SKIP_SDLC === '1' || process.env.SKIP_SDLC === 'true') {
     console.log('⚠️  Bypassing Quality Gates checks (SKIP_SDLC=1)');
-    return true;
+    return { success: true, failureLogs: '' };
   }
 
   console.log(`🛡️  Enforcing Quality Gates for transition from '${currentPhase}'...`);
+  let result;
 
   switch (currentPhase) {
     case 'discovery':
@@ -219,23 +346,31 @@ function validateQualityGate(issueId, currentPhase) {
 
       if (hasClientChanges || runAll) {
         const clientDir = path.join(repoRoot, 'client');
-        if (!runCheck('dart format --set-exit-if-changed .', clientDir, 'Client formatting check')) return false;
-        if (!runCheck('flutter analyze', clientDir, 'Client static analysis')) return false;
-        if (!runCheck('flutter test', clientDir, 'Client unit tests')) return false;
+        result = runCheck('dart format --set-exit-if-changed .', clientDir, 'Client formatting check');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('flutter analyze', clientDir, 'Client static analysis');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('flutter test', clientDir, 'Client unit tests');
+        if (!result.success) return { success: false, failureLogs: result.logs };
       }
 
       if (hasBackendChanges || runAll) {
         const backendDir = path.join(repoRoot, 'backend', 'functions');
         // Ensure node_modules exists
         if (!fs.existsSync(path.join(backendDir, 'node_modules'))) {
-          if (!runCheck('npm ci || npm install', backendDir, 'Backend dependency installation')) return false;
+          result = runCheck('npm ci || npm install', backendDir, 'Backend dependency installation');
+          if (!result.success) return { success: false, failureLogs: result.logs };
         }
-        if (!runCheck('npm run format:check', backendDir, 'Backend formatting check')) return false;
-        if (!runCheck('npm run lint', backendDir, 'Backend linting')) return false;
-        if (!runCheck('npm run test', backendDir, 'Backend unit tests')) return false;
-        if (!runCheck('npm run build', backendDir, 'Backend TypeScript compilation')) return false;
+        result = runCheck('npm run format:check', backendDir, 'Backend formatting check');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('npm run lint', backendDir, 'Backend linting');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('npm run test', backendDir, 'Backend unit tests');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('npm run build', backendDir, 'Backend TypeScript compilation');
+        if (!result.success) return { success: false, failureLogs: result.logs };
       }
-      return true;
+      return { success: true, failureLogs: '' };
       
     case 'qa_validation':
       return verifyDeliverable(issueId, 'QA_REPORT.md');
@@ -244,7 +379,7 @@ function validateQualityGate(issueId, currentPhase) {
       return verifyDeliverable(issueId, 'LESSONS_LEARNED.md');
       
     default:
-      return true;
+      return { success: true, failureLogs: '' };
   }
 }
 
@@ -277,9 +412,65 @@ function transitionIssue(issueIdStr, comment = '') {
   }
 
   // Validate programmatic quality gates
-  if (!validateQualityGate(issueId, metadata.current_phase)) {
+  const gateResult = validateQualityGate(issueId, metadata.current_phase);
+  if (!gateResult.success) {
     console.log(`🛑 Transition blocked due to Quality Gate violation.`);
+    
+    const activePhase = metadata.current_phase;
+    const targetAgent = metadata.assigned_agent || 'senior_developer';
+    
+    // Write QUALITY_GATE_FAILURE.md under state/issue_<id>/
+    const issueDir = path.join(ROOT_DIR, 'state', `issue_${issueId}`);
+    ensureDir(issueDir);
+    const failureFilePath = path.join(issueDir, 'QUALITY_GATE_FAILURE.md');
+    const timestampStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    
+    const failureContent = `# Quality Gate Failure: Issue #${issueId}\n\n- **Timestamp**: ${timestampStr}\n- **Phase**: \`${activePhase}\`\n- **Assignee**: \`${targetAgent}\`\n\n## 📋 Error & Verification Diagnostics\n\n\`\`\`text\n${gateResult.failureLogs}\n\`\`\`\n`;
+    fs.writeFileSync(failureFilePath, failureContent, 'utf8');
+    
+    // Auto reject the issue state back to implementation
+    metadata.current_phase = 'implementation';
+    metadata.assigned_agent = 'senior_developer';
+    metadata.status = 'blueprint-revision';
+    metadata.hitl_approval_required = false;
+    metadata.hitl_approved_by = '';
+    
+    // Append audit log
+    const logEntry = `\n- **${timestampStr}**: ❌ Quality Gate verification FAILED during \`${activePhase}\`. Sent back to \`senior_developer\` for blueprint-revision.`;
+    let updatedBody = body;
+    const auditHeader = '## 📋 Audit Log & Stage Transitions';
+    const auditLogIdx = body.indexOf(auditHeader);
+    if (auditLogIdx !== -1) {
+      updatedBody = body.substring(0, auditLogIdx + auditHeader.length) + logEntry + body.substring(auditLogIdx + auditHeader.length);
+    }
+    
+    // Update blockers section
+    const blockerHeader = '## 🔄 Blockers & Review Feedback';
+    const blockerIdx = updatedBody.indexOf(blockerHeader);
+    const loopEntry = `\n### Quality Gate Failure Loop (${timestampStr})\n- **By**: Automated Orchestrator\n- **Feedback**: Verification check failed in phase \`${activePhase}\`. Diagnostics saved to [QUALITY_GATE_FAILURE.md](file://${failureFilePath}).\n- **Status**: Active Revision Needed\n`;
+    if (blockerIdx !== -1) {
+      updatedBody = updatedBody.substring(0, blockerIdx + blockerHeader.length) + loopEntry + updatedBody.substring(blockerIdx + blockerHeader.length);
+    } else {
+      updatedBody += `\n\n${blockerHeader}${loopEntry}`;
+    }
+    
+    const serialized = serializeMarkdownState(metadata, updatedBody);
+    fs.writeFileSync(filePath, serialized, 'utf8');
+    
+    console.log(`❌ Auto-rejected Issue #${issueId} due to verification failures. Re-assigned to senior_developer.`);
     return;
+  }
+
+  // If the phase was implementation, and we successfully validated it:
+  if (metadata.current_phase === 'implementation') {
+    try {
+      const headHash = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+      const verifiedFilePath = path.join(ROOT_DIR, 'state', `issue_${issueId}`, '.sdlc_verified');
+      fs.writeFileSync(verifiedFilePath, headHash, 'utf8');
+      console.log(`✅ Generated .sdlc_verified token for commit: ${headHash}`);
+    } catch (e) {
+      console.warn('Warning: Could not write .sdlc_verified token:', e.message);
+    }
   }
 
   if (currentPhaseIndex >= phases.length - 1) {

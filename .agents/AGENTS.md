@@ -84,6 +84,13 @@ personas:
     role_description: "Reviews the completed cycle, identifies pitfalls, updates guidelines/documentation, and refactors code to improve future cycles."
     tools_allowed: ["read_file", "write_file", "run_command", "replace_file_content", "multi_replace_file_content", "grep_search"]
 
+  ai_principal_engineer:
+    name: "AI Principal Engineer Agent"
+    playbook: ".agents/skills/ai_principal_engineer/SKILL.md"
+    git_label: "status:ai-principal-engineering"
+    role_description: "Designs and builds AI SDLC autonomous systems, optimizes context engineering, and orchestrates agent workflows."
+    tools_allowed: ["read_file", "write_file", "run_command", "grep_search"]
+
 ```
 
 ---
@@ -129,6 +136,11 @@ lifecycle_paths:
         assignee: "tech_lead"
         output_file: "BLUEPRINT.md"
         next_phase: "implementation"
+        hitl_gate: false
+
+      - id: "implementation"
+        assignee: "senior_developer"
+        next_phase: "qa_validation"
         hitl_gate: false
 
       - id: "qa_validation"
