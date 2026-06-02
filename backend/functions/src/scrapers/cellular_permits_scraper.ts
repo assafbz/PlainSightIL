@@ -187,8 +187,9 @@ export async function scrapeAndSyncPermitApplications(
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
         const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
-          if (snap.exists) {
-            existingMap.set(snap.id, snap.data());
+          const data = snap.data();
+          if (snap.exists && data) {
+            existingMap.set(snap.id, data);
           }
         }
 
