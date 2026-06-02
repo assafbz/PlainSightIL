@@ -4,7 +4,8 @@ import {
   parseDDMMYYYY,
   parseDoctorRecord,
   scrapeAndSyncDoctorsLicenses,
-} from "../src/scrapers/9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+} from "../src/scrapers/doctors_licenses_scraper";
+import { DATASET_IDS } from "../src/utils/constants";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -111,7 +112,7 @@ describe("Doctors Licenses Ingest Sync Process", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "9c64c522-bbc2-48fe-96fb-3b2a8626f59e") {
+      if (id === DATASET_IDS.DOCTORS_LICENSES) {
         return {
           set: mockMetadataSet,
         };
@@ -179,17 +180,17 @@ describe("Doctors Licenses Ingest Sync Process", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    expect(mockCollection).toHaveBeenCalledWith("9c64c522-bbc2-48fe-96fb-3b2a8626f59e");
+    expect(mockCollection).toHaveBeenCalledWith(DATASET_IDS.DOCTORS_LICENSES);
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
 
     const written = mockBatch.set.mock.calls[0][1];
     expect(written.id).toBe("1");
     expect(written.firstName).toBe("מריו ה");
 
-    expect(mockDoc).toHaveBeenCalledWith("9c64c522-bbc2-48fe-96fb-3b2a8626f59e");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.DOCTORS_LICENSES);
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "9c64c522-bbc2-48fe-96fb-3b2a8626f59e",
+        activeCollection: DATASET_IDS.DOCTORS_LICENSES,
         status: "idle",
         recordCount: 1,
       }),

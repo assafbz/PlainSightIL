@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import '../data/models/doctor_license_model.dart';
 
 /// Glassmorphic bottom drawer detail panel for a doctor's license record.
@@ -244,7 +245,7 @@ class DoctorDetailDrawer extends StatelessWidget {
                               border: Border.all(color: AppColors.glassBorder),
                             ),
                             child: Text(
-                              'Resource ID: 9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+                              'Resource ID: ${DatasetIds.doctorsLicenses}',
                               style: AppTypography.labelXs(
                                 context,
                                 color: AppColors.textTertiary,

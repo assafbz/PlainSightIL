@@ -7,7 +7,8 @@ import {
   getTranslatedOperator,
   parsePermitRecord,
   scrapeAndSyncPermitApplications,
-} from "../src/scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
+} from "../src/scrapers/cellular_permits_scraper";
+import { DATASET_IDS } from "../src/utils/constants";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -114,7 +115,7 @@ describe("Incremental Update Scraper Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "ff398c7e-c522-4ee8-a53a-312b188a573d") {
+      if (id === DATASET_IDS.CELLULAR_PERMITS) {
         return {
           set: mockMetadataSet,
         };
@@ -184,7 +185,7 @@ describe("Incremental Update Scraper Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    expect(mockCollection).toHaveBeenCalledWith("ff398c7e-c522-4ee8-a53a-312b188a573d");
+    expect(mockCollection).toHaveBeenCalledWith(DATASET_IDS.CELLULAR_PERMITS);
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
 
@@ -195,10 +196,10 @@ describe("Incremental Update Scraper Ingestion", () => {
     expect(writtenRecord.lastUpdated).toBeDefined();
 
     // Verify metadata update
-    expect(mockDoc).toHaveBeenCalledWith("ff398c7e-c522-4ee8-a53a-312b188a573d");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.CELLULAR_PERMITS);
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "ff398c7e-c522-4ee8-a53a-312b188a573d",
+        activeCollection: DATASET_IDS.CELLULAR_PERMITS,
         status: "idle",
         recordCount: 1,
       }),

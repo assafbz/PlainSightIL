@@ -4,6 +4,7 @@ import { logger } from "firebase-functions";
 import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
+import { DATASET_IDS } from "../utils/constants";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -121,26 +122,26 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
     referenceNumber,
     company,
     permitType,
-    siteNumber,
     locality,
     addressDescription,
     focalPointType,
     coordinates: new GeoPoint(latitude, longitude),
     geohash,
     jurisdiction,
+    siteNumber,
     lastUpdated: new Date().toISOString(),
   };
 }
 
 export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
-  resourceId = "ff398c7e-c522-4ee8-a53a-312b188a573d",
+  resourceId = DATASET_IDS.CELLULAR_PERMITS,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
+  const datasetId = DATASET_IDS.CELLULAR_PERMITS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "ff398c7e-c522-4ee8-a53a-312b188a573d";
+    const targetCollection = DATASET_IDS.CELLULAR_PERMITS;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     // Paginated API fetch from data.gov.il datastore search

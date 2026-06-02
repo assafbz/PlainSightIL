@@ -7,7 +7,8 @@ import {
   scrapeAndSyncAntennas,
   convertItmToWgs84,
   isValidIsraelCoordinates,
-} from "../src/scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
+} from "../src/scrapers/cellular_antennas_scraper";
+import { DATASET_IDS } from "../src/utils/constants";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -132,7 +133,7 @@ describe("Scraper and Sync Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "8935c8e5-ec77-421f-af86-d970583195f8") {
+      if (id === DATASET_IDS.CELLULAR_ANTENNAS) {
         return {
           set: mockMetadataSet,
         };
@@ -208,7 +209,7 @@ describe("Scraper and Sync Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(2);
 
-    expect(mockCollection).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
+    expect(mockCollection).toHaveBeenCalledWith(DATASET_IDS.CELLULAR_ANTENNAS);
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(2);
 
@@ -219,10 +220,10 @@ describe("Scraper and Sync Ingestion", () => {
     expect(doc1.lastUpdated).toBeDefined();
 
     // Verify metadata update
-    expect(mockDoc).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.CELLULAR_ANTENNAS);
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "8935c8e5-ec77-421f-af86-d970583195f8",
+        activeCollection: DATASET_IDS.CELLULAR_ANTENNAS,
         status: "idle",
         recordCount: 2,
       }),
