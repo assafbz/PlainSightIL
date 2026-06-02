@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plainsight/core/errors/exceptions.dart';
 import '../models/user_profile_model.dart';
 
 /// Data source interface for fetching and updating profile documents in Cloud Firestore.
@@ -20,36 +21,46 @@ class UserProfileRemoteDataSourceImpl implements UserProfileRemoteDataSource {
 
   @override
   Stream<UserProfileModel?> getUserProfile(String uid) {
-    return firestore.collection('users').doc(uid).snapshots().map((doc) {
-      if (!doc.exists || doc.data() == null) {
-        return null;
-      }
-      return UserProfileModel.fromMap(doc.data()!);
-    });
+    try {
+      return firestore.collection('users').doc(uid).snapshots().map((doc) {
+        if (!doc.exists || doc.data() == null) {
+          return null;
+        }
+        return UserProfileModel.fromMap(doc.data()!);
+      }).handleError((Object error) {
+        throw ServerException(error.toString());
+      });
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
   }
 
   @override
   Future<void> updateUserProfile(UserProfileModel model) async {
-    final docRef = firestore.collection('users').doc(model.uid);
-    final docSnap = await docRef.get();
-    if (docSnap.exists) {
-      final Map<String, dynamic> updateData = {
-        'firstName': model.firstName,
-        'lastName': model.lastName,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      await docRef.update(updateData);
-    } else {
-      final Map<String, dynamic> setData = {
-        'uid': model.uid,
-        'firstName': model.firstName,
-        'lastName': model.lastName,
-        'email': model.email,
-        'role': 'user',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      await docRef.set(setData);
+    try {
+      final docRef = firestore.collection('users').doc(model.uid);
+      final docSnap = await docRef.get();
+      if (docSnap.exists) {
+        final Map<String, dynamic> updateData = {
+          'firstName': model.firstName,
+          'lastName': model.lastName,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        await docRef.update(updateData);
+      } else {
+        final Map<String, dynamic> setData = {
+          'uid': model.uid,
+          'firstName': model.firstName,
+          'lastName': model.lastName,
+          'email': model.email,
+          'role': 'user',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        await docRef.set(setData);
+      }
+    } catch (e) {
+      throw ServerException(e.toString());
     }
   }
 }

@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
 import { DATASET_IDS } from "./constants";
+import { AppLogger as logger } from "./logger";
 
 /**
  * Tracks execution metrics and computes database operation quota estimates

@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { GeoPoint } from "firebase-admin/firestore";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
@@ -146,9 +146,10 @@ export async function scrapeAndSyncPermitApplications(
     const targetCollection = DATASET_IDS.CELLULAR_PERMITS;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -156,7 +157,8 @@ export async function scrapeAndSyncPermitApplications(
     const now = new Date().toISOString();
 
     while (hasMore) {
-      const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
 
       const response = await axios.get(url);
@@ -221,6 +223,11 @@ export async function scrapeAndSyncPermitApplications(
         if (hasWrites) {
           await batch.commit();
         }
+      }
+
+      if (isEmulator) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;

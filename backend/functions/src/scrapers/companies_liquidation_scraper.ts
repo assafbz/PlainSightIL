@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
 import { areRecordsEqual } from "../utils/equality";
@@ -132,13 +132,13 @@ export async function scrapeAndSyncCompaniesLiquidation(
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
   try {
     const targetCollection = DATASET_IDS.COMPANIES_LIQUIDATION;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -146,7 +146,8 @@ export async function scrapeAndSyncCompaniesLiquidation(
     const now = new Date().toISOString();
 
     while (hasMore) {
-      const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
 
       const response = await axios.get(url);
@@ -207,6 +208,11 @@ export async function scrapeAndSyncCompaniesLiquidation(
         if (hasWrites) {
           await batch.commit();
         }
+      }
+
+      if (isEmulator) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;
