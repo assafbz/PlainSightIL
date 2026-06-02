@@ -72,12 +72,15 @@ class _MyAppState extends State<MyApp> {
             ),
             useMaterial3: true,
           ),
-          home: Directionality(
-            textDirection: _appState.textDirection,
-            child: (!_appState.isAuthenticated && !_appState.isGuestMode)
-                ? LoginPage(appState: _appState)
-                : AppShell(appState: _appState),
-          ),
+          builder: (context, child) {
+            return Directionality(
+              textDirection: _appState.textDirection,
+              child: child!,
+            );
+          },
+          home: (!_appState.isAuthenticated && !_appState.isGuestMode)
+              ? LoginPage(appState: _appState)
+              : AppShell(appState: _appState),
         );
       },
     );
