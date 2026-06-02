@@ -46,9 +46,9 @@ describe("Geohash Utility", () => {
 });
 
 describe("Record Parser", () => {
-  it("should return null if ID or coordinates are missing", () => {
+  it("should return null if מזהה or coordinates are missing", () => {
     const incompleteRecord = {
-      ID: 123,
+      מזהה: 123,
       X_ITM: 255812,
       // Y_ITM missing
     };
@@ -57,7 +57,7 @@ describe("Record Parser", () => {
 
   it("should parse and translate Hebrew fields correctly", () => {
     const raw = {
-      ID: 6793,
+      מזהה: 6793,
       X_ITM: 255812,
       Y_ITM: 732929,
       חברה: "סלקום",
@@ -90,7 +90,7 @@ describe("Record Parser", () => {
 
   it("should handle frequency parsing correctly", () => {
     const raw5g = {
-      ID: 1,
+      מזהה: 1,
       X_ITM: 255812,
       Y_ITM: 732929,
       "טכנולוגיית שידור": "דור 5",
@@ -99,7 +99,7 @@ describe("Record Parser", () => {
     expect(parsed5g?.radiationFrequency).toBe(3500);
 
     const raw3g = {
-      ID: 2,
+      מזהה: 2,
       X_ITM: 255812,
       Y_ITM: 732929,
       "טכנולוגיית שידור": "דור 3",
@@ -108,7 +108,7 @@ describe("Record Parser", () => {
     expect(parsed3g?.radiationFrequency).toBe(2100);
 
     const raw2g = {
-      ID: 3,
+      מזהה: 3,
       X_ITM: 255812,
       Y_ITM: 732929,
       "טכנולוגיית שידור": "דור 2",
@@ -183,14 +183,14 @@ describe("Scraper and Sync Ingestion", () => {
         result: {
           records: [
             {
-              ID: "6793",
+              מזהה: "6793",
               X_ITM: 255812,
               Y_ITM: 732929,
               חברה: "פלאפון",
               "היתר קרינה": "יש היתר",
             },
             {
-              ID: "6794",
+              מזהה: "6794",
               X_ITM: 255812,
               Y_ITM: 732929,
               חברה: "פרטנר",
@@ -246,7 +246,7 @@ describe("Scraper and Sync Ingestion", () => {
         result: {
           records: [
             {
-              ID: "6793",
+              מזהה: "6793",
               X_ITM: 255812,
               Y_ITM: 732929,
               חברה: "פלאפון",

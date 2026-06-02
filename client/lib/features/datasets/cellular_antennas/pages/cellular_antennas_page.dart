@@ -742,7 +742,7 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "ID: ${item['antennaId']}",
+                        "${appState.translate('antenna_id_prefix')}${item['antennaId']}",
                         style: AppTypography.headlineMd(
                           context,
                           color: AppColors.textPrimary,

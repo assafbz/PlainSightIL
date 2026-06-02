@@ -42,7 +42,7 @@ export function getTranslatedOperator(rawValue: string): { he: string; en: strin
 }
 
 export interface HebrewAntennaRecord {
-  ID?: number | string;
+  מזהה?: number | string;
   _id?: number;
   חברה?: string;
   "מס' אתר"?: string;
@@ -142,7 +142,7 @@ function translateAddress(hebrewAddress: string): string {
 }
 
 export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null {
-  const rawId = record.ID ?? record._id;
+  const rawId = record.מזהה ?? record._id;
   const x = record.X_ITM;
   const y = record.Y_ITM;
 
