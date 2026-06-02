@@ -5,8 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import 'package:plainsight/features/towers/presentation/pages/cellular_antennas_page.dart';
-import 'package:plainsight/features/towers/presentation/widgets/cellular_antennas_map_view.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/widgets/cellular_antennas_map_view.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

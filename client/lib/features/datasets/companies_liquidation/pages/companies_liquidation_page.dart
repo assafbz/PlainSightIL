@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import '../../data/models/liquidation_record_model.dart';
+import '../data/models/liquidation_record_model.dart';
 import '../widgets/liquidation_detail_drawer.dart';
 
 class CompaniesLiquidationScreen extends StatefulWidget {

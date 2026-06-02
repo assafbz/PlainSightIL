@@ -10,7 +10,7 @@ import 'local_storage.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
-import '../../features/directory/data/models/liquidation_record_model.dart';
+import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 import '../../features/profile/domain/repositories/user_profile_repository.dart';
 import '../../features/profile/domain/usecases/get_user_profile.dart';

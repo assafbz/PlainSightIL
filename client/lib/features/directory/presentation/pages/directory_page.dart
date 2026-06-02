@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
-import 'package:plainsight/features/towers/presentation/pages/cellular_antennas_page.dart';
-import 'package:plainsight/features/directory/presentation/pages/companies_liquidation_page.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
+import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
