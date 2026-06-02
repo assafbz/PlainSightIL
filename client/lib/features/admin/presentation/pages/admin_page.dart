@@ -67,22 +67,32 @@ class _AdminPageState extends State<AdminPage> {
                 Icon(Icons.lock_outline, color: AppColors.danger, size: 64),
                 const SizedBox(height: 16),
                 Text(
-                  widget.appState.locale == 'he' ? 'גישה נדחתה' : 'Access Denied',
-                  style: AppTypography.headlineLg(context, color: AppColors.textPrimary).copyWith(fontWeight: FontWeight.bold),
+                  widget.appState.locale == 'he'
+                      ? 'גישה נדחתה'
+                      : 'Access Denied',
+                  style: AppTypography.headlineLg(
+                    context,
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   widget.appState.locale == 'he'
                       ? 'אין לך הרשאות לגשת לדף זה.'
                       : 'You do not have permission to access this page.',
-                  style: AppTypography.bodyLg(context, color: AppColors.textSecondary),
+                  style: AppTypography.bodyLg(
+                    context,
+                    color: AppColors.textSecondary,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.arrow_back),
-                  label: Text(widget.appState.locale == 'he' ? 'חזור' : 'Go Back'),
+                  label: Text(
+                    widget.appState.locale == 'he' ? 'חזור' : 'Go Back',
+                  ),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: AppColors.onPrimary,
                     backgroundColor: AppColors.primary,
@@ -137,12 +147,15 @@ class _AdminPageState extends State<AdminPage> {
         final isLoading = widget.appState.isLoadingAdminMetadata;
 
         // Map over data spec and merge live status from appState
-        final List<Map<String, dynamic>> enrichedDatasets = datasetsSpec.map((spec) {
+        final List<Map<String, dynamic>> enrichedDatasets = datasetsSpec.map((
+          spec,
+        ) {
           final liveData = metadataMap[spec['id']] ?? {};
-          final status = (liveData['status'] as String? ?? 'idle').toLowerCase();
+          final status = (liveData['status'] as String? ?? 'idle')
+              .toLowerCase();
           final recordCount = liveData['recordCount'] as num? ?? 0;
           final lastUpdated = liveData['lastUpdated'] as String? ?? '';
-          
+
           return {
             ...spec,
             'status': status,
@@ -152,17 +165,26 @@ class _AdminPageState extends State<AdminPage> {
         }).toList();
 
         // Apply Search and Filter matching functional requirements
-        final List<Map<String, dynamic>> filteredDatasets = enrichedDatasets.where((dataset) {
-          final title = (widget.appState.locale == 'he' ? dataset['titleHe'] : dataset['titleEn']).toString().toLowerCase();
-          final resourceId = dataset['resourceId'].toString().toLowerCase();
-          final query = _searchQuery.toLowerCase();
+        final List<Map<String, dynamic>> filteredDatasets = enrichedDatasets
+            .where((dataset) {
+              final title =
+                  (widget.appState.locale == 'he'
+                          ? dataset['titleHe']
+                          : dataset['titleEn'])
+                      .toString()
+                      .toLowerCase();
+              final resourceId = dataset['resourceId'].toString().toLowerCase();
+              final query = _searchQuery.toLowerCase();
 
-          final matchesSearch = title.contains(query) || resourceId.contains(query);
+              final matchesSearch =
+                  title.contains(query) || resourceId.contains(query);
 
-          final matchesStatus = _statusFilter == 'all' || dataset['status'] == _statusFilter;
+              final matchesStatus =
+                  _statusFilter == 'all' || dataset['status'] == _statusFilter;
 
-          return matchesSearch && matchesStatus;
-        }).toList();
+              return matchesSearch && matchesStatus;
+            })
+            .toList();
 
         return Scaffold(
           backgroundColor: AppColors.baseBg,
@@ -196,25 +218,29 @@ class _AdminPageState extends State<AdminPage> {
                     // Datasets List View
                     Expanded(
                       child: isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(),
-                            )
+                          ? const Center(child: CircularProgressIndicator())
                           : filteredDatasets.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    widget.appState.translate('no_results'),
-                                    style: AppTypography.bodyLg(context, color: AppColors.textSecondary),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                  physics: const BouncingScrollPhysics(),
-                                  itemCount: filteredDatasets.length,
-                                  itemBuilder: (context, index) {
-                                    final dataset = filteredDatasets[index];
-                                    return _buildDatasetCard(context, dataset);
-                                  },
+                          ? Center(
+                              child: Text(
+                                widget.appState.translate('no_results'),
+                                style: AppTypography.bodyLg(
+                                  context,
+                                  color: AppColors.textSecondary,
                                 ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 8.0,
+                              ),
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: filteredDatasets.length,
+                              itemBuilder: (context, index) {
+                                final dataset = filteredDatasets[index];
+                                return _buildDatasetCard(context, dataset);
+                              },
+                            ),
                     ),
                   ],
                 ),
@@ -272,10 +298,16 @@ class _AdminPageState extends State<AdminPage> {
             ),
             child: TextField(
               controller: _searchController,
-              style: AppTypography.bodyLg(context, color: AppColors.textPrimary),
+              style: AppTypography.bodyLg(
+                context,
+                color: AppColors.textPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: widget.appState.translate('search_datasets'),
-                hintStyle: AppTypography.bodySm(context, color: AppColors.textTertiary),
+                hintStyle: AppTypography.bodySm(
+                  context,
+                  color: AppColors.textTertiary,
+                ),
                 prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -298,13 +330,25 @@ class _AdminPageState extends State<AdminPage> {
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
-                _buildFilterChip('all', widget.appState.translate('filter_status_all')),
+                _buildFilterChip(
+                  'all',
+                  widget.appState.translate('filter_status_all'),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip('idle', widget.appState.translate('filter_status_idle')),
+                _buildFilterChip(
+                  'idle',
+                  widget.appState.translate('filter_status_idle'),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip('syncing', widget.appState.translate('filter_status_syncing')),
+                _buildFilterChip(
+                  'syncing',
+                  widget.appState.translate('filter_status_syncing'),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip('error', widget.appState.translate('filter_status_error')),
+                _buildFilterChip(
+                  'error',
+                  widget.appState.translate('filter_status_error'),
+                ),
               ],
             ),
           ),
@@ -316,7 +360,7 @@ class _AdminPageState extends State<AdminPage> {
   /// Build status filter chip
   Widget _buildFilterChip(String value, String label) {
     final isSelected = _statusFilter == value;
-    
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -328,7 +372,9 @@ class _AdminPageState extends State<AdminPage> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withAlpha(40) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withAlpha(40)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.glassBorder,
@@ -376,8 +422,16 @@ class _AdminPageState extends State<AdminPage> {
         break;
     }
 
-    final title = (widget.appState.locale == 'he' ? dataset['titleHe'] : dataset['titleEn']) as String;
-    final agency = (widget.appState.locale == 'he' ? dataset['agencyHe'] : dataset['agencyEn']) as String;
+    final title =
+        (widget.appState.locale == 'he'
+                ? dataset['titleHe']
+                : dataset['titleEn'])
+            as String;
+    final agency =
+        (widget.appState.locale == 'he'
+                ? dataset['agencyHe']
+                : dataset['agencyEn'])
+            as String;
     final resourceId = dataset['resourceId'] as String;
 
     return Padding(
@@ -399,16 +453,20 @@ class _AdminPageState extends State<AdminPage> {
                   Expanded(
                     child: Text(
                       title,
-                      style: AppTypography.bodyLg(context, color: AppColors.textPrimary).copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTypography.bodyLg(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  
+
                   // Status Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
@@ -424,10 +482,10 @@ class _AdminPageState extends State<AdminPage> {
                         const SizedBox(width: 4),
                         Text(
                           widget.appState.translate(statusLabelKey),
-                          style: AppTypography.labelXs(context, color: statusColor).copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: AppTypography.labelXs(
+                            context,
+                            color: statusColor,
+                          ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -468,13 +526,11 @@ class _AdminPageState extends State<AdminPage> {
                 isMonospace: true,
               ),
               const Divider(color: Color(0x14FFFFFF), height: 20),
-              
+
               // Actions row (Trigger Manual Sync) (FR-01)
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  _buildSyncButton(context, dataset),
-                ],
+                children: [_buildSyncButton(context, dataset)],
               ),
             ],
           ),
@@ -510,19 +566,20 @@ class _AdminPageState extends State<AdminPage> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: AppTypography.bodySm(context, color: AppColors.textSecondary).copyWith(
-            fontSize: 12,
-            fontWeight: FontWeight.normal,
-          ),
+          style: AppTypography.bodySm(
+            context,
+            color: AppColors.textSecondary,
+          ).copyWith(fontSize: 12, fontWeight: FontWeight.normal),
         ),
         Expanded(
           child: Text(
             value,
-            style: AppTypography.bodySm(context, color: AppColors.textPrimary).copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              fontFamily: isMonospace ? 'Courier' : null,
-            ),
+            style: AppTypography.bodySm(context, color: AppColors.textPrimary)
+                .copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: isMonospace ? 'Courier' : null,
+                ),
             overflow: TextOverflow.ellipsis,
             maxLines: 2,
           ),
@@ -552,7 +609,9 @@ class _AdminPageState extends State<AdminPage> {
         : (isHeb ? 'סנכרן ידנית' : 'Trigger Sync');
 
     return Semantics(
-      label: isHeb ? 'הפעל סנכרון ידני עבור $datasetId' : 'Trigger manual sync for $datasetId',
+      label: isHeb
+          ? 'הפעל סנכרון ידני עבור $datasetId'
+          : 'Trigger manual sync for $datasetId',
       button: true,
       enabled: !isSyncing,
       child: Container(
@@ -567,15 +626,18 @@ class _AdminPageState extends State<AdminPage> {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.textTertiary),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.textTertiary,
+                    ),
                   ),
                 )
               : const Icon(Icons.sync, size: 18),
           label: Text(
             buttonText,
-            style: AppTypography.labelXs(context, color: isSyncing ? AppColors.textTertiary : AppColors.onPrimary).copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTypography.labelXs(
+              context,
+              color: isSyncing ? AppColors.textTertiary : AppColors.onPrimary,
+            ).copyWith(fontWeight: FontWeight.bold),
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: isSyncing ? AppColors.surfaceHigh : buttonColor,
@@ -584,7 +646,9 @@ class _AdminPageState extends State<AdminPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
-                color: isSyncing ? AppColors.glassBorder : buttonColor.withAlpha(50),
+                color: isSyncing
+                    ? AppColors.glassBorder
+                    : buttonColor.withAlpha(50),
                 width: 1,
               ),
             ),

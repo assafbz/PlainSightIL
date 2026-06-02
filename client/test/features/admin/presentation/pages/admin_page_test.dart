@@ -8,64 +8,65 @@ void main() {
     AppStateNotifier.isTesting = true;
   });
 
-  testWidgets('AdminPage renders supported datasets list and filters correct records', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1200, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'AdminPage renders supported datasets list and filters correct records',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    final appState = AppStateNotifier();
+      final appState = AppStateNotifier();
 
-    // Build the AdminPage within a MaterialApp framework
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Directionality(
-          textDirection: TextDirection.ltr,
-          child: AdminPage(appState: appState),
+      // Build the AdminPage within a MaterialApp framework
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.ltr,
+            child: AdminPage(appState: appState),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    // Verify Title and Search Bar exist
-    expect(find.text('Admin Dashboard'), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
+      // Verify Title and Search Bar exist
+      expect(find.text('Admin Dashboard'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
 
-    // Verify all three supported datasets cards exist initially
-    expect(find.text('Cellular Antennas'), findsOneWidget);
-    expect(find.text('Cellular Permit Applications'), findsOneWidget);
-    expect(find.text('Companies in Liquidation'), findsOneWidget);
+      // Verify all three supported datasets cards exist initially
+      expect(find.text('Cellular Antennas'), findsOneWidget);
+      expect(find.text('Cellular Permit Applications'), findsOneWidget);
+      expect(find.text('Companies in Liquidation'), findsOneWidget);
 
-    // Type query "Permit" in Search Field
-    await tester.enterText(find.byType(TextField), 'Permit');
-    await tester.pumpAndSettle();
+      // Type query "Permit" in Search Field
+      await tester.enterText(find.byType(TextField), 'Permit');
+      await tester.pumpAndSettle();
 
-    // Verify list is filtered
-    expect(find.text('Cellular Antennas'), findsNothing);
-    expect(find.text('Cellular Permit Applications'), findsOneWidget);
-    expect(find.text('Companies in Liquidation'), findsNothing);
+      // Verify list is filtered
+      expect(find.text('Cellular Antennas'), findsNothing);
+      expect(find.text('Cellular Permit Applications'), findsOneWidget);
+      expect(find.text('Companies in Liquidation'), findsNothing);
 
-    // Clear search query
-    await tester.enterText(find.byType(TextField), '');
-    await tester.pumpAndSettle();
+      // Clear search query
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
 
-    // Verify list goes back to showing all datasets
-    expect(find.text('Cellular Antennas'), findsOneWidget);
-    expect(find.text('Companies in Liquidation'), findsOneWidget);
+      // Verify list goes back to showing all datasets
+      expect(find.text('Cellular Antennas'), findsOneWidget);
+      expect(find.text('Companies in Liquidation'), findsOneWidget);
 
-    // Filter by Error status (by default mock datasets are status 'idle')
-    await tester.tap(find.text('Error'));
-    await tester.pumpAndSettle();
+      // Filter by Error status (by default mock datasets are status 'idle')
+      await tester.tap(find.text('Error'));
+      await tester.pumpAndSettle();
 
-    // Verify no datasets match the "Error" status filter
-    expect(find.text('Cellular Antennas'), findsNothing);
-    expect(find.text('Companies in Liquidation'), findsNothing);
-    expect(find.text('No records found'), findsOneWidget);
-  });
+      // Verify no datasets match the "Error" status filter
+      expect(find.text('Cellular Antennas'), findsNothing);
+      expect(find.text('Companies in Liquidation'), findsNothing);
+      expect(find.text('No records found'), findsOneWidget);
+    },
+  );
 
   testWidgets('AdminPage renders Access Denied when user is not admin', (
     WidgetTester tester,
@@ -120,9 +121,7 @@ void main() {
       MaterialApp(
         home: Directionality(
           textDirection: TextDirection.ltr,
-          child: Scaffold(
-            body: AdminPage(appState: appState),
-          ),
+          child: Scaffold(body: AdminPage(appState: appState)),
         ),
       ),
     );
@@ -137,20 +136,24 @@ void main() {
 
     // Tap the first button to trigger manual sync
     await tester.tap(syncButtonsFinder.at(0));
-    
+
     // Pump to initiate state change and verify immediate syncing visual feedback
     await tester.pump();
     expect(find.text('Syncing...'), findsOneWidget);
 
     // Wait for the mock Future delay in triggerManualSync (1 second) to complete
     await tester.pump(const Duration(seconds: 1));
-    await tester.pump(); // Run microtasks scheduled by Future resolution (calls showSnackBar)
+    await tester
+        .pump(); // Run microtasks scheduled by Future resolution (calls showSnackBar)
     // Pump frames to allow SnackBar slide-up animation to complete (without auto-dismissing)
     await tester.pump(const Duration(milliseconds: 500));
 
     // The mock sync should complete and return to idle with a success SnackBar
     expect(find.text('Syncing...'), findsNothing);
     expect(find.text('Trigger Sync'), findsNWidgets(3));
-    expect(find.text('Sync completed successfully! Updated 10000 records.'), findsOneWidget);
+    expect(
+      find.text('Sync completed successfully! Updated 10000 records.'),
+      findsOneWidget,
+    );
   });
 }

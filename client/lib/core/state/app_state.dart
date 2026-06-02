@@ -311,7 +311,8 @@ class AppStateNotifier extends ChangeNotifier {
   bool _isLoadingAdminMetadata = true;
   StreamSubscription<QuerySnapshot>? _adminMetadataSubscription;
 
-  Map<String, Map<String, dynamic>> get datasetMetadataMap => _datasetMetadataMap;
+  Map<String, Map<String, dynamic>> get datasetMetadataMap =>
+      _datasetMetadataMap;
   bool get isLoadingAdminMetadata => _isLoadingAdminMetadata;
 
   List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
@@ -944,25 +945,23 @@ class AppStateNotifier extends ChangeNotifier {
   String get functionsBaseUrl {
     const String projectId = 'demo-plainsightil';
     const String region = 'us-central1';
-    
+
     if (isTesting) {
       return 'http://127.0.0.1:5002/$projectId/$region';
     }
-    
-    final bool isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+    final bool isAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
     return 'http://$host:5002/$projectId/$region';
   }
 
   Future<Map<String, dynamic>> triggerManualSync(String datasetId) async {
     AppLogger.info('Triggering manual sync for dataset: $datasetId');
-    
+
     // Immediately set local status to syncing to eliminate visual latency
     final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
-    _datasetMetadataMap[datasetId] = {
-      ...localMeta,
-      'status': 'syncing',
-    };
+    _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'syncing'};
     notifyListeners();
 
     if (isTesting) {
@@ -1010,39 +1009,30 @@ class AppStateNotifier extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
         return {
           'success': true,
           'message': data['message'] ?? 'Sync completed successfully',
           'count': data['count'] ?? 0,
         };
       } else {
-        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
-        final String errorMessage = data['error'] ?? data['message'] ?? 'Failed to trigger sync';
-        
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final String errorMessage =
+            data['error'] ?? data['message'] ?? 'Failed to trigger sync';
+
         // Reset local status to error
-        _datasetMetadataMap[datasetId] = {
-          ...localMeta,
-          'status': 'error',
-        };
+        _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
         notifyListeners();
 
-        return {
-          'success': false,
-          'message': errorMessage,
-        };
+        return {'success': false, 'message': errorMessage};
       }
     } catch (e) {
       AppLogger.error('Error triggering manual sync', e);
-      _datasetMetadataMap[datasetId] = {
-        ...localMeta,
-        'status': 'error',
-      };
+      _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
       notifyListeners();
-      return {
-        'success': false,
-        'message': e.toString(),
-      };
+      return {'success': false, 'message': e.toString()};
     }
   }
 
