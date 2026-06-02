@@ -26,6 +26,9 @@ class AppStateNotifier extends ChangeNotifier {
   String _locale = 'en';
   int _activeTab = 0;
   bool _isDarkMode = true;
+  bool _isCheckingApiHealth = false;
+
+  bool get isCheckingApiHealth => _isCheckingApiHealth;
 
   // Authentication states
   User? _currentUser;
@@ -1166,7 +1169,11 @@ class AppStateNotifier extends ChangeNotifier {
   /// Triggers a manual pings/health check of data.gov.il via Cloud Function.
   Future<void> triggerApiHealthCheck() async {
     AppLogger.info('Triggering manual API health check');
+    _isCheckingApiHealth = true;
+    notifyListeners();
+
     if (isTesting) {
+      await Future.delayed(const Duration(milliseconds: 800));
       _apiHealth = {
         'url': 'https://data.gov.il',
         'isReachable': true,
@@ -1174,11 +1181,16 @@ class AppStateNotifier extends ChangeNotifier {
         'latencyMs': 89,
         'lastChecked': DateTime.now().toIso8601String(),
       };
+      _isCheckingApiHealth = false;
       notifyListeners();
       return;
     }
 
-    if (!isFirebaseInitialized) return;
+    if (!isFirebaseInitialized) {
+      _isCheckingApiHealth = false;
+      notifyListeners();
+      return;
+    }
 
     try {
       final url = Uri.parse('$functionsBaseUrl/manualApiHealthCheck');
@@ -1188,6 +1200,9 @@ class AppStateNotifier extends ChangeNotifier {
       );
     } catch (e) {
       AppLogger.error('Failed to trigger API health check', e);
+    } finally {
+      _isCheckingApiHealth = false;
+      notifyListeners();
     }
   }
 
@@ -1575,6 +1590,7 @@ class AppStateNotifier extends ChangeNotifier {
       'api_status_reachable': 'Reachable',
       'api_status_unreachable': 'Unreachable',
       'check_now': 'Check Now',
+      'checking': 'Checking...',
       'avg_latency': 'Avg Latency: ',
       'firestore_reads_writes': 'Firestore R/W: ',
       'error_logbook': 'Recent Outages & Errors',
@@ -1730,6 +1746,7 @@ class AppStateNotifier extends ChangeNotifier {
       'api_status_reachable': 'זמין',
       'api_status_unreachable': 'לא זמין',
       'check_now': 'בדוק כעת',
+      'checking': 'בודק...',
       'avg_latency': 'זמן ריצה ממוצע: ',
       'firestore_reads_writes': 'קריאות/כתיבות: ',
       'error_logbook': 'שגיאות ותקלות אחרונות',

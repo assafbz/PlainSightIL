@@ -126,7 +126,8 @@ function triggerSeeding() {
     '/demo-plainsightil/us-central1/manualSyncMetadata',
     '/demo-plainsightil/us-central1/manualSyncPermitApps',
     '/demo-plainsightil/us-central1/manualSyncAntennas',
-    '/demo-plainsightil/us-central1/manualSyncCompaniesLiquidation'
+    '/demo-plainsightil/us-central1/manualSyncCompaniesLiquidation',
+    '/demo-plainsightil/us-central1/manualApiHealthCheck'
   ];
 
   const runSync = (index) => {
