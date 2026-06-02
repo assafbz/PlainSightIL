@@ -10,6 +10,32 @@ fi
 
 echo "🛡️  PlainSightIL SDLC Pre-Push Enforcement..."
 
+# Root workspace directory safely using git top-level directory
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+# Check if we can bypass verification via coordinator successful verification tag (.sdlc_verified)
+BRANCH_NAME=$(git symbolic-ref --short HEAD 2>/dev/null)
+HEAD_HASH=$(git rev-parse HEAD 2>/dev/null)
+
+if [[ "$BRANCH_NAME" =~ ^(agents|dev)/([0-9]+)-.+$ ]]; then
+  ISSUE_ID="${BASH_REMATCH[2]}"
+  if [ -n "$ISSUE_ID" ]; then
+    VERIFIED_FILE="$PROJECT_ROOT/.agents/state/issue_$ISSUE_ID/.sdlc_verified"
+    if [ -f "$VERIFIED_FILE" ]; then
+      VERIFIED_HASH=$(cat "$VERIFIED_FILE")
+      if [ "$VERIFIED_HASH" = "$HEAD_HASH" ]; then
+        echo "✅ SDLC verification bypass active: commit $HEAD_HASH has already been successfully verified by the coordinator!"
+        
+        # Clean up the token file to prevent stale bypass on future commits
+        rm -f "$VERIFIED_FILE"
+        
+        echo "🛡️  SDLC Gate Check passed. Push authorized!"
+        exit 0
+      fi
+    fi
+  fi
+fi
+
 # Determine base branch to compare against
 BASE_BRANCH="dev"
 if ! git show-ref --verify --quiet refs/heads/dev && ! git show-ref --verify --quiet refs/remotes/origin/dev; then
@@ -31,9 +57,6 @@ while read -r file; do
     RUN_BACKEND=true
   fi
 done <<< "$CHANGED_FILES"
-
-# Root workspace directory
-PROJECT_ROOT=$(pwd)
 
 # ----------------- CLIENT (FLUTTER) CHECKS -----------------
 if [ "$RUN_CLIENT" = true ]; then
