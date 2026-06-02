@@ -1,6 +1,6 @@
 {
   "name": "plainsightil-root",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Root workspace management scripts for PlainSightIL",
   "private": true,
   "scripts": {
@@ -9,9 +9,15 @@
     "client:start": "flutter run -d chrome --web-port 8080",
     "start": "node scripts/run.js",
     "kill": "node scripts/kill.js",
-    "prepare": "bash .agents/bin/install-hooks.sh"
+    "prepare": "bash .agents/bin/install-hooks.sh",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:ci": "node scripts/ci-e2e.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
 }

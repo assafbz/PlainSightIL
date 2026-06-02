@@ -41,19 +41,26 @@ function startServices() {
   // Start Flutter Client
   const device = process.env.FLUTTER_DEVICE || 'chrome';
   const port = process.env.FLUTTER_PORT || '8080';
-  console.log(`📱 Starting Flutter Client on device: ${device} (port: ${port})...`);
   
-  const clientArgs = ['run', '-d', device];
-  if (device === 'chrome') {
-    clientArgs.push('--web-port', port);
+  if (device !== 'none') {
+    console.log(`📱 Starting Flutter Client on device: ${device} (port: ${port})...`);
+    
+    const clientArgs = ['run', '-d', device];
+    if (device === 'chrome') {
+      clientArgs.push('--web-port', port);
+    }
+    
+    const clientProc = spawn('flutter', clientArgs, {
+      cwd: path.join(rootDir, 'client'),
+      shell: true,
+      detached: true
+    });
+    children.push(clientProc);
+    prefixStream(clientProc.stdout, 'Client', '36');
+    prefixStream(clientProc.stderr, 'Client-Err', '31');
+  } else {
+    console.log('📱 Skipping Flutter Client startup (FLUTTER_DEVICE is set to none).');
   }
-  
-  const clientProc = spawn('flutter', clientArgs, {
-    cwd: path.join(rootDir, 'client'),
-    shell: true,
-    detached: true
-  });
-  children.push(clientProc);
 
   // Automatic database seeding once emulators are ready
   let seeded = false;
@@ -125,8 +132,6 @@ function startServices() {
   // Prefix output streams: 33 = yellow (backend), 36 = cyan (client)
   prefixStream(backendProc.stdout, 'Backend', '33');
   prefixStream(backendProc.stderr, 'Backend-Err', '31');
-  prefixStream(clientProc.stdout, 'Client', '36');
-  prefixStream(clientProc.stderr, 'Client-Err', '31');
 
   // Handle termination signals
   const cleanExit = () => {
