@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -936,6 +939,100 @@ class AppStateNotifier extends ChangeNotifier {
     } catch (e) {
       AppLogger.error('Error casting vote for dataset: $datasetId', e);
       return false;
+    }
+  }
+
+  String get functionsBaseUrl {
+    const String projectId = 'demo-plainsightil';
+    const String region = 'us-central1';
+
+    if (isTesting) {
+      return 'http://127.0.0.1:5002/$projectId/$region';
+    }
+
+    final bool isAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
+    return 'http://$host:5002/$projectId/$region';
+  }
+
+  Future<Map<String, dynamic>> triggerManualSync(String datasetId) async {
+    AppLogger.info('Triggering manual sync for dataset: $datasetId');
+
+    // Immediately set local status to syncing to eliminate visual latency
+    final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
+    _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'syncing'};
+    notifyListeners();
+
+    if (isTesting) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      // Simulate success and update local state to idle with updated count
+      _datasetMetadataMap[datasetId] = {
+        ...localMeta,
+        'status': 'idle',
+        'recordCount': 10000,
+        'lastUpdated': DateTime.now().toUtc().toIso8601String(),
+      };
+      notifyListeners();
+      return {
+        'success': true,
+        'message': 'Sync completed successfully',
+        'count': 10000,
+      };
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      String? token;
+      if (user != null) {
+        token = await user.getIdToken();
+      }
+
+      String functionName;
+      if (datasetId == 'cellular_antennas') {
+        functionName = 'manualSyncAntennas';
+      } else if (datasetId == 'cellular_permit_applications') {
+        functionName = 'manualSyncPermitApps';
+      } else if (datasetId == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
+        functionName = 'manualSyncCompaniesLiquidation';
+      } else {
+        throw Exception('Unknown dataset ID: $datasetId');
+      }
+
+      final url = Uri.parse('$functionsBaseUrl/$functionName');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Sync completed successfully',
+          'count': data['count'] ?? 0,
+        };
+      } else {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final String errorMessage =
+            data['error'] ?? data['message'] ?? 'Failed to trigger sync';
+
+        // Reset local status to error
+        _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
+        notifyListeners();
+
+        return {'success': false, 'message': errorMessage};
+      }
+    } catch (e) {
+      AppLogger.error('Error triggering manual sync', e);
+      _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
+      notifyListeners();
+      return {'success': false, 'message': e.toString()};
     }
   }
 

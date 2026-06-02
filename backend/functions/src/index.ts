@@ -31,10 +31,94 @@ export const scheduledAntennaScraper = functions.pubsub
     }
   });
 
+/**
+ * Helper to validate if the incoming request is an authenticated POST request made by an admin.
+ * Returns the decoded token if valid, otherwise sends an error response and returns null.
+ */
+async function validateAdminRequest(
+  req: functions.https.Request,
+  res: any,
+): Promise<{ uid: string } | null> {
+  // Allow unauthenticated GET requests in local emulator for seeding/development
+  if (process.env.FUNCTIONS_EMULATOR === "true" && req.method === "GET") {
+    functions.logger.info("Bypassing admin check for emulator seeding via GET request.");
+    return { uid: "emulator-seeder" };
+  }
+
+  // 1. Enforce POST request method
+  if (req.method !== "POST") {
+    functions.logger.warn(`Rejected manual sync request: method ${req.method} is not allowed.`);
+    res.status(405).json({
+      error: "Method Not Allowed",
+      message: "Sync request must be a POST request.",
+    });
+    return null;
+  }
+
+  // 2. Extract authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    functions.logger.warn("Rejected manual sync request: missing or invalid authorization header.");
+    res.status(401).json({
+      error: "Unauthorized",
+      message: "Missing or invalid authorization header.",
+    });
+    return null;
+  }
+
+  const token = authHeader.split("Bearer ")[1];
+  try {
+    // 3. Verify Firebase ID Token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    // 4. Retrieve user document from Firestore users collection
+    const userDoc = await admin.firestore().collection("users").doc(uid).get();
+    if (!userDoc.exists) {
+      functions.logger.warn(`Rejected manual sync request: user ${uid} document not found.`);
+      res.status(403).json({
+        error: "Forbidden",
+        message: "User profile not found in database.",
+      });
+      return null;
+    }
+
+    const userData = userDoc.data();
+    if (!userData || userData.role !== "admin") {
+      functions.logger.warn(`Rejected manual sync request: user ${uid} does not have admin role.`);
+      res.status(403).json({
+        error: "Forbidden",
+        message: "Caller is not authorized to trigger manual sync.",
+      });
+      return null;
+    }
+
+    return { uid };
+  } catch (error) {
+    const err = error as Error;
+    functions.logger.error("Authorization check failed with error:", err.message);
+    res.status(401).json({
+      error: "Unauthorized",
+      message: "Token verification failed.",
+      details: err.message,
+    });
+    return null;
+  }
+}
+
 // HTTPS Triggered Cloud Function for Active Antennas - for manual invocation and dev triggers
 export const manualSyncAntennas = functions.https.onRequest(async (req, res) => {
   functions.logger.info("manualSyncAntennas HTTPS trigger invoked");
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
+  const datasetId = "cellular_antennas";
+  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
+
   try {
+    // Set status to syncing in Firestore immediately
+    await metadataRef.set({ status: "syncing" }, { merge: true });
+
     const result = await scrapeAndSyncAntennas(db);
     functions.logger.info("manualSyncAntennas sync completed successfully", {
       count: result.count,
@@ -49,6 +133,7 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
       error: err.message,
       stack: err.stack,
     });
+    await metadataRef.set({ status: "error" }, { merge: true });
     res.status(500).json({
       message: "Sync failed",
       error: err.message || String(error),
@@ -80,7 +165,16 @@ export const scheduledPermitAppsScraper = functions.pubsub
 // HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
 export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
   functions.logger.info("manualSyncPermitApps HTTPS trigger invoked");
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
+  const datasetId = "cellular_permit_applications";
+  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
+
   try {
+    // Set status to syncing in Firestore immediately
+    await metadataRef.set({ status: "syncing" }, { merge: true });
+
     const result = await scrapeAndSyncPermitApplications(db);
     functions.logger.info("manualSyncPermitApps sync completed successfully", {
       count: result.count,
@@ -95,6 +189,7 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
       error: err.message,
       stack: err.stack,
     });
+    await metadataRef.set({ status: "error" }, { merge: true });
     res.status(500).json({
       message: "Sync failed",
       error: err.message || String(error),
@@ -126,6 +221,9 @@ export const scheduledMetadataScraper = functions.pubsub
 // HTTPS Triggered Cloud Function for Dataset Metadata - manual sync
 export const manualSyncMetadata = functions.https.onRequest(async (req, res) => {
   functions.logger.info("manualSyncMetadata HTTPS trigger invoked");
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
   try {
     const result = await scrapeAndSyncDatasetMetadata(db);
     functions.logger.info("manualSyncMetadata sync completed successfully", {
@@ -172,7 +270,16 @@ export const scheduledCompaniesLiquidationScraper = functions.pubsub
 // HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
   functions.logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
+  const datasetId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
+
   try {
+    // Set status to syncing in Firestore immediately
+    await metadataRef.set({ status: "syncing" }, { merge: true });
+
     const result = await scrapeAndSyncCompaniesLiquidation(db);
     functions.logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
       count: result.count,
@@ -187,6 +294,7 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
       error: err.message,
       stack: err.stack,
     });
+    await metadataRef.set({ status: "error" }, { merge: true });
     res.status(500).json({
       message: "Companies in liquidation sync failed",
       error: err.message || String(error),

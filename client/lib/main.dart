@@ -21,8 +21,8 @@ void main() async {
   try {
     await Firebase.initializeApp(options: localFirebaseOptions);
     final String host = kIsWeb
-        ? 'localhost'
-        : (Platform.isAndroid ? '10.0.2.2' : 'localhost');
+        ? '127.0.0.1'
+        : (Platform.isAndroid ? '10.0.2.2' : '127.0.0.1');
     // Connect to local Firestore emulator
     FirebaseFirestore.instance.useFirestoreEmulator(host, 8081);
     // Connect to local Auth emulator
