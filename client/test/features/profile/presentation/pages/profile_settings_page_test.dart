@@ -75,10 +75,12 @@ void main() {
         // 1. Initially it should be English (LTR)
         expect(appState.locale, 'en');
         final Directionality dirLtr = tester.widget<Directionality>(
-          find.ancestor(
-            of: find.byType(ProfileSettingsPage),
-            matching: find.byType(Directionality),
-          ).first,
+          find
+              .ancestor(
+                of: find.byType(ProfileSettingsPage),
+                matching: find.byType(Directionality),
+              )
+              .first,
         );
         expect(dirLtr.textDirection, TextDirection.ltr);
 
@@ -88,10 +90,12 @@ void main() {
 
         // Verify Directionality is now RTL
         final Directionality dirRtl = tester.widget<Directionality>(
-          find.ancestor(
-            of: find.byType(ProfileSettingsPage),
-            matching: find.byType(Directionality),
-          ).first,
+          find
+              .ancestor(
+                of: find.byType(ProfileSettingsPage),
+                matching: find.byType(Directionality),
+              )
+              .first,
         );
         expect(dirRtl.textDirection, TextDirection.rtl);
       },

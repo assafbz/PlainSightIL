@@ -436,7 +436,10 @@ class NavigationDrawerWidget extends StatelessWidget {
                                 isRoadmap: true,
                               ),
                               if (appState.isAdmin) ...[
-                                const Divider(color: Color(0x14FFFFFF), height: 16),
+                                const Divider(
+                                  color: Color(0x14FFFFFF),
+                                  height: 16,
+                                ),
                                 _buildAdminNavItem(context),
                               ],
                             ],
@@ -642,9 +645,10 @@ class NavigationDrawerWidget extends StatelessWidget {
               PageRouteBuilder<void>(
                 pageBuilder: (context, animation, secondaryAnimation) =>
                     AdminPage(appState: appState),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
               ),
             );
           },
@@ -658,10 +662,18 @@ class NavigationDrawerWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: Row(
               children: [
-                Icon(Icons.admin_panel_settings_outlined, color: labelColor, size: 24),
+                Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: labelColor,
+                  size: 24,
+                ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(title, style: itemTextStyle)),
-                Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textTertiary,
+                  size: 18,
+                ),
               ],
             ),
           ),

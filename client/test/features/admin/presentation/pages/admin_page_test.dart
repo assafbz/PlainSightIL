@@ -8,57 +8,58 @@ void main() {
     AppStateNotifier.isTesting = true;
   });
 
-  testWidgets('AdminPage renders supported datasets list and filters correct records', (
-    WidgetTester tester,
-  ) async {
-    final appState = AppStateNotifier();
+  testWidgets(
+    'AdminPage renders supported datasets list and filters correct records',
+    (WidgetTester tester) async {
+      final appState = AppStateNotifier();
 
-    // Build the AdminPage within a MaterialApp framework
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Directionality(
-          textDirection: TextDirection.ltr,
-          child: AdminPage(appState: appState),
+      // Build the AdminPage within a MaterialApp framework
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.ltr,
+            child: AdminPage(appState: appState),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    // Verify Title and Search Bar exist
-    expect(find.text('Admin Dashboard'), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
+      // Verify Title and Search Bar exist
+      expect(find.text('Admin Dashboard'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
 
-    // Verify all three supported datasets cards exist initially
-    expect(find.text('Cellular Antennas'), findsOneWidget);
-    expect(find.text('Cellular Permit Applications'), findsOneWidget);
-    expect(find.text('Companies in Liquidation'), findsOneWidget);
+      // Verify all three supported datasets cards exist initially
+      expect(find.text('Cellular Antennas'), findsOneWidget);
+      expect(find.text('Cellular Permit Applications'), findsOneWidget);
+      expect(find.text('Companies in Liquidation'), findsOneWidget);
 
-    // Type query "Permit" in Search Field
-    await tester.enterText(find.byType(TextField), 'Permit');
-    await tester.pumpAndSettle();
+      // Type query "Permit" in Search Field
+      await tester.enterText(find.byType(TextField), 'Permit');
+      await tester.pumpAndSettle();
 
-    // Verify list is filtered
-    expect(find.text('Cellular Antennas'), findsNothing);
-    expect(find.text('Cellular Permit Applications'), findsOneWidget);
-    expect(find.text('Companies in Liquidation'), findsNothing);
+      // Verify list is filtered
+      expect(find.text('Cellular Antennas'), findsNothing);
+      expect(find.text('Cellular Permit Applications'), findsOneWidget);
+      expect(find.text('Companies in Liquidation'), findsNothing);
 
-    // Clear search query
-    await tester.enterText(find.byType(TextField), '');
-    await tester.pumpAndSettle();
+      // Clear search query
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
 
-    // Verify list goes back to showing all datasets
-    expect(find.text('Cellular Antennas'), findsOneWidget);
-    expect(find.text('Companies in Liquidation'), findsOneWidget);
+      // Verify list goes back to showing all datasets
+      expect(find.text('Cellular Antennas'), findsOneWidget);
+      expect(find.text('Companies in Liquidation'), findsOneWidget);
 
-    // Filter by Error status (by default mock datasets are status 'idle')
-    await tester.tap(find.text('Error'));
-    await tester.pumpAndSettle();
+      // Filter by Error status (by default mock datasets are status 'idle')
+      await tester.tap(find.text('Error'));
+      await tester.pumpAndSettle();
 
-    // Verify no datasets match the "Error" status filter
-    expect(find.text('Cellular Antennas'), findsNothing);
-    expect(find.text('Companies in Liquidation'), findsNothing);
-    expect(find.text('No records found'), findsOneWidget);
-  });
+      // Verify no datasets match the "Error" status filter
+      expect(find.text('Cellular Antennas'), findsNothing);
+      expect(find.text('Companies in Liquidation'), findsNothing);
+      expect(find.text('No records found'), findsOneWidget);
+    },
+  );
 
   testWidgets('AdminPage renders Access Denied when user is not admin', (
     WidgetTester tester,
