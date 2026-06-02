@@ -132,7 +132,7 @@ All E2E tests are designed to execute against a local hermetic environment:
 
 ## 6. Offline Support & Caching
 
-### Test Case: `E2E-OFF-01` (Offline Navigation & Isar Cache Access)
+### Test Case: `E2E-OFF-01` (Offline Navigation & Local Cache Access)
 - **Objective**: Verify that previously loaded dataset data is available offline from local cache.
 - **Preconditions**: App has previously loaded the Liquidation directory while online.
 - **Steps**:
@@ -141,5 +141,5 @@ All E2E tests are designed to execute against a local hermetic environment:
   3. Scroll the cached list.
 - **Assertions**:
   - An offline warning banner is displayed at the top/bottom of the page.
-  - The previously loaded data remains fully populated and readable from the local Isar database.
+  - The previously loaded data remains fully populated and readable from the local Firestore persistence cache and memory buffers.
   - The application does not crash or show a black screen.

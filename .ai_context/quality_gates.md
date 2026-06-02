@@ -53,7 +53,7 @@ graph TD
 *   **Checklist Criteria**:
     *   [ ] Component hierarchy diagrams mapping Flutter widgets and Clean Architecture layers.
     *   [ ] Backend changes outlined (new Cloud Functions, Firestore schema updates, or SQL tables).
-    *   [ ] Explicit data sync caching flow detailed (Isar local DB schema vs Firestore updates).
+    *   [ ] Explicit data sync caching flow detailed (SharedPreferences/LocalStorage structures and Firestore native offline persistence).
     *   [ ] Identification of critical third-party dependencies or APIs to be introduced.
     *   [ ] **Expected API Documentation**: Expected API documentation targets (critical classes, interfaces, data mappings, calculations) are declared in `TDD.md`.
 
@@ -131,7 +131,7 @@ Testing gates protect critical layers of the app from regression.
 
 *   **Coverage Thresholds**:
     *   **Domain & Data Layers (Client & Backend)**: **90%+** unit test coverage.
-    *   **Presentation Layer (Client - BLoC/Cubit)**: **100%** flow coverage (all states and events tested).
+    *   **Presentation Layer (Client - ChangeNotifier / State Notifiers)**: **100%** flow coverage (all state change paths and notifyListeners calls tested).
 *   **Execution Rules**:
     *   **Client Command**: `flutter test --coverage` (verified against local LCOV file).
     *   **Backend Command**: `npm run test` (executed via Vitest).

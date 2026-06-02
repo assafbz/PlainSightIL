@@ -54,7 +54,7 @@ Any dataset added to PlainSightIL must conform to these strict architectural and
 | **Mobile-First Geometry** | Designed primarily for mobile viewports (portrait). | Bottom sheets, swipe gestures, floating action buttons (FABs), and thumb-friendly touch targets (min 48x48px). |
 | **Bi-directional Support (RTL/LTR)** | Seamless switching between Hebrew and English. | Flexbox/Grid CSS using logical properties (e.g., `margin-inline-start`) instead of left/right attributes. |
 | **State-of-the-Art Aesthetics** | Premium visual appearance that wows users. | Glassmorphism (`backdrop-filter`), tailored HSL-based dark mode colors, smooth micro-animations, and modern typography (e.g., Outfit/Inter). |
-| **Offline-First & Speed** | Sub-second load times on poor mobile connections. | LocalStorage/IndexedDB caching of API responses. Graceful mock-data fallbacks if government endpoints are down. |
+| **Offline-First & Speed** | Sub-second load times on poor mobile connections. | SharedPreferences caching of settings/metadata and Firestore offline persistence. Graceful mock-data fallbacks if government endpoints are down. |
 | **Data Provenance** | Unquestionable accuracy and trust. | Transparent "Data Source" badge displaying the exact agency, API endpoint, and timestamp of the last database refresh. |
 
 ---
