@@ -347,6 +347,7 @@ class _TowersScreenState extends State<TowersScreen>
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppColors.primary),
+          tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [

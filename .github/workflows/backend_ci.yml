@@ -2,9 +2,23 @@ name: Backend Quality CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, 'agents/**', 'dev/**' ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend_ci.yml'
+      - 'package.json'
+      - 'scripts/**'
   pull_request:
     branches: [ main, dev ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend_ci.yml'
+      - 'package.json'
+      - 'scripts/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -12,12 +26,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Validate Branch Name
+        if: github.event_name == 'pull_request'
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          if [[ ! "$BRANCH_NAME" =~ ^(agents|dev)/[0-9]+-.+$ ]]; then
+            echo "🛑 ERROR: Pull request branch name '$BRANCH_NAME' does not follow SDLC conventions!"
+            echo "Branch name must match the pattern: agents/<issue_id>-<description> or dev/<issue_id>-<description>"
+            echo "Example: agents/42-setup-login-page"
+            exit 1
+          fi
+          echo "✅ Branch name '$BRANCH_NAME' is valid."
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: backend/functions/package-lock.json
 
@@ -40,3 +72,7 @@ jobs:
       - name: Build TypeScript
         run: npm run build
         working-directory: backend/functions
+
+      - name: Validate Firestore Rules
+        run: npx firebase-tools emulators:exec --project demo-plainsightil --only firestore "echo 'Firestore rules verified successfully'"
+        working-directory: backend

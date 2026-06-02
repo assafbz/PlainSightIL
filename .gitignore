@@ -22,3 +22,6 @@ Thumbs.db
 **/node_modules/
 backend/functions/lib/
 **/build/
+test-results/
+playwright-report/
+

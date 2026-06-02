@@ -1,0 +1,71 @@
+import 'dart:html' as html;
+import 'local_storage_stub.dart';
+
+/// Web implementation of the [LocalStorageImpl] interface.
+/// Persists data directly in the browser's [html.window.localStorage].
+class LocalStorageWeb implements LocalStorageImpl {
+  /// Initialization is a no-op on Web as [html.window.localStorage] is immediately accessible.
+  @override
+  Future<void> init() async {}
+
+  /// Retrieves the favorite dataset IDs from localStorage, splitting the comma-separated string.
+  @override
+  List<String> getFavorites() {
+    try {
+      final value = html.window.localStorage['favorites'];
+      if (value == null) return [];
+      return List<String>.from(value.split(',').where((s) => s.isNotEmpty));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Saves the favorite dataset IDs as a comma-separated string in localStorage.
+  @override
+  Future<void> saveFavorites(List<String> favorites) async {
+    try {
+      html.window.localStorage['favorites'] = favorites.join(',');
+    } catch (_) {}
+  }
+
+  /// Retrieves the recently viewed dataset IDs from localStorage, splitting the comma-separated string.
+  @override
+  List<String> getRecents() {
+    try {
+      final value = html.window.localStorage['recents'];
+      if (value == null) return [];
+      return List<String>.from(value.split(',').where((s) => s.isNotEmpty));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Saves the recently viewed dataset IDs as a comma-separated string in localStorage.
+  @override
+  Future<void> saveRecents(List<String> recents) async {
+    try {
+      html.window.localStorage['recents'] = recents.join(',');
+    } catch (_) {}
+  }
+
+  /// Checks if the guest mode flag is set to 'true' in localStorage.
+  @override
+  bool getGuestMode() {
+    try {
+      return html.window.localStorage['guest_mode'] == 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Saves the guest mode status flag in localStorage.
+  @override
+  Future<void> saveGuestMode(bool enabled) async {
+    try {
+      html.window.localStorage['guest_mode'] = enabled.toString();
+    } catch (_) {}
+  }
+}
+
+/// Web factory method returning a new [LocalStorageWeb] instance.
+LocalStorageImpl getLocalStorage() => LocalStorageWeb();

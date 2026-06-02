@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'local_storage.dart';
 import '../theme/design_system.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/directory/data/models/liquidation_record_model.dart';
@@ -35,9 +35,13 @@ class AppStateNotifier extends ChangeNotifier {
 
   Future<void> _initSharedPreferences() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _favorites = prefs.getStringList('favorites') ?? [];
-      _recents = prefs.getStringList('recents') ?? [];
+      await LocalStorage.init();
+      _favorites = LocalStorage.getFavorites();
+      _recents = LocalStorage.getRecents();
+      _isGuestMode = LocalStorage.getGuestMode();
+      if (_isGuestMode) {
+        initPermitMetadataListener();
+      }
       notifyListeners();
     } catch (e) {
       debugPrint('Error initializing SharedPreferences: $e');
@@ -56,8 +60,7 @@ class AppStateNotifier extends ChangeNotifier {
     }
     notifyListeners();
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('favorites', _favorites);
+      await LocalStorage.saveFavorites(_favorites);
     } catch (e) {
       debugPrint('Error saving favorites: $e');
     }
@@ -73,8 +76,7 @@ class AppStateNotifier extends ChangeNotifier {
       notifyListeners();
     });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('recents', _recents);
+      await LocalStorage.saveRecents(_recents);
     } catch (e) {
       debugPrint('Error saving recents: $e');
     }
@@ -128,6 +130,9 @@ class AppStateNotifier extends ChangeNotifier {
   Future<void> signOut() async {
     _isMockAuthenticated = false;
     _isGuestMode = false;
+    try {
+      await LocalStorage.saveGuestMode(false);
+    } catch (_) {}
     _permitRecords = [];
     _antennaRecords = [];
     _directoryRecords = [];
@@ -150,6 +155,11 @@ class AppStateNotifier extends ChangeNotifier {
       initPermitMetadataListener();
     }
     notifyListeners();
+    try {
+      LocalStorage.saveGuestMode(enabled);
+    } catch (e) {
+      debugPrint('Error saving guest mode: $e');
+    }
   }
 
   // Double-buffered Firestore subscriptions for permit applications

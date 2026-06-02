@@ -172,6 +172,7 @@ class _LiquidationScreenState extends State<LiquidationScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        tooltip: 'Back',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const SizedBox(width: 8),
