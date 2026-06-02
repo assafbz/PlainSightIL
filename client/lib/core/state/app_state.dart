@@ -5,8 +5,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'local_storage.dart';
 import '../theme/design_system.dart';
+import '../utils/app_logger.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/directory/data/models/liquidation_record_model.dart';
+import '../../features/profile/domain/entities/user_profile.dart';
+import '../../features/profile/domain/repositories/user_profile_repository.dart';
+import '../../features/profile/domain/usecases/get_user_profile.dart';
+import '../../features/profile/domain/usecases/update_user_profile.dart';
+import '../../features/profile/data/datasources/user_profile_remote_datasource.dart';
+import '../../features/profile/data/repositories/user_profile_repository_impl.dart';
 
 class AppStateNotifier extends ChangeNotifier {
   static bool isTesting = false;
@@ -27,10 +34,49 @@ class AppStateNotifier extends ChangeNotifier {
   List<String> get favorites => _favorites;
   List<String> get recents => _recents;
 
+  // Profile management state
+  UserProfile? _userProfile;
+  StreamSubscription<UserProfile?>? _profileSubscription;
+  late final UserProfileRepository _profileRepository;
+  late final GetUserProfile _getUserProfileUseCase;
+  late final UpdateUserProfile _updateUserProfileUseCase;
+
+  UserProfile? get userProfile => _userProfile;
+
   AppStateNotifier() {
+    AppLogger.info('Initializing AppStateNotifier (isTesting: $isTesting)');
     _isMockAuthenticated = isTesting;
+    _initProfileUsecases();
     _initAuthListener();
     _initSharedPreferences();
+    if (_isMockAuthenticated) {
+      _updateProfileListener('mock_uid');
+    }
+  }
+
+  void _initProfileUsecases() {
+    if (!isTesting && isFirebaseInitialized) {
+      final datasource = UserProfileRemoteDataSourceImpl(
+        FirebaseFirestore.instance,
+      );
+      _profileRepository = UserProfileRepositoryImpl(datasource);
+    } else {
+      _profileRepository = _MockUserProfileRepository();
+    }
+    _getUserProfileUseCase = GetUserProfile(_profileRepository);
+    _updateUserProfileUseCase = UpdateUserProfile(_profileRepository);
+  }
+
+  /// Sets the mock user profile (available only in testing mode).
+  void setMockProfile(UserProfile? profile) {
+    if (!isTesting) return;
+    if (_profileRepository is _MockUserProfileRepository) {
+      final mockRepo = _profileRepository;
+      mockRepo._currentProfile = profile;
+      mockRepo._controller.add(profile);
+      _userProfile = profile;
+      notifyListeners();
+    }
   }
 
   Future<void> _initSharedPreferences() async {
@@ -39,12 +85,15 @@ class AppStateNotifier extends ChangeNotifier {
       _favorites = LocalStorage.getFavorites();
       _recents = LocalStorage.getRecents();
       _isGuestMode = LocalStorage.getGuestMode();
+      AppLogger.info(
+        'SharedPreferences loaded: ${_favorites.length} favorites, ${_recents.length} recents, guestMode: $_isGuestMode',
+      );
       if (_isGuestMode) {
         initPermitMetadataListener();
       }
       notifyListeners();
     } catch (e) {
-      debugPrint('Error initializing SharedPreferences: $e');
+      AppLogger.error('Error initializing SharedPreferences', e);
     }
   }
 
@@ -53,7 +102,11 @@ class AppStateNotifier extends ChangeNotifier {
   }
 
   Future<void> toggleFavorite(String datasetId) async {
-    if (_favorites.contains(datasetId)) {
+    final isFav = _favorites.contains(datasetId);
+    AppLogger.info(
+      'Toggling favorite for dataset $datasetId (Currently favorite: $isFav)',
+    );
+    if (isFav) {
       _favorites.remove(datasetId);
     } else {
       _favorites.add(datasetId);
@@ -62,11 +115,12 @@ class AppStateNotifier extends ChangeNotifier {
     try {
       await LocalStorage.saveFavorites(_favorites);
     } catch (e) {
-      debugPrint('Error saving favorites: $e');
+      AppLogger.error('Error saving favorites for dataset $datasetId', e);
     }
   }
 
   Future<void> addRecent(String datasetId) async {
+    AppLogger.info('Adding dataset $datasetId to recents');
     _recents.remove(datasetId);
     _recents.insert(0, datasetId);
     if (_recents.length > 5) {
@@ -78,25 +132,73 @@ class AppStateNotifier extends ChangeNotifier {
     try {
       await LocalStorage.saveRecents(_recents);
     } catch (e) {
-      debugPrint('Error saving recents: $e');
+      AppLogger.error('Error saving recents for dataset $datasetId', e);
     }
   }
 
   void _initAuthListener() {
     if (isTesting || !isFirebaseInitialized) return;
     try {
+      AppLogger.info('Initializing FirebaseAuth listener');
       FirebaseAuth.instance.authStateChanges().listen((user) {
         final bool userChanged = _currentUser?.uid != user?.uid;
         _currentUser = user;
+        AppLogger.info(
+          'Auth state updated. User UID: ${user?.uid}, changed: $userChanged',
+        );
         if (userChanged) {
           // Re-bind Firestore listeners when the authentication state changes
           // to ensure data is fetched under the updated auth credentials.
           initPermitMetadataListener();
+          _updateProfileListener(user?.uid);
         }
         notifyListeners();
       });
     } catch (e) {
-      debugPrint('Auth listener init error: $e');
+      AppLogger.error('Auth listener init error', e);
+    }
+  }
+
+  void _updateProfileListener(String? uid) {
+    AppLogger.info('Updating profile stream listener for UID: $uid');
+    _profileSubscription?.cancel();
+    _profileSubscription = null;
+
+    if (uid == null) {
+      _userProfile = null;
+      notifyListeners();
+      return;
+    }
+
+    _profileSubscription = _getUserProfileUseCase
+        .call(uid)
+        .listen(
+          (profile) {
+            AppLogger.info(
+              'Profile stream emitted value for UID $uid: $profile',
+            );
+            if (_userProfile != profile) {
+              _userProfile = profile;
+              notifyListeners();
+            }
+          },
+          onError: (Object error) {
+            AppLogger.error('Profile stream error for UID: $uid', error);
+          },
+        );
+  }
+
+  /// Updates the user's profile and handles success/error states.
+  Future<void> updateUserProfile(UserProfile profile) async {
+    AppLogger.info('Updating user profile for UID: ${profile.uid}');
+    try {
+      await _updateUserProfileUseCase.call(profile);
+      AppLogger.info(
+        'Successfully updated user profile for UID: ${profile.uid}',
+      );
+    } catch (e) {
+      AppLogger.error('Error updating user profile for UID: ${profile.uid}', e);
+      rethrow;
     }
   }
 
@@ -109,9 +211,12 @@ class AppStateNotifier extends ChangeNotifier {
       : null;
 
   Future<void> signInWithGoogle() async {
+    AppLogger.info('Initiating Google Sign-In');
     if (isTesting || !isFirebaseInitialized) {
+      AppLogger.info('Using mock authentication mode');
       _isMockAuthenticated = true;
       _isGuestMode = false;
+      _updateProfileListener('mock_uid');
       notifyListeners();
       return;
     }
@@ -120,16 +225,21 @@ class AppStateNotifier extends ChangeNotifier {
       final provider = GoogleAuthProvider();
       await FirebaseAuth.instance.signInWithPopup(provider);
       _isGuestMode = false;
+      AppLogger.info(
+        'Successfully authenticated with Google. User UID: ${FirebaseAuth.instance.currentUser?.uid}',
+      );
       notifyListeners();
     } catch (e) {
-      debugPrint('Google Sign-In Error: $e');
+      AppLogger.error('Google Sign-In Error', e);
       rethrow;
     }
   }
 
   Future<void> signOut() async {
+    AppLogger.info('Signing out current user');
     _isMockAuthenticated = false;
     _isGuestMode = false;
+    _updateProfileListener(null);
     try {
       await LocalStorage.saveGuestMode(false);
     } catch (_) {}
@@ -142,14 +252,16 @@ class AppStateNotifier extends ChangeNotifier {
     if (isFirebaseInitialized) {
       try {
         await FirebaseAuth.instance.signOut();
+        AppLogger.info('Successfully signed out from FirebaseAuth');
       } catch (e) {
-        debugPrint('Firebase Sign-Out Error: $e');
+        AppLogger.error('Firebase Sign-Out Error', e);
       }
     }
     notifyListeners();
   }
 
   void setGuestMode(bool enabled) {
+    AppLogger.info('Setting guest mode to: $enabled');
     _isGuestMode = enabled;
     if (enabled) {
       initPermitMetadataListener();
@@ -158,7 +270,7 @@ class AppStateNotifier extends ChangeNotifier {
     try {
       LocalStorage.saveGuestMode(enabled);
     } catch (e) {
-      debugPrint('Error saving guest mode: $e');
+      AppLogger.error('Error saving guest mode', e);
     }
   }
 
@@ -281,12 +393,13 @@ class AppStateNotifier extends ChangeNotifier {
       _permitSyncStatus = 'error';
       _isLoadingPermits = false;
       notifyListeners();
-      debugPrint(
+      AppLogger.warning(
         'Firebase is not initialized. Skipping permit metadata listener.',
       );
       return;
     }
 
+    AppLogger.info('Initializing permit metadata listener');
     _permitMetadataSubscription?.cancel();
     try {
       _permitMetadataSubscription = FirebaseFirestore.instance
@@ -299,6 +412,9 @@ class AppStateNotifier extends ChangeNotifier {
                 final data = metaSnapshot.data()!;
                 final newActive = data['activeCollection'] as String? ?? '';
                 _permitSyncStatus = data['status'] as String? ?? 'idle';
+                AppLogger.info(
+                  'Permit metadata loaded. activeCollection: $newActive, status: $_permitSyncStatus',
+                );
 
                 if (newActive.isNotEmpty &&
                     newActive != _activePermitCollection) {
@@ -307,6 +423,7 @@ class AppStateNotifier extends ChangeNotifier {
                   notifyListeners();
                 }
               } else {
+                AppLogger.warning('Permit metadata document does not exist');
                 _isLoadingPermits = false;
                 notifyListeners();
               }
@@ -315,18 +432,19 @@ class AppStateNotifier extends ChangeNotifier {
               _isLoadingPermits = false;
               _permitSyncStatus = 'error';
               notifyListeners();
-              debugPrint('Firestore permit metadata listener error: $err');
+              AppLogger.error('Firestore permit metadata listener error', err);
             },
           );
     } catch (e) {
       _isLoadingPermits = false;
       _permitSyncStatus = 'error';
       notifyListeners();
-      debugPrint('Failed to bind Firestore metadata: $e');
+      AppLogger.error('Failed to bind Firestore metadata', e);
     }
   }
 
   void _bindActivePermitCollection(String newCollection) {
+    AppLogger.info('Binding active permit collection to: $newCollection');
     _activePermitCollection = newCollection;
     _isLoadingPermits = true;
     notifyListeners();
@@ -346,6 +464,9 @@ class AppStateNotifier extends ChangeNotifier {
           .snapshots()
           .listen(
             (snapshot) {
+              AppLogger.info(
+                'Permits fetched from Firestore ($newCollection): ${snapshot.docs.length} records',
+              );
               // Swap only when data resolves to prevent flickering
               _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
               _isLoadingPermits = false;
@@ -355,14 +476,17 @@ class AppStateNotifier extends ChangeNotifier {
               _isLoadingPermits = false;
               _permitSyncStatus = 'error';
               notifyListeners();
-              debugPrint('Firestore permit collection listener error: $err');
+              AppLogger.error(
+                'Firestore permit collection listener error for $newCollection',
+                err,
+              );
             },
           );
     } catch (e) {
       _isLoadingPermits = false;
       _permitSyncStatus = 'error';
       notifyListeners();
-      debugPrint('Failed to bind Firestore collection $newCollection: $e');
+      AppLogger.error('Failed to bind Firestore collection $newCollection', e);
     }
   }
 
@@ -414,12 +538,16 @@ class AppStateNotifier extends ChangeNotifier {
       return;
     }
 
+    AppLogger.info('Initializing cellular antennas listener');
     try {
       _antennaSubscription = FirebaseFirestore.instance
           .collection('cellular_antennas')
           .snapshots()
           .listen(
             (snapshot) {
+              AppLogger.info(
+                'Antennas fetched from Firestore: ${snapshot.docs.length} records',
+              );
               _antennaRecords = snapshot.docs.map((doc) => doc.data()).toList();
               _isLoadingAntennas = false;
               notifyListeners();
@@ -427,13 +555,16 @@ class AppStateNotifier extends ChangeNotifier {
             onError: (Object err) {
               _isLoadingAntennas = false;
               notifyListeners();
-              debugPrint('Firestore antenna collection listener error: $err');
+              AppLogger.error(
+                'Firestore antenna collection listener error',
+                err,
+              );
             },
           );
     } catch (e) {
       _isLoadingAntennas = false;
       notifyListeners();
-      debugPrint('Failed to bind Firestore antennas: $e');
+      AppLogger.error('Failed to bind Firestore antennas', e);
     }
   }
 
@@ -506,12 +637,18 @@ class AppStateNotifier extends ChangeNotifier {
       return;
     }
 
+    AppLogger.info(
+      'Initializing dataset directory metadata and requests listeners',
+    );
     try {
       _directorySubscription = FirebaseFirestore.instance
           .collection('datasets_metadata')
           .snapshots()
           .listen(
             (snapshot) {
+              AppLogger.info(
+                'Directory metadata fetched from Firestore: ${snapshot.docs.length} records',
+              );
               _directoryRecords = snapshot.docs
                   .map((doc) => DatasetMetadataModel.fromMap(doc.data()))
                   .toList();
@@ -521,7 +658,7 @@ class AppStateNotifier extends ChangeNotifier {
             onError: (Object err) {
               _isLoadingDirectory = false;
               notifyListeners();
-              debugPrint('Firestore directory metadata error: $err');
+              AppLogger.error('Firestore directory metadata error', err);
             },
           );
 
@@ -535,17 +672,20 @@ class AppStateNotifier extends ChangeNotifier {
                 counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0)
                     .toInt();
               }
+              AppLogger.info(
+                'Dataset requests counts fetched from Firestore: ${counts.length} records',
+              );
               _datasetRequestCounts = counts;
               notifyListeners();
             },
             onError: (Object err) {
-              debugPrint('Firestore dataset requests count error: $err');
+              AppLogger.error('Firestore dataset requests count error', err);
             },
           );
     } catch (e) {
       _isLoadingDirectory = false;
       notifyListeners();
-      debugPrint('Failed to initialize directory listener: $e');
+      AppLogger.error('Failed to initialize directory listener', e);
     }
   }
 
@@ -599,6 +739,7 @@ class AppStateNotifier extends ChangeNotifier {
       return;
     }
 
+    AppLogger.info('Initializing companies liquidation listener');
     try {
       _liquidationSubscription = FirebaseFirestore.instance
           .collection('companies_liquidation')
@@ -606,6 +747,9 @@ class AppStateNotifier extends ChangeNotifier {
           .snapshots()
           .listen(
             (snapshot) {
+              AppLogger.info(
+                'Companies liquidation fetched from Firestore: ${snapshot.docs.length} records',
+              );
               _liquidationRecords = snapshot.docs
                   .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
                   .toList();
@@ -615,15 +759,16 @@ class AppStateNotifier extends ChangeNotifier {
             onError: (Object err) {
               _isLoadingLiquidation = false;
               notifyListeners();
-              debugPrint(
-                'Firestore liquidation collection listener error: $err',
+              AppLogger.error(
+                'Firestore liquidation collection listener error',
+                err,
               );
             },
           );
     } catch (e) {
       _isLoadingLiquidation = false;
       notifyListeners();
-      debugPrint('Failed to initialize liquidation listener: $e');
+      AppLogger.error('Failed to initialize liquidation listener', e);
     }
   }
 
@@ -631,6 +776,9 @@ class AppStateNotifier extends ChangeNotifier {
     String datasetId,
     String datasetTitle,
   ) async {
+    AppLogger.info(
+      'Requesting dataset activation for datasetId: $datasetId ($datasetTitle)',
+    );
     if (isTesting) {
       _datasetRequestCounts[datasetId] =
           (_datasetRequestCounts[datasetId] ?? 0) + 1;
@@ -638,17 +786,30 @@ class AppStateNotifier extends ChangeNotifier {
       return true;
     }
 
-    if (!isFirebaseInitialized) return false;
+    if (!isFirebaseInitialized) {
+      AppLogger.warning(
+        'Firebase is not initialized. Skipping dataset activation request.',
+      );
+      return false;
+    }
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       String? uid = user?.uid;
       if (uid == null) {
+        AppLogger.info(
+          'No authenticated user. Attempting anonymous sign-in for request registration',
+        );
         final authResult = await FirebaseAuth.instance.signInAnonymously();
         uid = authResult.user?.uid;
       }
 
-      if (uid == null) return false;
+      if (uid == null) {
+        AppLogger.warning(
+          'Anonymous sign-in failed. Cannot record activation vote.',
+        );
+        return false;
+      }
 
       final voteRef = FirebaseFirestore.instance
           .collection('dataset_requests')
@@ -658,7 +819,9 @@ class AppStateNotifier extends ChangeNotifier {
 
       final voteSnap = await voteRef.get();
       if (voteSnap.exists) {
-        // User already voted for this dataset
+        AppLogger.info(
+          'User $uid has already registered a vote for dataset: $datasetId',
+        );
         return false;
       }
 
@@ -675,11 +838,15 @@ class AppStateNotifier extends ChangeNotifier {
         if (requestSnap.exists) {
           final currentCount =
               (requestSnap.data()?['requestCount'] as num? ?? 0).toInt();
+          AppLogger.info(
+            'Incrementing requestCount for dataset $datasetId to ${currentCount + 1}',
+          );
           transaction.update(requestRef, {
             'requestCount': currentCount + 1,
             'lastRequestedAt': FieldValue.serverTimestamp(),
           });
         } else {
+          AppLogger.info('Initializing requestCount for dataset $datasetId');
           transaction.set(requestRef, {
             'datasetId': datasetId,
             'datasetTitle': datasetTitle,
@@ -689,9 +856,12 @@ class AppStateNotifier extends ChangeNotifier {
         }
       });
 
+      AppLogger.info(
+        'Successfully registered activation request for dataset: $datasetId',
+      );
       return true;
     } catch (e) {
-      debugPrint('Error casting vote for dataset: $e');
+      AppLogger.error('Error casting vote for dataset: $datasetId', e);
       return false;
     }
   }
@@ -834,6 +1004,23 @@ class AppStateNotifier extends ChangeNotifier {
       'terms_disclaimer':
           'By continuing, you agree to PlainSight IL\'s Terms of Service and Privacy Policy.',
       'logout_label': 'Log out',
+      'profile_settings_title': 'Profile Settings',
+      'save': 'Save',
+      'first_name': 'First Name',
+      'last_name': 'Last Name',
+      'email': 'Email',
+      'user_role': 'User Role',
+      'save_profile': 'Save Profile',
+      'cancel': 'Cancel',
+      'role_user': 'User',
+      'role_admin': 'Admin',
+      'profile_credentials_info':
+          'The following fields are bound to your identity provider and cannot be changed.',
+      'profile_settings_label': 'Profile Settings',
+      'profile_update_success': 'Profile updated successfully!',
+      'profile_update_error': 'Failed to update profile.',
+      'edit_profile': 'Edit Profile',
+      'profile_loading': 'Loading profile...',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -934,11 +1121,59 @@ class AppStateNotifier extends ChangeNotifier {
       'terms_disclaimer':
           'בהמשך השימוש, הינך מסכים לתנאי השירות ומדיניות הפרטיות של בגובה העיניים.',
       'logout_label': 'התנתקות',
+      'profile_settings_title': 'הגדרות פרופיל',
+      'save': 'שמור',
+      'first_name': 'שם פרטי',
+      'last_name': 'שם משפחה',
+      'email': 'אימייל',
+      'user_role': 'תפקיד',
+      'save_profile': 'שמור פרופיל',
+      'cancel': 'ביטול',
+      'role_user': 'משתמש',
+      'role_admin': 'מנהל מערכת',
+      'profile_credentials_info':
+          'השדות הבאים קשורים לספק ההזדהות שלך ואינם ניתנים לשינוי.',
+      'profile_settings_label': 'הגדרות פרופיל',
+      'profile_update_success': 'הפרופיל עודכן בהצלחה!',
+      'profile_update_error': 'עדכון הפרופיל נכשל.',
+      'edit_profile': 'ערוך פרופיל',
+      'profile_loading': 'טוען פרופיל...',
     },
   };
 
   /// Translate a key using the current locale
   String translate(String key) {
     return _localizedStrings[_locale]?[key] ?? key;
+  }
+}
+
+/// A Mock User Profile Repository used in testing and offline environments.
+class _MockUserProfileRepository implements UserProfileRepository {
+  final _controller = StreamController<UserProfile?>.broadcast();
+  UserProfile? _currentProfile;
+
+  _MockUserProfileRepository() {
+    _currentProfile = UserProfile(
+      uid: 'mock_uid',
+      firstName: 'Assaf',
+      lastName: 'Benzaken',
+      email: 'assaf@plainsight.il',
+      role: 'user',
+      createdAt: DateTime(2026, 6, 1),
+      updatedAt: DateTime(2026, 6, 1),
+    );
+    _controller.add(_currentProfile);
+  }
+
+  @override
+  Stream<UserProfile?> getUserProfile(String uid) async* {
+    yield _currentProfile;
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<void> updateUserProfile(UserProfile profile) async {
+    _currentProfile = profile;
+    _controller.add(profile);
   }
 }

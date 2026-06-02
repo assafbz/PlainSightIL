@@ -142,6 +142,9 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
 - **Context Isolation & State Clearing**: Clear local storage inline once during setup rather than using persistent `page.addInitScript()` callbacks which run on every page reload and wipe session states.
 - **Bypass Assertions**: When validating login bypass, check for the absence of login-specific components (buttons/inputs) rather than general greetings like "Welcome Back" which may also be rendered on dashboard headers.
 - **Offline Caching Validation**: To verify database cache (Isar DB/Firestore offline) retrieval, navigate away and reload the screen while offline rather than asserting on an already-rendered view.
+- **Flutter Web CanvasKit Text Inputs**: Standard Playwright programmatic `.fill()` commands on transparent overlay `<input>` elements will fail to register changes inside Flutter's `TextEditingController` Dart state. To interact with Flutter inputs, first click/focus the input element, execute a robust backspace loop (50 times) to clear the existing text, and then use `page.keyboard.type('New Value')` to dispatch browser keystroke events that Flutter Web captures.
+- **Strict Mode Violations & Announces**: When asserting the presence of text elements that also generate screen-reader announcements (such as a SnackBar text or dialog titles), Playwright's default selector will match multiple elements (e.g. `flt-announcement-polite` and the semantic span). Always append `.first()` to text-based locators to prevent strict mode errors.
+- **Static HTTP Port Swapping**: To prevent static server `serve` from switching to alternative ports if port 8080 is blocked or slow to release, append the `--no-port-switching` option to guarantee consistent test runs.
 
 ---
 

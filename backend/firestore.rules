@@ -47,5 +47,31 @@ service cloud.firestore {
         allow write, create: if request.auth != null && request.auth.uid == userId;
       }
     }
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.role == "user"
+                    && request.resource.data.email == request.auth.token.email
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.createdAt is timestamp
+                    && request.resource.data.firstName is string
+                    && request.resource.data.firstName.size() <= 50
+                    && request.resource.data.lastName is string
+                    && request.resource.data.lastName.size() <= 50
+                    && request.resource.data.updatedAt is timestamp
+                    && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt']);
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.email == resource.data.email
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.firstName is string
+                    && request.resource.data.firstName.size() <= 50
+                    && request.resource.data.lastName is string
+                    && request.resource.data.lastName.size() <= 50
+                    && request.resource.data.updatedAt is timestamp
+                    && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt']);
+      allow delete: if false; // Deletion is managed by administrative cleanup systems only
+    }
   }
 }
