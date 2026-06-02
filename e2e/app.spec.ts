@@ -140,6 +140,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     // Locate "מאגר הכונס הרשמי" card and click "Open Visualizer"
     const card = page.locator('[aria-label*="מאגר הכונס הרשמי"], [aria-label*="הכונס הרשמי"]').first();
     await expect(card).toBeVisible({ timeout: 15000 });
+    await card.scrollIntoViewIfNeeded();
 
     const openVisualizerBtn = card.getByText('Open Visualizer').first();
     await expect(openVisualizerBtn).toBeVisible();
