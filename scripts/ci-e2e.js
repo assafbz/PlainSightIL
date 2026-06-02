@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 // Ensure Homebrew openjdk is in path for Mac users if run locally
 if (process.platform === 'darwin') {
@@ -8,12 +9,41 @@ if (process.platform === 'darwin') {
 
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🚀 [CI-E2E] Starting Firebase Emulators...');
-const emulatorsProc = spawn('npx', ['firebase-tools', 'emulators:start', '--project', 'demo-plainsightil', '--only', 'firestore,auth,functions'], {
+// Calculate dynamic ports based on PORT_OFFSET or custom env
+const offset = parseInt(process.env.PORT_OFFSET, 10) || 0;
+const ports = {
+  client: (parseInt(process.env.CLIENT_PORT, 10) || 8080) + offset,
+  firestore: (parseInt(process.env.FIRESTORE_PORT, 10) || 8081) + offset,
+  auth: (parseInt(process.env.AUTH_PORT, 10) || 9099) + offset,
+  functions: (parseInt(process.env.FUNCTIONS_PORT, 10) || 5002) + offset,
+  ui: (parseInt(process.env.EMULATOR_UI_PORT, 10) || 4001) + offset,
+};
+
+// Generate dynamic Firebase config file
+console.log('⚙️ [CI-E2E] Generating dynamic Firebase emulator configuration...');
+const baseConfigPath = path.join(rootDir, 'backend', 'firebase.json');
+const tempConfigPath = path.join(rootDir, 'backend', 'firebase.tmp.json');
+try {
+  const baseConfig = JSON.parse(fs.readFileSync(baseConfigPath, 'utf8'));
+  baseConfig.emulators = {
+    firestore: { port: ports.firestore, host: '127.0.0.1' },
+    auth: { port: ports.auth, host: '127.0.0.1' },
+    functions: { port: ports.functions, host: '127.0.0.1' },
+    ui: { enabled: true, port: ports.ui, host: '127.0.0.1' }
+  };
+  fs.writeFileSync(tempConfigPath, JSON.stringify(baseConfig, null, 2));
+} catch (e) {
+  console.error('❌ [CI-E2E] Failed to write temporary configuration:', e.message);
+  process.exit(1);
+}
+
+console.log(`🚀 [CI-E2E] Starting Firebase Emulators (Firestore: ${ports.firestore}, Auth: ${ports.auth}, Functions: ${ports.functions})...`);
+const emulatorsProc = spawn('npx', ['firebase-tools', 'emulators:start', '--project', 'demo-plainsightil', '--config', 'firebase.tmp.json', '--only', 'firestore,auth,functions'], {
   cwd: path.join(rootDir, 'backend'),
   shell: true,
   detached: false
 });
+
 
 let serveProc = null;
 let playwrightProc = null;
@@ -34,15 +64,34 @@ function cleanup(exitCode = 0) {
     try { emulatorsProc.kill('SIGKILL'); } catch(e) {}
   }
   
+  // Delete temporary Firebase configuration file
+  try {
+    if (fs.existsSync(tempConfigPath)) {
+      fs.unlinkSync(tempConfigPath);
+      console.log('🗑️ [CI-E2E] Temporary config file cleaned.');
+    }
+  } catch (e) {
+    console.warn('⚠️ [CI-E2E] Failed to delete temporary Firebase config:', e.message);
+  }
+
   // Run global process kill script to make absolutely sure ports are free
   console.log('🧹 [CI-E2E] Running final port sweep...');
   const killProc = spawn('node', [path.join(rootDir, 'scripts', 'kill.js')], {
+    env: {
+      ...process.env,
+      CLIENT_PORT: ports.client,
+      FIRESTORE_PORT: ports.firestore,
+      AUTH_PORT: ports.auth,
+      FUNCTIONS_PORT: ports.functions,
+      EMULATOR_UI_PORT: ports.ui
+    },
     stdio: 'inherit',
     shell: true
   });
   killProc.on('close', () => {
     process.exit(exitCode);
   });
+
 }
 
 // Watch emulators output
@@ -91,10 +140,11 @@ function triggerSeeding() {
     
     const req = http.get({
       hostname: 'localhost',
-      port: 5002,
+      port: ports.functions,
       path: path,
       timeout: 60000
     }, (res) => {
+
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
@@ -117,8 +167,8 @@ function triggerSeeding() {
 }
 
 function startServer() {
-  console.log('🌐 [CI-E2E] Starting static HTTP server for Flutter Web build...');
-  serveProc = spawn('npx', ['serve', 'client/build/web', '-l', '8080', '-s'], {
+  console.log(`🌐 [CI-E2E] Starting static HTTP server for Flutter Web build on port ${ports.client}...`);
+  serveProc = spawn('npx', ['serve', 'client/build/web', '-l', ports.client.toString(), '-s'], {
     cwd: rootDir,
     shell: true
   });
@@ -147,9 +197,16 @@ function runPlaywright() {
   console.log('🧪 [CI-E2E] Running Playwright E2E Tests...');
   playwrightProc = spawn('npx', ['playwright', 'test'], {
     cwd: rootDir,
+    env: {
+      ...process.env,
+      CLIENT_PORT: ports.client.toString(),
+      FIRESTORE_PORT: ports.firestore.toString(),
+      AUTH_PORT: ports.auth.toString()
+    },
     stdio: 'inherit',
     shell: true
   });
+
 
   playwrightProc.on('close', (code) => {
     console.log(`🧪 [CI-E2E] Playwright tests execution completed with code ${code}`);

@@ -44,3 +44,5 @@ yarn-error.log*
 Desktop.ini
 ehthumbs.db
 
+# Temporary Firebase Config
+backend/firebase.tmp.json

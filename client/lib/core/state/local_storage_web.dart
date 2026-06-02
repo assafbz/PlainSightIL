@@ -67,6 +67,32 @@ class LocalStorageWeb implements LocalStorageImpl {
       html.window.localStorage['guest_mode'] = enabled.toString();
     } catch (_) {}
   }
+
+  /// Wipes all key-value pairs stored in the browser's localStorage.
+  @override
+  Future<void> clearAll() async {
+    try {
+      html.window.localStorage.clear();
+    } catch (_) {}
+  }
+
+  /// Retrieves the cached git branch name from localStorage.
+  @override
+  String? getLastSavedBranch() {
+    try {
+      return html.window.localStorage['last_git_branch'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Persists the active git branch name in localStorage.
+  @override
+  Future<void> saveLastSavedBranch(String branch) async {
+    try {
+      html.window.localStorage['last_git_branch'] = branch;
+    } catch (_) {}
+  }
 }
 
 /// Web factory method returning a new [LocalStorageWeb] instance.

@@ -9,6 +9,9 @@ import 'package:flutter/material.dart';
 import 'local_storage.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/directory/data/models/liquidation_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
@@ -85,6 +88,22 @@ class AppStateNotifier extends ChangeNotifier {
   Future<void> _initSharedPreferences() async {
     try {
       await LocalStorage.init();
+
+      // Check if branch swapped and reset cache to prevent state pollution
+      const String activeBranch = String.fromEnvironment(
+        'GIT_BRANCH',
+        defaultValue: 'unknown',
+      );
+      final String? lastSavedBranch = LocalStorage.getLastSavedBranch();
+
+      if (activeBranch != 'unknown' && lastSavedBranch != activeBranch) {
+        AppLogger.warning(
+          '🔄 Git Branch Switch Detected! (Prev: $lastSavedBranch, Curr: $activeBranch). Flushing local cache...',
+        );
+        await LocalStorage.clearAll();
+        await LocalStorage.saveLastSavedBranch(activeBranch);
+      }
+
       _favorites = LocalStorage.getFavorites();
       _recents = LocalStorage.getRecents();
       _isGuestMode = LocalStorage.getGuestMode();
@@ -314,6 +333,17 @@ class AppStateNotifier extends ChangeNotifier {
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>
       _datasetMetadataMap;
   bool get isLoadingAdminMetadata => _isLoadingAdminMetadata;
+
+  // Telemetry state fields
+  Map<String, dynamic> _apiHealth = {};
+  List<Map<String, dynamic>> _scraperRuns = [];
+  bool _isLoadingTelemetry = true;
+  StreamSubscription<DocumentSnapshot>? _apiHealthSubscription;
+  StreamSubscription<QuerySnapshot>? _scraperRunsSubscription;
+
+  Map<String, dynamic> get apiHealth => _apiHealth;
+  List<Map<String, dynamic>> get scraperRuns => _scraperRuns;
+  bool get isLoadingTelemetry => _isLoadingTelemetry;
 
   List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
   bool get isLoadingDirectory => _isLoadingDirectory;
@@ -789,6 +819,7 @@ class AppStateNotifier extends ChangeNotifier {
   /// Initialize real-time snapshot listener on dataset_metadata collection
   void initAdminMetadataListener() {
     _adminMetadataSubscription?.cancel();
+    initTelemetryListeners();
     if (isTesting) {
       _datasetMetadataMap = {
         'cellular_antennas': {
@@ -845,6 +876,176 @@ class AppStateNotifier extends ChangeNotifier {
       _isLoadingAdminMetadata = false;
       notifyListeners();
       debugPrint('Failed to initialize admin metadata listener: $e');
+    }
+  }
+
+  /// Initialize real-time listeners for system health and scraper runs
+  void initTelemetryListeners() {
+    _apiHealthSubscription?.cancel();
+    _scraperRunsSubscription?.cancel();
+
+    if (isTesting) {
+      _apiHealth = {
+        'url': 'https://data.gov.il',
+        'isReachable': true,
+        'statusCode': 200,
+        'latencyMs': 142,
+        'lastChecked': DateTime.now()
+            .subtract(const Duration(minutes: 2))
+            .toIso8601String(),
+      };
+      _scraperRuns = [
+        {
+          'datasetId': 'cellular_antennas',
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 1, seconds: 5))
+              .toIso8601String(),
+          'durationMs': 4800,
+          'status': 'success',
+          'recordsProcessed': 9840,
+          'firestoreReadsEstimate': 9841,
+          'firestoreWritesEstimate': 9841,
+          'errorMessage': '',
+          'errorStack': '',
+        },
+        {
+          'datasetId': 'companies_liquidation',
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 2, seconds: 1))
+              .toIso8601String(),
+          'durationMs': 1200,
+          'status': 'success',
+          'recordsProcessed': 3,
+          'firestoreReadsEstimate': 4,
+          'firestoreWritesEstimate': 4,
+          'errorMessage': '',
+          'errorStack': '',
+        },
+        {
+          'datasetId': 'datasets_metadata',
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 3))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 3, seconds: 12))
+              .toIso8601String(),
+          'durationMs': 12500,
+          'status': 'success',
+          'recordsProcessed': 1250,
+          'firestoreReadsEstimate': 0,
+          'firestoreWritesEstimate': 1250,
+          'errorMessage': '',
+          'errorStack': '',
+        },
+        {
+          'datasetId': 'cellular_antennas',
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 4))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 4, seconds: 4))
+              .toIso8601String(),
+          'durationMs': 3800,
+          'status': 'error',
+          'recordsProcessed': 0,
+          'firestoreReadsEstimate': 0,
+          'firestoreWritesEstimate': 0,
+          'errorMessage': 'manualSyncAntennas: 502 Bad Gateway',
+          'errorStack':
+              'Error: 502 Bad Gateway\n    at scrapeAndSyncAntennas (/src/scrapers/antennas.ts:269:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)',
+        },
+      ];
+      _isLoadingTelemetry = false;
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) {
+      _isLoadingTelemetry = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      _apiHealthSubscription = FirebaseFirestore.instance
+          .collection('system_health')
+          .doc('data_gov_il')
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (snapshot.exists && snapshot.data() != null) {
+                _apiHealth = snapshot.data()!;
+              } else {
+                _apiHealth = {};
+              }
+              _isLoadingTelemetry = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingTelemetry = false;
+              notifyListeners();
+              AppLogger.error('Firestore system_health listener error', err);
+            },
+          );
+
+      _scraperRunsSubscription = FirebaseFirestore.instance
+          .collection('scraper_runs')
+          .orderBy('startTime', descending: true)
+          .limit(20)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              _scraperRuns = snapshot.docs.map((doc) => doc.data()).toList();
+              notifyListeners();
+            },
+            onError: (Object err) {
+              AppLogger.error('Firestore scraper_runs listener error', err);
+            },
+          );
+    } catch (e) {
+      _isLoadingTelemetry = false;
+      notifyListeners();
+      AppLogger.error('Failed to initialize telemetry listeners', e);
+    }
+  }
+
+  /// Triggers a manual pings/health check of data.gov.il via Cloud Function.
+  Future<void> triggerApiHealthCheck() async {
+    AppLogger.info('Triggering manual API health check');
+    if (isTesting) {
+      _apiHealth = {
+        'url': 'https://data.gov.il',
+        'isReachable': true,
+        'statusCode': 200,
+        'latencyMs': 89,
+        'lastChecked': DateTime.now().toIso8601String(),
+      };
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) return;
+
+    try {
+      String host = 'localhost';
+      if (!kIsWeb && Platform.isAndroid) {
+        host = '10.0.2.2';
+      }
+      final url = Uri.parse(
+        'http://$host:5002/plainsightil-dev/us-central1/manualApiHealthCheck',
+      );
+      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      AppLogger.info(
+        'Manual API health check triggered. Status: ${response.statusCode}',
+      );
+    } catch (e) {
+      AppLogger.error('Failed to trigger API health check', e);
     }
   }
 
@@ -1072,6 +1273,8 @@ class AppStateNotifier extends ChangeNotifier {
     _liquidationSubscription?.cancel();
     _adminMetadataSubscription?.cancel();
     _profileSubscription?.cancel();
+    _apiHealthSubscription?.cancel();
+    _scraperRunsSubscription?.cancel();
     super.dispose();
   }
 
@@ -1206,6 +1409,19 @@ class AppStateNotifier extends ChangeNotifier {
       'resource_id': 'Resource ID: ',
       'source_agency': 'Source Agency: ',
       'status_label': 'Status: ',
+      'telemetry_title': 'System Health & Telemetry',
+      'telemetry_tab': 'Telemetry',
+      'datasets_tab': 'Datasets',
+      'api_reachability': 'API Reachability',
+      'api_status_reachable': 'Reachable',
+      'api_status_unreachable': 'Unreachable',
+      'check_now': 'Check Now',
+      'avg_latency': 'Avg Latency: ',
+      'firestore_reads_writes': 'Firestore R/W: ',
+      'error_logbook': 'Recent Outages & Errors',
+      'no_telemetry': 'No telemetry logs found',
+      'latency_sec': 's',
+      'runs_title': 'Ingestion Pipelines',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -1336,6 +1552,19 @@ class AppStateNotifier extends ChangeNotifier {
       'resource_id': 'מזהה משאב: ',
       'source_agency': 'סוכנות מקור: ',
       'status_label': 'סטטוס: ',
+      'telemetry_title': 'בריאות המערכת וטלמטריה',
+      'telemetry_tab': 'טלמטריה',
+      'datasets_tab': 'מאגרים',
+      'api_reachability': 'זמינות ה-API',
+      'api_status_reachable': 'זמין',
+      'api_status_unreachable': 'לא זמין',
+      'check_now': 'בדוק כעת',
+      'avg_latency': 'זמן ריצה ממוצע: ',
+      'firestore_reads_writes': 'קריאות/כתיבות: ',
+      'error_logbook': 'שגיאות ותקלות אחרונות',
+      'no_telemetry': 'לא נמצאו נתוני טלמטריה',
+      'latency_sec': ' שנ׳',
+      'runs_title': 'תהליכי סנכרון',
     },
   };
 

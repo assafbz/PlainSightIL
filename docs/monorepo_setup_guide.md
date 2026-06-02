@@ -59,11 +59,27 @@ flutter pub get
 
 The backend uses the **Firebase Local Emulator Suite** to run Firestore and Cloud Functions locally without modifying production cloud resources.
 
-### 1. Port Allocation
-The project uses custom ports configured in [firebase.json](file:///Users/abenzaken/Dev/PlainSightIL/backend/firebase.json):
+### 1. Port Allocation & Dynamic Shifting
+By default, the project uses the following default ports configured in [firebase.json](file:///Users/abenzaken/Dev/PlainSightIL/backend/firebase.json):
 *   **Firestore Emulator**: Port `8081`
+*   **Auth Emulator**: Port `9099`
 *   **Functions Emulator**: Port `5002`
 *   **Emulator UI**: Port `4001` (accessible via web browser at `http://localhost:4001`)
+*   **Flutter Client Web**: Port `8080` (accessible via `http://localhost:8080`)
+
+#### 🔄 Concurrent Workspace Run (Dynamic Ports)
+To allow multiple developers or autonomous agents to run the application concurrently on the same machine without port collisions, the runner script supports port shifting via the `PORT_OFFSET` environment variable:
+```bash
+# Shift all client and emulator ports by 100
+PORT_OFFSET=100 npm start
+```
+This automatically updates ports to:
+*   Firestore Emulator: `8181`
+*   Auth Emulator: `9199`
+*   Functions Emulator: `5102`
+*   Emulator UI: `4101`
+*   Flutter Client Web: `8180`
+
 
 ### 2. Start the Backend Emulators
 ```bash
@@ -142,16 +158,18 @@ npm run test
 ## 🔍 Troubleshooting Guide
 
 ### 1. "Port 8080/8081 Taken" on Emulator Start
-**Problem:** Starting the Firebase emulators fails with a message indicating that a port is already in use.  
-**Solution:** Locate and terminate the process holding the port:
-```bash
-# Check if a process is using port 8081
-lsof -i :8081
+**Problem:** Starting the Firebase emulators or Flutter client fails with a message indicating that a port is already in use.  
+**Solution:** 
+*   **Automatic Pre-flight Kill**: Running `npm start` automatically triggers an inline sweep (`node scripts/kill.js`) to terminate lingering processes on standard ports (`8080`, `8081`, `9099`, `5002`, `4001`) before launching the environment.
+*   **Manual Port Clearing**: Run `npm run kill` to manually clean up orphans.
+*   **Alternative Ports**: Use `PORT_OFFSET=<number> npm start` to boot the application on a completely free set of ports (e.g. `PORT_OFFSET=100`).
 
-# Kill the process using its PID
-kill -9 <PID>
-```
-*Note: Make sure to check `firebase.json` for all mapped ports if the conflict persists.*
+### 2. State & Cache Pollution on Branch Swap
+**Problem:** Swapping Git branches yields database schema crashes, stale authentication sessions, or layout parsing errors.
+**Solution:**
+*   **Automated Git post-checkout hook**: The workspace includes a `post-checkout` hook that kills lingering processes and automatically downloads package updates (`flutter pub get` or `npm install`) if dependencies diverge between branches.
+*   **Runtime Cache Validation**: The client runtime compares the current git branch against the last branch recorded in LocalStorage/Preferences. If a mismatch is detected, the cache is automatically flushed to isolate workspace states.
+
 
 ### 2. "FirebaseException: type 'FirebaseException' is not a subtype of 'JavaScriptObject'" (Web target)
 **Problem:** The client app crashes on launch with a web-interop casting error when run in Chrome.  

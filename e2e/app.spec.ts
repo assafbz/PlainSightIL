@@ -5,6 +5,11 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   let page: Page;
+  
+  // Read dynamic emulator ports to inject them into the Flutter web client via URL parameters
+  const firestorePort = process.env.FIRESTORE_PORT || '8081';
+  const authPort = process.env.AUTH_PORT || '9099';
+  const queryParams = `?enable-accessibility=true&firestore_port=${firestorePort}&auth_port=${authPort}`;
 
   test.beforeAll(async ({ browser }) => {
     // Extend hook timeout to 3 minutes for cold DDC compilation
@@ -14,8 +19,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     page.on('console', msg => console.log(`[Browser Console] ${msg.type()}: ${msg.text()}`));
     page.on('pageerror', err => console.log(`[Browser Page Error] ${err.stack || err.message}`));
 
-    console.log('Navigating to PlainSightIL for initial setup...');
-    await page.goto('http://localhost:8080/?enable-accessibility=true');
+    console.log(`Navigating to PlainSightIL for initial setup with queryParams: ${queryParams}...`);
+    await page.goto(`/${queryParams}`);
 
     // Clear localStorage once at the start (not via persistent addInitScript)
     await page.evaluate(() => {
@@ -24,7 +29,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     });
 
     console.log('Reloading after clearing storage...');
-    await page.goto('http://localhost:8080/?enable-accessibility=true');
+    await page.goto(`/${queryParams}`);
     
     // Wait for DDC script compilation to complete (up to 120 seconds)
         const placeholder = page.locator('flt-semantics-placeholder').first();
@@ -186,7 +191,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
 
     // Reload the page (simulating restart/re-launch)
     console.log('Reloading page to test session persistence...');
-    await page.goto('http://localhost:8080/?enable-accessibility=true');
+    await page.goto(`/${queryParams}`);
     
     const valAfter = await page.evaluate(() => window.localStorage.getItem('guest_mode'));
     expect(valAfter).toBe('true');
@@ -209,7 +214,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
       window.localStorage.clear();
       window.sessionStorage.clear();
     });
-    await page.goto('http://localhost:8080/?enable-accessibility=true');
+    await page.goto(`/${queryParams}`);
 
     // Re-enable accessibility on page reload
     const placeholder = page.locator('flt-semantics-placeholder').first();
@@ -225,14 +230,17 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
       page.waitForEvent('popup'),
       page.getByText('Sign in with Google').click(),
     ]);
-    await popup.waitForLoadState();
+    console.log(`Popup opened. Initial URL: ${popup.url()}`);
+    await popup.waitForLoadState('networkidle').catch(() => console.log('Timeout waiting for networkidle'));
+    console.log(`Popup loaded. URL after load: ${popup.url()}`);
 
     // Authenticate via Firebase Auth Emulator popup
     console.log('Authenticating in the emulator popup...');
-    await popup.waitForTimeout(1000);
+    await popup.waitForTimeout(2000);
     console.log('--- POPUP HTML CONTENT START ---');
     console.log(await popup.content());
     console.log('--- POPUP HTML CONTENT END ---');
+
     
     // Wait for either the "Add new account" button OR the email input field to appear
     await Promise.race([

@@ -17,6 +17,8 @@ class _AdminPageState extends State<AdminPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _statusFilter = 'all'; // 'all', 'idle', 'syncing', 'error'
+  int _activeSubTab = 0; // 0 for Datasets, 1 for Telemetry
+  final Set<String> _expandedRuns = {}; // Tracks expanded log IDs
 
   @override
   void initState() {
@@ -212,35 +214,56 @@ class _AdminPageState extends State<AdminPage> {
                     // Header Bar
                     _buildHeader(context),
 
-                    // Filters Toolbar
-                    _buildFiltersToolbar(context),
+                    // Sub Tab Bar (Datasets / Telemetry)
+                    _buildSubTabBar(context),
 
-                    // Datasets List View
+                    // Conditional body
                     Expanded(
-                      child: isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : filteredDatasets.isEmpty
-                          ? Center(
-                              child: Text(
-                                widget.appState.translate('no_results'),
-                                style: AppTypography.bodyLg(
-                                  context,
-                                  color: AppColors.textSecondary,
+                      child: _activeSubTab == 0
+                          ? Column(
+                              children: [
+                                // Filters Toolbar
+                                _buildFiltersToolbar(context),
+
+                                // Datasets List View
+                                Expanded(
+                                  child: isLoading
+                                      ? const Center(
+                                          child: CircularProgressIndicator(),
+                                        )
+                                      : filteredDatasets.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            widget.appState.translate(
+                                              'no_results',
+                                            ),
+                                            style: AppTypography.bodyLg(
+                                              context,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        )
+                                      : ListView.builder(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16.0,
+                                            vertical: 8.0,
+                                          ),
+                                          physics:
+                                              const BouncingScrollPhysics(),
+                                          itemCount: filteredDatasets.length,
+                                          itemBuilder: (context, index) {
+                                            final dataset =
+                                                filteredDatasets[index];
+                                            return _buildDatasetCard(
+                                              context,
+                                              dataset,
+                                            );
+                                          },
+                                        ),
                                 ),
-                              ),
+                              ],
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 8.0,
-                              ),
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: filteredDatasets.length,
-                              itemBuilder: (context, index) {
-                                final dataset = filteredDatasets[index];
-                                return _buildDatasetCard(context, dataset);
-                              },
-                            ),
+                          : _buildTelemetryView(context),
                     ),
                   ],
                 ),
@@ -659,6 +682,396 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  Widget _buildSubTabBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _activeSubTab = 0;
+                  });
+                },
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(15),
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: _activeSubTab == 0
+                      ? BoxDecoration(
+                          color: AppColors.primary.withAlpha(40),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        )
+                      : null,
+                  child: Text(
+                    widget.appState.translate('datasets_tab'),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: _activeSubTab == 0
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _activeSubTab = 1;
+                  });
+                },
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(15),
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: _activeSubTab == 1
+                      ? BoxDecoration(
+                          color: AppColors.primary.withAlpha(40),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        )
+                      : null,
+                  child: Text(
+                    widget.appState.translate('telemetry_tab'),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: _activeSubTab == 1
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTelemetryView(BuildContext context) {
+    final scraperRuns = widget.appState.scraperRuns;
+    final apiHealth = widget.appState.apiHealth;
+
+    final List<Map<String, String>> specs = [
+      {
+        'id': 'cellular_antennas',
+        'titleEn': 'Cellular Antennas',
+        'titleHe': 'אנטנות סלולריות פעילות',
+      },
+      {
+        'id': 'cellular_permit_applications',
+        'titleEn': 'Cellular Permits',
+        'titleHe': 'בקשות להיתרי הקמה',
+      },
+      {
+        'id': 'companies_liquidation',
+        'titleEn': 'Companies Liquidation',
+        'titleHe': 'מאגר הכונס הרשמי',
+      },
+      {
+        'id': 'datasets_metadata',
+        'titleEn': 'Dataset Metadata',
+        'titleHe': 'מדריך מאגרי מידע',
+      },
+    ];
+
+    final errorRuns = scraperRuns.where((r) => r['status'] == 'error').toList();
+
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      children: [
+        _buildApiHealthCard(context, apiHealth),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            widget.appState.translate('runs_title'),
+            style: AppTypography.headlineMd(
+              context,
+              color: AppColors.textPrimary,
+            ).copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        ...specs.map((spec) {
+          final runs = scraperRuns
+              .where((r) => r['datasetId'] == spec['id'])
+              .toList();
+          final latestRun = runs.isNotEmpty ? runs.first : null;
+          double avgLatency = 0.0;
+          if (runs.isNotEmpty) {
+            avgLatency =
+                runs
+                    .map((r) => (r['durationMs'] as num).toDouble())
+                    .reduce((a, b) => a + b) /
+                runs.length /
+                1000.0;
+          }
+          return _buildPipelineRowCard(context, spec, latestRun, avgLatency);
+        }),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            widget.appState.translate('error_logbook'),
+            style: AppTypography.headlineMd(
+              context,
+              color: AppColors.textPrimary,
+            ).copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        if (errorRuns.isEmpty)
+          GlassmorphicCard(
+            borderRadius: 16.0,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Text(
+                  widget.appState.translate('no_telemetry'),
+                  style: AppTypography.bodyLg(
+                    context,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          ...errorRuns.map((run) {
+            final runKey = '${run['datasetId']}_${run['startTime']}';
+            final isExpanded = _expandedRuns.contains(runKey);
+            return _buildErrorLogCard(context, run, runKey, isExpanded);
+          }),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  Widget _buildApiHealthCard(
+    BuildContext context,
+    Map<String, dynamic> apiHealth,
+  ) {
+    final isReachable = apiHealth['isReachable'] as bool? ?? false;
+    final statusCode = apiHealth['statusCode'] as num? ?? 0;
+    final latencyMs = apiHealth['latencyMs'] as num? ?? 0;
+    final lastChecked = apiHealth['lastChecked'] as String? ?? '';
+
+    final statusColor = isReachable ? AppColors.success : AppColors.danger;
+    final statusText = isReachable
+        ? widget.appState.translate('api_status_reachable')
+        : widget.appState.translate('api_status_unreachable');
+
+    return GlassmorphicCard(
+      borderRadius: 20.0,
+      startBorderColor: statusColor,
+      startBorderWidth: 4.0,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  widget.appState.translate('api_reachability'),
+                  style: AppTypography.bodyLg(
+                    context,
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: statusColor.withAlpha(40)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedGlowDot(color: statusColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        statusText,
+                        style: AppTypography.labelXs(
+                          context,
+                          color: statusColor,
+                        ).copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildDetailRow(
+              context,
+              Icons.link_outlined,
+              'URL',
+              apiHealth['url'] as String? ?? 'https://data.gov.il',
+            ),
+            const SizedBox(height: 8),
+            _buildDetailRow(
+              context,
+              Icons.speed_outlined,
+              widget.appState.translate('status_label'),
+              statusCode > 0 ? '$statusCode (${latencyMs}ms)' : '-',
+            ),
+            const SizedBox(height: 8),
+            _buildDetailRow(
+              context,
+              Icons.access_time_outlined,
+              widget.appState.translate('last_sync'),
+              _formatTimestamp(lastChecked),
+            ),
+            const Divider(color: Color(0x14FFFFFF), height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await widget.appState.triggerApiHealthCheck();
+                },
+                icon: const Icon(Icons.refresh),
+                label: Text(widget.appState.translate('check_now')),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: AppColors.onPrimary,
+                  backgroundColor: AppColors.primary.withAlpha(30),
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: AppColors.primary.withAlpha(60),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPipelineRowCard(
+    BuildContext context,
+    Map<String, String> spec,
+    Map<String, dynamic>? latestRun,
+    double avgLatency,
+  ) {
+    final title = widget.appState.locale == 'he'
+        ? spec['titleHe']!
+        : spec['titleEn']!;
+    Color statusColor = AppColors.textTertiary;
+    IconData statusIcon = Icons.help_outline;
+
+    if (latestRun != null) {
+      if (latestRun['status'] == 'success') {
+        statusColor = AppColors.success;
+        statusIcon = Icons.check_circle_outline;
+      } else {
+        statusColor = AppColors.danger;
+        statusIcon = Icons.error_outline;
+      }
+    }
+
+    final reads = latestRun != null
+        ? latestRun['firestoreReadsEstimate'] as num? ?? 0
+        : 0;
+    final writes = latestRun != null
+        ? latestRun['firestoreWritesEstimate'] as num? ?? 0
+        : 0;
+    final lastTime = latestRun != null
+        ? latestRun['endTime'] as String? ?? ''
+        : '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: GlassmorphicCard(
+        borderRadius: 16.0,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: AppTypography.bodySm(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(statusIcon, color: statusColor, size: 18),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMiniDetail(
+                      context,
+                      Icons.timer_outlined,
+                      widget.appState.translate('avg_latency'),
+                      '${avgLatency.toStringAsFixed(1)}${widget.appState.translate('latency_sec')}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildMiniDetail(
+                      context,
+                      Icons.cloud_queue_outlined,
+                      widget.appState.translate('firestore_reads_writes'),
+                      '$reads / $writes',
+                    ),
+                  ),
+                ],
+              ),
+              if (lastTime.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _buildMiniDetail(
+                  context,
+                  Icons.access_time_outlined,
+                  widget.appState.translate('last_sync'),
+                  _formatTimestamp(lastTime),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Handle trigger button actions and notify users via SnackBar on completion (FR-04)
   Future<void> _handleManualSync(BuildContext context, String datasetId) async {
     final isHeb = widget.appState.locale == 'he';
@@ -706,5 +1119,203 @@ class _AdminPageState extends State<AdminPage> {
         ),
       );
     }
+  }
+
+  Widget _buildMiniDetail(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppColors.textTertiary, size: 12),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: AppTypography.labelXs(
+            context,
+            color: AppColors.textSecondary,
+          ).copyWith(fontSize: 10),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          value,
+          style: AppTypography.labelXs(
+            context,
+            color: AppColors.textPrimary,
+          ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorLogCard(
+    BuildContext context,
+    Map<String, dynamic> run,
+    String runKey,
+    bool isExpanded,
+  ) {
+    final datasetId = run['datasetId'] as String? ?? 'unknown';
+    final startTime = run['startTime'] as String? ?? '';
+    final errorMessage = run['errorMessage'] as String? ?? '';
+    final errorStack = run['errorStack'] as String? ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: GlassmorphicCard(
+        borderRadius: 16.0,
+        startBorderColor: AppColors.danger,
+        startBorderWidth: 4.0,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedRuns.remove(runKey);
+              } else {
+                _expandedRuns.add(runKey);
+              }
+            });
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            datasetId,
+                            style:
+                                AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ).copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Courier',
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatTimestamp(startTime),
+                            style: AppTypography.labelXs(
+                              context,
+                              color: AppColors.textTertiary,
+                            ).copyWith(fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  errorMessage,
+                  style: AppTypography.bodySm(
+                    context,
+                    color: AppColors.danger,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
+                if (isExpanded && errorStack.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Divider(color: Color(0x14FFFFFF)),
+                  Container(
+                    height: 150,
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0x33000000),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.glassBorder),
+                    ),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: SelectableText(
+                        errorStack,
+                        style: const TextStyle(
+                          fontFamily: 'Courier',
+                          fontSize: 10,
+                          color: Color(0xFFFDA4AF),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AnimatedGlowDot extends StatefulWidget {
+  final Color color;
+  const AnimatedGlowDot({super.key, required this.color});
+
+  @override
+  State<AnimatedGlowDot> createState() => _AnimatedGlowDotState();
+}
+
+class _AnimatedGlowDotState extends State<AnimatedGlowDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: widget.color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withAlpha((100 * _animation.value).toInt()),
+                blurRadius: 10 * _animation.value,
+                spreadRadius: 3 * _animation.value,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

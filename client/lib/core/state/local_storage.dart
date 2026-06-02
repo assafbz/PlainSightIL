@@ -34,4 +34,14 @@ class LocalStorage {
   /// Persists the guest session status flag.
   static Future<void> saveGuestMode(bool enabled) =>
       _impl.saveGuestMode(enabled);
+
+  /// Wipes the entire local storage configuration.
+  static Future<void> clearAll() => _impl.clearAll();
+
+  /// Returns the branch name associated with the saved cache.
+  static String? getLastSavedBranch() => _impl.getLastSavedBranch();
+
+  /// Persists the active branch name to separate cache states.
+  static Future<void> saveLastSavedBranch(String branch) =>
+      _impl.saveLastSavedBranch(branch);
 }

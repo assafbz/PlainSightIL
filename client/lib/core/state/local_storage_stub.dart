@@ -21,6 +21,15 @@ abstract class LocalStorageImpl {
 
   /// Set the guest session mode status.
   Future<void> saveGuestMode(bool enabled);
+
+  /// Clear all stored data values.
+  Future<void> clearAll();
+
+  /// Retrieve the last branch name used to save cache.
+  String? getLastSavedBranch();
+
+  /// Save the active branch name into local preferences.
+  Future<void> saveLastSavedBranch(String branch);
 }
 
 /// Factory stub method to instantiate the platform-specific local storage implementation.
