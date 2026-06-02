@@ -6,12 +6,16 @@
 echo "⚙️  Installing PlainSightIL SDLC Git Hooks..."
 
 # Ensure we are in the root directory
-if [ ! -d ".git" ]; then
-  echo "🛑 ERROR: Must run this script from the project root directory containing the .git folder."
+if [ ! -e ".git" ]; then
+  echo "🛑 ERROR: Must run this script from the project root directory containing the .git folder or file."
   exit 1
 fi
 
-HOOKS_DIR=".git/hooks"
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+if [ -z "$GIT_COMMON_DIR" ]; then
+  GIT_COMMON_DIR=".git"
+fi
+HOOKS_DIR="$GIT_COMMON_DIR/hooks"
 BIN_DIR=".agents/bin"
 
 if [ ! -d "$HOOKS_DIR" ]; then
