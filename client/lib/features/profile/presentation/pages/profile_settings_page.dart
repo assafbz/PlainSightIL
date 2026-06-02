@@ -38,7 +38,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   /// Initializes text editing controllers with the current profile data or fallbacks from identity provider.
   void _initFields() {
     final profile = widget.appState.userProfile;
-    final currentUser = widget.appState.currentUser;
 
     // Retrieve default first name and last name from identity provider if profile document is null/empty
     String defaultFirstName = '';
