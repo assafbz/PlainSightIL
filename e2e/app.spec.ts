@@ -9,7 +9,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   // Read dynamic emulator ports to inject them into the Flutter web client via URL parameters
   const firestorePort = process.env.FIRESTORE_PORT || '8081';
   const authPort = process.env.AUTH_PORT || '9099';
-  const queryParams = `?enable-accessibility=true&firestore_port=${firestorePort}&auth_port=${authPort}`;
+  const functionsPort = process.env.FUNCTIONS_PORT || '5002';
+  const queryParams = `?enable-accessibility=true&firestore_port=${firestorePort}&auth_port=${authPort}&functions_port=${functionsPort}`;
 
   test.beforeAll(async ({ browser }) => {
     // Extend hook timeout to 3 minutes for cold DDC compilation

@@ -15,6 +15,22 @@ admin.initializeApp();
 const db = admin.firestore();
 
 /**
+ * Helper to configure CORS headers and automatically resolve preflight OPTIONS requests.
+ * Returns true if the request was an OPTIONS request and has been completed.
+ */
+function handleCors(req: functions.https.Request, res: any): boolean {
+  res.set("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") {
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Max-Age", "3600");
+    res.status(204).send("");
+    return true;
+  }
+  return false;
+}
+
+/**
  * Benchmark reachability status and response latency of the government open data API,
  * writing health statistics to the system_health collection.
  * @param firestoreDb Firestore database instance
@@ -75,6 +91,7 @@ export const scheduledApiHealthCheck = functions.pubsub.schedule("*/15 * * * *")
  */
 export const manualApiHealthCheck = functions.https.onRequest(async (req, res) => {
   logger.info("manualApiHealthCheck HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
   try {
     const result = await checkAndLogApiReachability(db);
     res.status(200).json(result);
@@ -189,6 +206,7 @@ async function validateAdminRequest(
 // HTTPS Triggered Cloud Function for Active Antennas - for manual invocation and dev triggers
 export const manualSyncAntennas = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncAntennas HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
@@ -250,6 +268,7 @@ export const scheduledPermitAppsScraper = functions.pubsub
 // HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
 export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncPermitApps HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
@@ -311,6 +330,7 @@ export const scheduledMetadataScraper = functions.pubsub
 // HTTPS Triggered Cloud Function for Dataset Metadata - manual sync
 export const manualSyncMetadata = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncMetadata HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
@@ -366,6 +386,7 @@ export const scheduledCompaniesLiquidationScraper = functions.pubsub
 // HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
