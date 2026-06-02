@@ -1,13 +1,14 @@
 const { execSync } = require('child_process');
 
-console.log('🔍 Locating and terminating PlainSightIL processes...');
+const offset = parseInt(process.env.PORT_OFFSET, 10) || 0;
+console.log(`🔍 Locating and terminating PlainSightIL processes (offset: ${offset})...`);
 
 const ports = [
-  parseInt(process.env.FIRESTORE_PORT, 10) || 8081,
-  parseInt(process.env.AUTH_PORT, 10) || 9099,
-  parseInt(process.env.FUNCTIONS_PORT, 10) || 5002,
-  parseInt(process.env.EMULATOR_UI_PORT, 10) || 4001,
-  parseInt(process.env.CLIENT_PORT, 10) || 8080
+  process.env.FIRESTORE_PORT ? parseInt(process.env.FIRESTORE_PORT, 10) : (8081 + offset),
+  process.env.AUTH_PORT ? parseInt(process.env.AUTH_PORT, 10) : (9099 + offset),
+  process.env.FUNCTIONS_PORT ? parseInt(process.env.FUNCTIONS_PORT, 10) : (5002 + offset),
+  process.env.EMULATOR_UI_PORT ? parseInt(process.env.EMULATOR_UI_PORT, 10) : (4001 + offset),
+  process.env.CLIENT_PORT ? parseInt(process.env.CLIENT_PORT, 10) : (8080 + offset)
 ];
 const pids = new Set();
 

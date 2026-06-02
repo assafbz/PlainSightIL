@@ -1088,7 +1088,7 @@ class _AdminPageState extends State<AdminPage> {
 
     final result = await widget.appState.triggerManualSync(datasetId);
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     ScaffoldMessenger.of(context).clearSnackBars();
 

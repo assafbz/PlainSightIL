@@ -19,8 +19,8 @@ The diagram below outlines the sequential lifecycle of our E2E test execution:
 
 ```mermaid
 graph TD
-    Start[Start Test Loop] --> Kill["Run cleanup (npm run kill)"]
-    Kill --> Spawn["Spawn Emulators & Web (npm start)"]
+    Start[Start Test Loop] --> Kill["Run cleanup (PORT_OFFSET=id npm run kill)"]
+    Kill --> Spawn["Spawn Emulators & Web (PORT_OFFSET=id npm start)"]
     Spawn --> Seed[Seed Firestore Mock Data]
     Seed --> RunTests[Execute Client/Backend Test Suites]
     
@@ -82,14 +82,14 @@ graph TD
 Tests must run in a predictable environment isolated from external network calls or remote databases.
 
 1.  **Kill Orphaned Processes**:
-    Before launching emulators, clean up any processes bound to the emulator and client ports (`8080`, `8081`, `5002`, `4001`):
+    Before launching emulators, clean up any processes bound to the emulator and client ports by setting the active `PORT_OFFSET` (using the active `issue_id` as the offset):
     ```bash
-    npm run kill
+    PORT_OFFSET=<issue_id> npm run kill
     ```
 2.  **Start Services Parallelly**:
-    Launch the Firebase Emulator Suite (hosting Firestore, Auth, Functions) and compiling the Flutter web client:
+    Launch the Firebase Emulator Suite (hosting Firestore, Auth, Functions) and compile the Flutter web client with the active `PORT_OFFSET` (using the active `issue_id` as the offset):
     ```bash
-    npm start
+    PORT_OFFSET=<issue_id> npm start
     ```
 3.  **Local Seeding and Cleanup**:
     - Seed data via JSON files mapped to collection names (e.g., using test mock fixtures).

@@ -117,9 +117,10 @@ export const scheduledAntennaScraper = functions.pubsub
  */
 async function validateAdminRequest(
   req: functions.https.Request,
-  res: any,
+  res: functions.Response,
 ): Promise<{ uid: string } | null> {
   // Allow unauthenticated GET requests in local emulator for seeding/development
+  // eslint-disable-next-line no-undef
   if (process.env.FUNCTIONS_EMULATOR === "true" && req.method === "GET") {
     functions.logger.info("Bypassing admin check for emulator seeding via GET request.");
     return { uid: "emulator-seeder" };

@@ -276,20 +276,20 @@ To run local verification and manual validation during the development and QA li
 
 ### 🚀 Running both Backend and Client
 ```bash
-npm start
+PORT_OFFSET=<issue_id> npm start
 ```
-- **Description**: Spawns the Firebase local emulator suite (port `8081` for Firestore, port `5002` for Cloud Functions) and compiles the Flutter web client (port `8080` in Chrome) in parallel.
-- **Agent Usage**: Developer and QA agents should invoke this command when running manual visual validations, layout verification, or local API integration checks.
+- **Description**: Spawns the Firebase local emulator suite and compiles the Flutter web client in parallel, shifted by the issue ID to prevent port conflicts when multiple issues are worked on concurrently.
+- **Agent Usage**: Developer and QA agents MUST invoke this command using the active issue ID as the `PORT_OFFSET` (e.g., `PORT_OFFSET=22 npm start` for Issue #22) when running manual visual validations, layout verification, or local API integration checks.
 
 ### 🛑 Killing all Running Processes
 ```bash
-npm run kill
+PORT_OFFSET=<issue_id> npm run kill
 ```
-- **Description**: Scans for and immediately terminates any orphaned processes bound to ports `8081`, `5002`, `4001`, or `8080`.
-- **Agent Usage**: Agents should run this clean-up utility at the end of their task cycles or before starting a new run to ensure no port conflicts block execution.
+- **Description**: Terminates any orphaned processes bound to the offset-shifted ports.
+- **Agent Usage**: Agents MUST run this clean-up utility using the active issue ID as the `PORT_OFFSET` (e.g., `PORT_OFFSET=22 npm run kill` for Issue #22) at the end of their task cycles or before starting a new run to ensure no port conflicts block execution.
 
-### 📦 Individual Service Control
+### 📦 Individual Service Control (with Port Shifting)
 - **Compile Backend Functions**: `npm run backend:build`
-- **Start Backend Emulators**: `npm run backend:start`
-- **Start Flutter Client**: `npm run client:start`
+- **Start Backend Emulators**: `PORT_OFFSET=<issue_id> npm run backend:start`
+- **Start Flutter Client**: `PORT_OFFSET=<issue_id> npm run client:start`
 

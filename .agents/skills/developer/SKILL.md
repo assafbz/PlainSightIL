@@ -30,6 +30,14 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
 
 ### 3. Local Verification
 - Run local code analysis (e.g., `flutter analyze` for the client and `npm run lint` / `npm run build` for the backend) to catch any compilation, linter, or type inference issues before claiming completion.
+- To run manual validation or visual checks of the app, start the local environment using the active `PORT_OFFSET` (using the active `issue_id` as the offset) to prevent port collisions:
+  ```bash
+  PORT_OFFSET=<issue_id> npm start
+  ```
+- Always clean up your running processes afterwards:
+  ```bash
+  PORT_OFFSET=<issue_id> npm run kill
+  ```
 - Ensure that widgets using non-constant variables or properties (like dynamic theme colors from `AppColors`) are not marked as `const`.
 - Explicitly parameterize generic type methods and constructors (like `MaterialPageRoute<void>` or `showModalBottomSheet<void>`) to avoid type inference warnings.
 - Make sure local execution passes without runtime crashes.
