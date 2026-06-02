@@ -56,7 +56,11 @@ class LiquidationNotifier extends ChangeNotifier {
       _liquidationSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _liquidationRecords = snapshot.docs
-              .map((doc) => LiquidationRecordModel.fromMap(doc.data() as Map<String, dynamic>))
+              .map(
+                (doc) => LiquidationRecordModel.fromMap(
+                  doc.data() as Map<String, dynamic>,
+                ),
+              )
               .toList();
           _isLoadingLiquidation = false;
           notifyListeners();
@@ -64,7 +68,10 @@ class LiquidationNotifier extends ChangeNotifier {
         onError: (Object err) {
           _isLoadingLiquidation = false;
           notifyListeners();
-          AppLogger.error('Firestore liquidation collection listener error', err);
+          AppLogger.error(
+            'Firestore liquidation collection listener error',
+            err,
+          );
         },
       );
       return;
@@ -116,7 +123,9 @@ class LiquidationNotifier extends ChangeNotifier {
       return;
     }
 
-    AppLogger.info('Initializing companies liquidation listener in LiquidationNotifier');
+    AppLogger.info(
+      'Initializing companies liquidation listener in LiquidationNotifier',
+    );
     try {
       _liquidationSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
@@ -133,13 +142,19 @@ class LiquidationNotifier extends ChangeNotifier {
             onError: (Object err) {
               _isLoadingLiquidation = false;
               notifyListeners();
-              AppLogger.error('Firestore liquidation collection listener error', err);
+              AppLogger.error(
+                'Firestore liquidation collection listener error',
+                err,
+              );
             },
           );
     } catch (e) {
       _isLoadingLiquidation = false;
       notifyListeners();
-      AppLogger.error('Failed to initialize liquidation listener in LiquidationNotifier', e);
+      AppLogger.error(
+        'Failed to initialize liquidation listener in LiquidationNotifier',
+        e,
+      );
     }
   }
 

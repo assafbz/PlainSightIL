@@ -131,7 +131,9 @@ void main() {
 
     test('initAntennaListener initializes antennas in testing mode', () {
       AppStateNotifier.isTesting = true;
-      print('DEBUG: AppStateNotifier.isTesting = ${AppStateNotifier.isTesting}, antennaRecords = ${appState.antennaRecords}');
+      print(
+        'DEBUG: AppStateNotifier.isTesting = ${AppStateNotifier.isTesting}, antennaRecords = ${appState.antennaRecords}',
+      );
       expect(appState.antennaRecords.isEmpty, true);
       expect(appState.isLoadingAntennas, true);
 
@@ -291,10 +293,15 @@ void main() {
       expect(appState.isCheckingApiHealth, isFalse);
       expect(appState.apiHealth['isReachable'], isTrue);
 
-      final voteSuccess = await appState.requestDatasetActivation('some-dataset', 'Some Title');
+      final voteSuccess = await appState.requestDatasetActivation(
+        'some-dataset',
+        'Some Title',
+      );
       expect(voteSuccess, isTrue);
 
-      final syncResult = await appState.triggerManualSync('8935c8e5-ec77-421f-af86-d970583195f8');
+      final syncResult = await appState.triggerManualSync(
+        '8935c8e5-ec77-421f-af86-d970583195f8',
+      );
       expect(syncResult['success'], isTrue);
 
       appState.setMockProfile(null);

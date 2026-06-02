@@ -130,12 +130,24 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AppStateNotifier>.value(value: _appState),
-        ChangeNotifierProvider<AuthNotifier>.value(value: _appState.authNotifier),
-        ChangeNotifierProvider<AntennasNotifier>.value(value: _appState.antennasNotifier),
-        ChangeNotifierProvider<PermitsNotifier>.value(value: _appState.permitsNotifier),
-        ChangeNotifierProvider<LiquidationNotifier>.value(value: _appState.liquidationNotifier),
-        ChangeNotifierProvider<DoctorsNotifier>.value(value: _appState.doctorsNotifier),
-        ChangeNotifierProvider<TelemetryNotifier>.value(value: _appState.telemetryNotifier),
+        ChangeNotifierProvider<AuthNotifier>.value(
+          value: _appState.authNotifier,
+        ),
+        ChangeNotifierProvider<AntennasNotifier>.value(
+          value: _appState.antennasNotifier,
+        ),
+        ChangeNotifierProvider<PermitsNotifier>.value(
+          value: _appState.permitsNotifier,
+        ),
+        ChangeNotifierProvider<LiquidationNotifier>.value(
+          value: _appState.liquidationNotifier,
+        ),
+        ChangeNotifierProvider<DoctorsNotifier>.value(
+          value: _appState.doctorsNotifier,
+        ),
+        ChangeNotifierProvider<TelemetryNotifier>.value(
+          value: _appState.telemetryNotifier,
+        ),
       ],
       child: ListenableBuilder(
         listenable: _appState,

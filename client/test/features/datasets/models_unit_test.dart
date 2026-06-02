@@ -103,10 +103,7 @@ void main() {
     });
 
     test('fromMap parses safely with non-Map status', () {
-      final map = {
-        'liquidationCaseId': 12345,
-        'caseStatus': 'invalid-type',
-      };
+      final map = {'liquidationCaseId': 12345, 'caseStatus': 'invalid-type'};
 
       final model = LiquidationRecordModel.fromMap(map);
       expect(model.caseStatus['he'], 'פירוק פעיל'); // Default

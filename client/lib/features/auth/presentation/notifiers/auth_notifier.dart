@@ -150,7 +150,10 @@ class AuthNotifier extends ChangeNotifier {
       _isGuestMode = LocalStorage.getGuestMode();
       notifyListeners();
     } catch (e) {
-      AppLogger.error('Error initializing SharedPreferences in AuthNotifier', e);
+      AppLogger.error(
+        'Error initializing SharedPreferences in AuthNotifier',
+        e,
+      );
     }
   }
 
@@ -241,17 +244,19 @@ class AuthNotifier extends ChangeNotifier {
       return;
     }
 
-    _profileSubscription = _getUserProfileUseCase.call(uid).listen(
-      (profile) {
-        if (_userProfile != profile) {
-          _userProfile = profile;
-          notifyListeners();
-        }
-      },
-      onError: (Object error) {
-        AppLogger.error('Profile stream error for UID: $uid', error);
-      },
-    );
+    _profileSubscription = _getUserProfileUseCase
+        .call(uid)
+        .listen(
+          (profile) {
+            if (_userProfile != profile) {
+              _userProfile = profile;
+              notifyListeners();
+            }
+          },
+          onError: (Object error) {
+            AppLogger.error('Profile stream error for UID: $uid', error);
+          },
+        );
   }
 
   /// Save modifications to the user's profile card in the database.

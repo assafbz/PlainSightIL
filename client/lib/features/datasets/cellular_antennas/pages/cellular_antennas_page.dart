@@ -355,17 +355,14 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
           ListenableBuilder(
             listenable: appState,
             builder: (context, _) {
-              final isFav = appState.isFavorite(
-                DatasetIds.cellularAntennas,
-              );
+              final isFav = appState.isFavorite(DatasetIds.cellularAntennas);
               return IconButton(
                 icon: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border,
                   color: isFav ? AppColors.danger : AppColors.textSecondary,
                 ),
-                onPressed: () => appState.toggleFavorite(
-                  DatasetIds.cellularAntennas,
-                ),
+                onPressed: () =>
+                    appState.toggleFavorite(DatasetIds.cellularAntennas),
               );
             },
           ),

@@ -20,7 +20,8 @@ import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 import 'package:plainsight/features/profile/domain/repositories/user_profile_repository.dart';
 
 // Fake implementations for Firestore classes
-class FakeQueryDocumentSnapshot implements QueryDocumentSnapshot<Map<String, dynamic>> {
+class FakeQueryDocumentSnapshot
+    implements QueryDocumentSnapshot<Map<String, dynamic>> {
   final String _id;
   final Map<String, dynamic> _data;
   FakeQueryDocumentSnapshot(this._id, this._data);
@@ -78,7 +79,8 @@ class FakeUser implements User {
   String? get email => _email;
 
   @override
-  Future<String> getIdToken([bool forceRefresh = false]) async => 'mock-id-token';
+  Future<String> getIdToken([bool forceRefresh = false]) async =>
+      'mock-id-token';
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -86,7 +88,8 @@ class FakeUser implements User {
 
 // Fake User Profile Repository
 class FakeUserProfileRepository implements UserProfileRepository {
-  final StreamController<UserProfile?> controller = StreamController<UserProfile?>.broadcast();
+  final StreamController<UserProfile?> controller =
+      StreamController<UserProfile?>.broadcast();
   UserProfile? mockProfile;
   UserProfile? lastUpdated;
   bool throwOnUpdate = false;
@@ -126,7 +129,12 @@ class FakeHttpClient implements http.Client {
   }
 
   @override
-  Future<http.Response> post(Uri url, {Map<String, String>? headers, Object? body, dynamic encoding}) async {
+  Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+    dynamic encoding,
+  }) async {
     if (onPost != null) {
       return onPost!(url, headers: headers, body: body);
     }
@@ -153,62 +161,68 @@ void main() {
   );
 
   group('AuthNotifier Tests', () {
-    test('Constructor initialization with custom repository and stream', () async {
-      final mockRepo = FakeUserProfileRepository(tProfile);
-      final authStreamController = StreamController<User?>();
+    test(
+      'Constructor initialization with custom repository and stream',
+      () async {
+        final mockRepo = FakeUserProfileRepository(tProfile);
+        final authStreamController = StreamController<User?>();
 
-      AppStateNotifier.isTesting = false;
-      final notifier = AuthNotifier(
-        isTesting: false,
-        testProfileRepository: mockRepo,
-        testAuthChangesStream: authStreamController.stream,
-      );
+        AppStateNotifier.isTesting = false;
+        final notifier = AuthNotifier(
+          isTesting: false,
+          testProfileRepository: mockRepo,
+          testAuthChangesStream: authStreamController.stream,
+        );
 
-      expect(notifier.isAuthenticated, isFalse);
-      expect(notifier.userProfile, isNull);
+        expect(notifier.isAuthenticated, isFalse);
+        expect(notifier.userProfile, isNull);
 
-      // Emit authenticated user
-      final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-      authStreamController.add(fakeUser);
+        // Emit authenticated user
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        authStreamController.add(fakeUser);
 
-      // Allow stream to process
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Allow stream to process
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(notifier.isAuthenticated, isTrue);
-      expect(notifier.currentUser?.uid, 'user_123');
-      expect(notifier.userProfile, tProfile);
+        expect(notifier.isAuthenticated, isTrue);
+        expect(notifier.currentUser?.uid, 'user_123');
+        expect(notifier.userProfile, tProfile);
 
-      // Update User Profile
-      final updatedProfile = tProfile.copyWith(firstName: 'Assaf New');
-      await notifier.updateUserProfile(updatedProfile);
-      expect(mockRepo.lastUpdated, updatedProfile);
-      expect(notifier.userProfile?.firstName, 'Assaf New');
+        // Update User Profile
+        final updatedProfile = tProfile.copyWith(firstName: 'Assaf New');
+        await notifier.updateUserProfile(updatedProfile);
+        expect(mockRepo.lastUpdated, updatedProfile);
+        expect(notifier.userProfile?.firstName, 'Assaf New');
 
-      // Guest Mode Toggle
-      notifier.setGuestMode(true);
-      expect(notifier.isGuestMode, isTrue);
+        // Guest Mode Toggle
+        notifier.setGuestMode(true);
+        expect(notifier.isGuestMode, isTrue);
 
-      // Sign In with Google
-      await notifier.signInWithGoogle();
-      expect(notifier.isGuestMode, isFalse);
+        // Sign In with Google
+        await notifier.signInWithGoogle();
+        expect(notifier.isGuestMode, isFalse);
 
-      // Sign Out
-      AppStateNotifier.isTesting = false;
-      await notifier.signOut();
-      authStreamController.add(null);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(notifier.isAuthenticated, isFalse);
-      expect(notifier.userProfile, isNull);
+        // Sign Out
+        AppStateNotifier.isTesting = false;
+        await notifier.signOut();
+        authStreamController.add(null);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(notifier.isAuthenticated, isFalse);
+        expect(notifier.userProfile, isNull);
 
-      AppStateNotifier.isTesting = true;
+        AppStateNotifier.isTesting = true;
 
-      await authStreamController.close();
-      notifier.dispose();
-    });
+        await authStreamController.close();
+        notifier.dispose();
+      },
+    );
 
     test('Favorites and Recents list toggling and saving', () async {
       final mockRepo = FakeUserProfileRepository(tProfile);
-      final notifier = AuthNotifier(isTesting: true, testProfileRepository: mockRepo);
+      final notifier = AuthNotifier(
+        isTesting: true,
+        testProfileRepository: mockRepo,
+      );
 
       // Favorites
       expect(notifier.isFavorite('dataset-1'), isFalse);
@@ -230,160 +244,196 @@ void main() {
       notifier.dispose();
     });
 
-    test('AuthNotifier behaves correctly when isFirebaseInitialized is false', () async {
-      AppStateNotifier.isTesting = false;
-      final mockRepo = FakeUserProfileRepository(tProfile);
-      final streamController = StreamController<User?>();
-      final notifier = AuthNotifier(
-        isTesting: false,
-        testProfileRepository: mockRepo,
-        testAuthChangesStream: streamController.stream,
-      );
-      expect(notifier.isAuthenticated, isFalse);
-      
-      // trigger auth stream exception path
-      final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-      
-      streamController.addError('Connection failed');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      
-      await notifier.signInWithGoogle();
-      expect(notifier.isAuthenticated, isTrue);
-      
-      await notifier.signOut();
-      expect(notifier.isAuthenticated, isFalse);
-      
-      await streamController.close();
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+    test(
+      'AuthNotifier behaves correctly when isFirebaseInitialized is false',
+      () async {
+        AppStateNotifier.isTesting = false;
+        final mockRepo = FakeUserProfileRepository(tProfile);
+        final streamController = StreamController<User?>();
+        final notifier = AuthNotifier(
+          isTesting: false,
+          testProfileRepository: mockRepo,
+          testAuthChangesStream: streamController.stream,
+        );
+        expect(notifier.isAuthenticated, isFalse);
+
+        // trigger auth stream exception path
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+
+        streamController.addError('Connection failed');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        await notifier.signInWithGoogle();
+        expect(notifier.isAuthenticated, isTrue);
+
+        await notifier.signOut();
+        expect(notifier.isAuthenticated, isFalse);
+
+        await streamController.close();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
 
   group('AntennasNotifier Tests', () {
-    test('initAntennaListener updates records from testFirestoreStream', () async {
-      final streamController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-      
-      AppStateNotifier.isTesting = false;
-      final notifier = AntennasNotifier(isTesting: false, testFirestoreStream: streamController.stream);
+    test(
+      'initAntennaListener updates records from testFirestoreStream',
+      () async {
+        final streamController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
 
-      expect(notifier.isLoadingAntennas, isTrue);
-      notifier.initAntennaListener();
+        AppStateNotifier.isTesting = false;
+        final notifier = AntennasNotifier(
+          isTesting: false,
+          testFirestoreStream: streamController.stream,
+        );
 
-      // Emit data snapshot
-      final mapData = {
-        'antennaId': 'CELL-100',
-        'addressHebrew': 'Dizengoff 50',
-      };
-      final fakeDoc = FakeQueryDocumentSnapshot('1', mapData);
-      final fakeSnapshot = FakeQuerySnapshot([fakeDoc]);
+        expect(notifier.isLoadingAntennas, isTrue);
+        notifier.initAntennaListener();
 
-      streamController.add(fakeSnapshot);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Emit data snapshot
+        final mapData = {
+          'antennaId': 'CELL-100',
+          'addressHebrew': 'Dizengoff 50',
+        };
+        final fakeDoc = FakeQueryDocumentSnapshot('1', mapData);
+        final fakeSnapshot = FakeQuerySnapshot([fakeDoc]);
 
-      expect(notifier.isLoadingAntennas, isFalse);
-      expect(notifier.antennaRecords.length, 1);
-      expect(notifier.antennaRecords.first['antennaId'], 'CELL-100');
+        streamController.add(fakeSnapshot);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Emit error
-      streamController.addError('Connection Error');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(notifier.isLoadingAntennas, isFalse); // Keeps loading state as false
+        expect(notifier.isLoadingAntennas, isFalse);
+        expect(notifier.antennaRecords.length, 1);
+        expect(notifier.antennaRecords.first['antennaId'], 'CELL-100');
 
-      await streamController.close();
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+        // Emit error
+        streamController.addError('Connection Error');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(
+          notifier.isLoadingAntennas,
+          isFalse,
+        ); // Keeps loading state as false
 
-    test('initAntennaListener fallback when stream is null and firebase is not initialized', () {
-      AppStateNotifier.isTesting = false;
-      final notifier = AntennasNotifier(isTesting: false);
-      notifier.initAntennaListener();
-      expect(notifier.isLoadingAntennas, isFalse);
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+        await streamController.close();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
+
+    test(
+      'initAntennaListener fallback when stream is null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = AntennasNotifier(isTesting: false);
+        notifier.initAntennaListener();
+        expect(notifier.isLoadingAntennas, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
 
   group('PermitsNotifier Tests', () {
-    test('initPermitMetadataListener double-buffers collections via streams', () async {
-      final metadataController = StreamController<DocumentSnapshot<Map<String, dynamic>>>();
-      final permitsController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+    test(
+      'initPermitMetadataListener double-buffers collections via streams',
+      () async {
+        final metadataController =
+            StreamController<DocumentSnapshot<Map<String, dynamic>>>();
+        final permitsController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
 
-      AppStateNotifier.isTesting = false;
-      final notifier = PermitsNotifier(
-        isTesting: false,
-        testMetadataStream: metadataController.stream,
-        testPermitsStream: permitsController.stream,
-      );
+        AppStateNotifier.isTesting = false;
+        final notifier = PermitsNotifier(
+          isTesting: false,
+          testMetadataStream: metadataController.stream,
+          testPermitsStream: permitsController.stream,
+        );
 
-      notifier.initPermitMetadataListener();
-      expect(notifier.isLoadingPermits, isTrue);
+        notifier.initPermitMetadataListener();
+        expect(notifier.isLoadingPermits, isTrue);
 
-      // Emit metadata snapshot with different collection name
-      final metaData = {
-        'activeCollection': 'permits_june_2026',
-        'status': 'syncing',
-      };
-      final fakeMetaDoc = FakeDocumentSnapshot('ff398c7e-c522-4ee8-a53a-312b188a573d', true, metaData);
-      metadataController.add(fakeMetaDoc);
+        // Emit metadata snapshot with different collection name
+        final metaData = {
+          'activeCollection': 'permits_june_2026',
+          'status': 'syncing',
+        };
+        final fakeMetaDoc = FakeDocumentSnapshot(
+          'ff398c7e-c522-4ee8-a53a-312b188a573d',
+          true,
+          metaData,
+        );
+        metadataController.add(fakeMetaDoc);
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(notifier.permitSyncStatus, 'syncing');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(notifier.permitSyncStatus, 'syncing');
 
-      // Send duplicate metadata snapshot to hit line 73 else branch
-      metadataController.add(fakeMetaDoc);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Send duplicate metadata snapshot to hit line 73 else branch
+        metadataController.add(fakeMetaDoc);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      // Emit permits snapshots
-      final permitData = {'siteNumber': 'PT1234B'};
-      final fakePermitDoc = FakeQueryDocumentSnapshot('1', permitData);
-      final fakePermitsSnapshot = FakeQuerySnapshot([fakePermitDoc]);
+        // Emit permits snapshots
+        final permitData = {'siteNumber': 'PT1234B'};
+        final fakePermitDoc = FakeQueryDocumentSnapshot('1', permitData);
+        final fakePermitsSnapshot = FakeQuerySnapshot([fakePermitDoc]);
 
-      permitsController.add(fakePermitsSnapshot);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        permitsController.add(fakePermitsSnapshot);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(notifier.isLoadingPermits, isFalse);
-      expect(notifier.permitRecords.length, 1);
-      expect(notifier.permitRecords.first['siteNumber'], 'PT1234B');
+        expect(notifier.isLoadingPermits, isFalse);
+        expect(notifier.permitRecords.length, 1);
+        expect(notifier.permitRecords.first['siteNumber'], 'PT1234B');
 
-      // Emit permits stream error to hit line 205-209
-      permitsController.addError('Permits Stream Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.permitSyncStatus, 'error');
+        // Emit permits stream error to hit line 205-209
+        permitsController.addError('Permits Stream Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.permitSyncStatus, 'error');
 
-      // Emit metadata stream error
-      metadataController.addError('Connection error');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(notifier.permitSyncStatus, 'error');
+        // Emit metadata stream error
+        metadataController.addError('Connection error');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(notifier.permitSyncStatus, 'error');
 
-      // Emit metadata empty document
-      final emptyMetaDoc = FakeDocumentSnapshot('ff398c7e-c522-4ee8-a53a-312b188a573d', false, null);
-      metadataController.add(emptyMetaDoc);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Emit metadata empty document
+        final emptyMetaDoc = FakeDocumentSnapshot(
+          'ff398c7e-c522-4ee8-a53a-312b188a573d',
+          false,
+          null,
+        );
+        metadataController.add(emptyMetaDoc);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      await metadataController.close();
-      await permitsController.close();
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+        await metadataController.close();
+        await permitsController.close();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
 
-    test('initPermitMetadataListener fallback when streams are null and firebase is not initialized', () {
-      AppStateNotifier.isTesting = false;
-      final notifier = PermitsNotifier(isTesting: false);
-      notifier.initPermitMetadataListener();
-      expect(notifier.permitSyncStatus, 'error');
-      expect(notifier.isLoadingPermits, isFalse);
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+    test(
+      'initPermitMetadataListener fallback when streams are null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = PermitsNotifier(isTesting: false);
+        notifier.initPermitMetadataListener();
+        expect(notifier.permitSyncStatus, 'error');
+        expect(notifier.isLoadingPermits, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
 
   group('LiquidationNotifier Tests', () {
     test('initLiquidationListener updates liquidation records', () async {
-      final streamController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-      
+      final streamController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+
       AppStateNotifier.isTesting = false;
-      final notifier = LiquidationNotifier(isTesting: false, testFirestoreStream: streamController.stream);
+      final notifier = LiquidationNotifier(
+        isTesting: false,
+        testFirestoreStream: streamController.stream,
+      );
 
       notifier.initLiquidationListener();
       expect(notifier.isLoadingLiquidation, isTrue);
@@ -415,22 +465,29 @@ void main() {
       AppStateNotifier.isTesting = true;
     });
 
-    test('initLiquidationListener fallback when stream is null and firebase is not initialized', () {
-      AppStateNotifier.isTesting = false;
-      final notifier = LiquidationNotifier(isTesting: false);
-      notifier.initLiquidationListener();
-      expect(notifier.isLoadingLiquidation, isFalse);
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+    test(
+      'initLiquidationListener fallback when stream is null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = LiquidationNotifier(isTesting: false);
+        notifier.initLiquidationListener();
+        expect(notifier.isLoadingLiquidation, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
 
   group('DoctorsNotifier Tests', () {
     test('initDoctorsListener updates doctor records', () async {
-      final streamController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-      
+      final streamController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+
       AppStateNotifier.isTesting = false;
-      final notifier = DoctorsNotifier(isTesting: false, testFirestoreStream: streamController.stream);
+      final notifier = DoctorsNotifier(
+        isTesting: false,
+        testFirestoreStream: streamController.stream,
+      );
 
       notifier.initDoctorsListener();
       expect(notifier.isLoadingDoctors, isTrue);
@@ -463,117 +520,140 @@ void main() {
       AppStateNotifier.isTesting = true;
     });
 
-    test('initDoctorsListener fallback when stream is null and firebase is not initialized', () {
-      AppStateNotifier.isTesting = false;
-      final notifier = DoctorsNotifier(isTesting: false);
-      notifier.initDoctorsListener();
-      expect(notifier.isLoadingDoctors, isFalse);
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+    test(
+      'initDoctorsListener fallback when stream is null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = DoctorsNotifier(isTesting: false);
+        notifier.initDoctorsListener();
+        expect(notifier.isLoadingDoctors, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
 
   group('TelemetryNotifier Tests', () {
-    test('initTelemetryListeners and initDirectoryListener update stats', () async {
-      final metaController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-      final healthController = StreamController<DocumentSnapshot<Map<String, dynamic>>>();
-      final runsController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-      final directoryController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-      final requestsController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+    test(
+      'initTelemetryListeners and initDirectoryListener update stats',
+      () async {
+        final metaController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final healthController =
+            StreamController<DocumentSnapshot<Map<String, dynamic>>>();
+        final runsController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final directoryController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final requestsController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
 
-      AppStateNotifier.isTesting = false;
-      final notifier = TelemetryNotifier(
-        isTesting: false,
-        testMetadataStream: metaController.stream,
-        testHealthStream: healthController.stream,
-        testScraperRunsStream: runsController.stream,
-        testDirectoryStream: directoryController.stream,
-        testRequestsStream: requestsController.stream,
-      );
+        AppStateNotifier.isTesting = false;
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testMetadataStream: metaController.stream,
+          testHealthStream: healthController.stream,
+          testScraperRunsStream: runsController.stream,
+          testDirectoryStream: directoryController.stream,
+          testRequestsStream: requestsController.stream,
+        );
 
-      notifier.initAdminMetadataListener();
-      notifier.initDirectoryListener();
+        notifier.initAdminMetadataListener();
+        notifier.initDirectoryListener();
 
-      expect(notifier.isLoadingAdminMetadata, isTrue);
-      expect(notifier.isLoadingTelemetry, isTrue);
-      expect(notifier.isLoadingDirectory, isTrue);
+        expect(notifier.isLoadingAdminMetadata, isTrue);
+        expect(notifier.isLoadingTelemetry, isTrue);
+        expect(notifier.isLoadingDirectory, isTrue);
 
-      // 1. Metadata snapshot
-      final fakeMetaDoc = FakeQueryDocumentSnapshot('antennas-id', {'recordCount': 100});
-      metaController.add(FakeQuerySnapshot([fakeMetaDoc]));
+        // 1. Metadata snapshot
+        final fakeMetaDoc = FakeQueryDocumentSnapshot('antennas-id', {
+          'recordCount': 100,
+        });
+        metaController.add(FakeQuerySnapshot([fakeMetaDoc]));
 
-      // 2. Health snapshot
-      final fakeHealthDoc = FakeDocumentSnapshot('data_gov_il', true, {'isReachable': true});
-      healthController.add(fakeHealthDoc);
+        // 2. Health snapshot
+        final fakeHealthDoc = FakeDocumentSnapshot('data_gov_il', true, {
+          'isReachable': true,
+        });
+        healthController.add(fakeHealthDoc);
 
-      // 3. Scraper runs snapshot
-      final fakeRunDoc = FakeQueryDocumentSnapshot('run-1', {'datasetId': 'antennas-id', 'status': 'success'});
-      runsController.add(FakeQuerySnapshot([fakeRunDoc]));
+        // 3. Scraper runs snapshot
+        final fakeRunDoc = FakeQueryDocumentSnapshot('run-1', {
+          'datasetId': 'antennas-id',
+          'status': 'success',
+        });
+        runsController.add(FakeQuerySnapshot([fakeRunDoc]));
 
-      // 4. Directory records snapshot
-      final fakeDirDoc = FakeQueryDocumentSnapshot('1', {
-        'id': 'antennas-id',
-        'datasetId': 'antennas-id',
-        'name': 'antennas',
-        'title': 'Antennas',
-        'notes': 'notes',
-        'publisher': 'agency',
-        'resourceCount': 1,
-        'lastUpdated': '2026-06-01T12:00:00.000Z',
-        'tags': ['radiation'],
-        'isSupported': true,
-      });
-      directoryController.add(FakeQuerySnapshot([fakeDirDoc]));
+        // 4. Directory records snapshot
+        final fakeDirDoc = FakeQueryDocumentSnapshot('1', {
+          'id': 'antennas-id',
+          'datasetId': 'antennas-id',
+          'name': 'antennas',
+          'title': 'Antennas',
+          'notes': 'notes',
+          'publisher': 'agency',
+          'resourceCount': 1,
+          'lastUpdated': '2026-06-01T12:00:00.000Z',
+          'tags': ['radiation'],
+          'isSupported': true,
+        });
+        directoryController.add(FakeQuerySnapshot([fakeDirDoc]));
 
-      // 5. Requests snapshot
-      final fakeReqDoc = FakeQueryDocumentSnapshot('antennas-id', {'requestCount': 12});
-      requestsController.add(FakeQuerySnapshot([fakeReqDoc]));
+        // 5. Requests snapshot
+        final fakeReqDoc = FakeQueryDocumentSnapshot('antennas-id', {
+          'requestCount': 12,
+        });
+        requestsController.add(FakeQuerySnapshot([fakeReqDoc]));
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(notifier.isLoadingAdminMetadata, isFalse);
-      expect(notifier.isLoadingTelemetry, isFalse);
-      expect(notifier.isLoadingDirectory, isFalse);
+        expect(notifier.isLoadingAdminMetadata, isFalse);
+        expect(notifier.isLoadingTelemetry, isFalse);
+        expect(notifier.isLoadingDirectory, isFalse);
 
-      expect(notifier.datasetMetadataMap['antennas-id']?['recordCount'], 100);
-      expect(notifier.apiHealth['isReachable'], isTrue);
-      expect(notifier.scraperRuns.length, 1);
-      expect(notifier.directoryRecords.first.title, 'Antennas');
-      expect(notifier.getRequestCount('antennas-id'), 12);
+        expect(notifier.datasetMetadataMap['antennas-id']?['recordCount'], 100);
+        expect(notifier.apiHealth['isReachable'], isTrue);
+        expect(notifier.scraperRuns.length, 1);
+        expect(notifier.directoryRecords.first.title, 'Antennas');
+        expect(notifier.getRequestCount('antennas-id'), 12);
 
-      // Stream Errors
-      metaController.addError('Error');
-      healthController.addError('Error');
-      runsController.addError('Error');
-      directoryController.addError('Error');
-      requestsController.addError('Error');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Stream Errors
+        metaController.addError('Error');
+        healthController.addError('Error');
+        runsController.addError('Error');
+        directoryController.addError('Error');
+        requestsController.addError('Error');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Stream Empty docs
-      healthController.add(FakeDocumentSnapshot('data_gov_il', false, null));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Stream Empty docs
+        healthController.add(FakeDocumentSnapshot('data_gov_il', false, null));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Clean up
-      await metaController.close();
-      await healthController.close();
-      await runsController.close();
-      await directoryController.close();
-      await requestsController.close();
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+        // Clean up
+        await metaController.close();
+        await healthController.close();
+        await runsController.close();
+        await directoryController.close();
+        await requestsController.close();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
 
-    test('initTelemetryListeners and initDirectoryListener fallback when streams are null and firebase is not initialized', () {
-      AppStateNotifier.isTesting = false;
-      final notifier = TelemetryNotifier(isTesting: false);
-      notifier.initAdminMetadataListener();
-      notifier.initDirectoryListener();
-      expect(notifier.isLoadingAdminMetadata, isFalse);
-      expect(notifier.isLoadingTelemetry, isFalse);
-      expect(notifier.isLoadingDirectory, isFalse);
-      notifier.dispose();
-      AppStateNotifier.isTesting = true;
-    });
+    test(
+      'initTelemetryListeners and initDirectoryListener fallback when streams are null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = TelemetryNotifier(isTesting: false);
+        notifier.initAdminMetadataListener();
+        notifier.initDirectoryListener();
+        expect(notifier.isLoadingAdminMetadata, isFalse);
+        expect(notifier.isLoadingTelemetry, isFalse);
+        expect(notifier.isLoadingDirectory, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
 
     test('HTTP calls triggerApiHealthCheck and triggerManualSync', () async {
       var pingCalled = false;
@@ -590,7 +670,10 @@ void main() {
         onPost: (url, {body, headers}) {
           if (url.path.contains('manualSyncAntennas')) {
             syncCalled = true;
-            return http.Response('{"message":"Synced successfully", "count": 150}', 200);
+            return http.Response(
+              '{"message":"Synced successfully", "count": 150}',
+              200,
+            );
           }
           return http.Response('{"error":"Not Found"}', 404);
         },
@@ -619,23 +702,30 @@ void main() {
       notifierNoFirebase.dispose();
       AppStateNotifier.testIsFirebaseInitialized = null; // Reset
 
-      final syncResult = await notifier.triggerManualSync('8935c8e5-ec77-421f-af86-d970583195f8');
+      final syncResult = await notifier.triggerManualSync(
+        '8935c8e5-ec77-421f-af86-d970583195f8',
+      );
       expect(syncCalled, isTrue);
       expect(syncResult['success'], isTrue);
       expect(syncResult['count'], 150);
 
       // Test manual sync with unknown/failure cases
-      final failSyncResult = await notifier.triggerManualSync('unknown-dataset');
+      final failSyncResult = await notifier.triggerManualSync(
+        'unknown-dataset',
+      );
       expect(failSyncResult['success'], isFalse);
 
       // Test manual sync with HTTP failure
       final notifierFailHttp = TelemetryNotifier(
         isTesting: false,
         httpClient: FakeHttpClient(
-          onPost: (url, {body, headers}) => http.Response('{"error":"Server error"}', 500),
+          onPost: (url, {body, headers}) =>
+              http.Response('{"error":"Server error"}', 500),
         ),
       );
-      final errorSyncResult = await notifierFailHttp.triggerManualSync('8935c8e5-ec77-421f-af86-d970583195f8');
+      final errorSyncResult = await notifierFailHttp.triggerManualSync(
+        '8935c8e5-ec77-421f-af86-d970583195f8',
+      );
       expect(errorSyncResult['success'], isFalse);
 
       notifier.dispose();
@@ -646,31 +736,51 @@ void main() {
 
   group('Production path test cases for notifiers (Firebase/Firestore mock paths)', () {
     late FakeFirebaseFirestore mockFirestore;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> antennaController;
-    late StreamController<DocumentSnapshot<Map<String, dynamic>>> permitMetadataController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> permitsController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> liquidationController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> doctorsController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> telemetryMetadataController;
-    late StreamController<DocumentSnapshot<Map<String, dynamic>>> telemetryHealthController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> telemetryScraperRunsController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> telemetryDirectoryController;
-    late StreamController<QuerySnapshot<Map<String, dynamic>>> telemetryRequestsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    antennaController;
+    late StreamController<DocumentSnapshot<Map<String, dynamic>>>
+    permitMetadataController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    permitsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    liquidationController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    doctorsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    telemetryMetadataController;
+    late StreamController<DocumentSnapshot<Map<String, dynamic>>>
+    telemetryHealthController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    telemetryScraperRunsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    telemetryDirectoryController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    telemetryRequestsController;
 
     setUp(() {
       AppStateNotifier.isTesting = false;
       AppStateNotifier.testIsFirebaseInitialized = true;
 
-      antennaController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      permitMetadataController = StreamController<DocumentSnapshot<Map<String, dynamic>>>.broadcast();
-      permitsController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      liquidationController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      doctorsController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      telemetryMetadataController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      telemetryHealthController = StreamController<DocumentSnapshot<Map<String, dynamic>>>.broadcast();
-      telemetryScraperRunsController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      telemetryDirectoryController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
-      telemetryRequestsController = StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      antennaController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      permitMetadataController =
+          StreamController<DocumentSnapshot<Map<String, dynamic>>>.broadcast();
+      permitsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      liquidationController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      doctorsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      telemetryMetadataController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      telemetryHealthController =
+          StreamController<DocumentSnapshot<Map<String, dynamic>>>.broadcast();
+      telemetryScraperRunsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      telemetryDirectoryController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      telemetryRequestsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
 
       mockFirestore = FakeFirebaseFirestore((path) {
         if (path == '8935c8e5-ec77-421f-af86-d970583195f8') {
@@ -680,7 +790,9 @@ void main() {
             stream: telemetryMetadataController.stream,
             docBuilder: (docId) {
               if (docId == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
-                return FakeDocumentReference(snapshotStream: permitMetadataController.stream);
+                return FakeDocumentReference(
+                  snapshotStream: permitMetadataController.stream,
+                );
               }
               return FakeDocumentReference();
             },
@@ -689,17 +801,25 @@ void main() {
           return FakeCollectionReference(
             docBuilder: (docId) {
               if (docId == 'data_gov_il') {
-                return FakeDocumentReference(snapshotStream: telemetryHealthController.stream);
+                return FakeDocumentReference(
+                  snapshotStream: telemetryHealthController.stream,
+                );
               }
               return FakeDocumentReference();
             },
           );
         } else if (path == 'scraper_runs') {
-          return FakeCollectionReference(stream: telemetryScraperRunsController.stream);
+          return FakeCollectionReference(
+            stream: telemetryScraperRunsController.stream,
+          );
         } else if (path == 'datasets_metadata') {
-          return FakeCollectionReference(stream: telemetryDirectoryController.stream);
+          return FakeCollectionReference(
+            stream: telemetryDirectoryController.stream,
+          );
         } else if (path == 'dataset_requests') {
-          return FakeCollectionReference(stream: telemetryRequestsController.stream);
+          return FakeCollectionReference(
+            stream: telemetryRequestsController.stream,
+          );
         } else if (path == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
           return FakeCollectionReference(stream: liquidationController.stream);
         } else if (path == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
@@ -725,70 +845,92 @@ void main() {
       telemetryRequestsController.close();
     });
 
-    test('AntennasNotifier handles real Firestore streams and error path', () async {
-      final notifier = AntennasNotifier(isTesting: false, testFirestore: mockFirestore);
-      expect(notifier.isLoadingAntennas, isTrue);
+    test(
+      'AntennasNotifier handles real Firestore streams and error path',
+      () async {
+        final notifier = AntennasNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        expect(notifier.isLoadingAntennas, isTrue);
 
-      notifier.initAntennaListener();
-      
-      antennaController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('doc1', {
-          'antennaId': 'CELL-200',
-          'operatorName': 'Partner',
-        })
-      ]));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingAntennas, isFalse);
-      expect(notifier.antennaRecords.first['antennaId'], 'CELL-200');
+        notifier.initAntennaListener();
 
-      antennaController.addError('Stream Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingAntennas, isFalse);
+        antennaController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('doc1', {
+              'antennaId': 'CELL-200',
+              'operatorName': 'Partner',
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingAntennas, isFalse);
+        expect(notifier.antennaRecords.first['antennaId'], 'CELL-200');
 
-      notifier.dispose();
-    });
+        antennaController.addError('Stream Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingAntennas, isFalse);
 
-    test('AntennasNotifier handles init failure / isFirebaseInitialized false path', () async {
-      AppStateNotifier.testIsFirebaseInitialized = false;
-      final notifier = AntennasNotifier(isTesting: false);
-      notifier.initAntennaListener();
-      expect(notifier.isLoadingAntennas, isFalse);
-      notifier.dispose();
-    });
+        notifier.dispose();
+      },
+    );
 
-    test('PermitsNotifier handles real Firestore streams and error paths', () async {
-      final notifier = PermitsNotifier(isTesting: false, testFirestore: mockFirestore);
-      notifier.initPermitMetadataListener();
+    test(
+      'AntennasNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = AntennasNotifier(isTesting: false);
+        notifier.initAntennaListener();
+        expect(notifier.isLoadingAntennas, isFalse);
+        notifier.dispose();
+      },
+    );
 
-      permitMetadataController.add(FakeDocumentSnapshot('meta', true, {
-        'activeCollection': 'permits_active_collection',
-        'status': 'syncing',
-      }));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.permitSyncStatus, 'syncing');
+    test(
+      'PermitsNotifier handles real Firestore streams and error paths',
+      () async {
+        final notifier = PermitsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initPermitMetadataListener();
 
-      permitsController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('perm1', {
-          'referenceNumber': 12345,
-        })
-      ]));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingPermits, isFalse);
-      expect(notifier.permitRecords.first['referenceNumber'], 12345);
+        permitMetadataController.add(
+          FakeDocumentSnapshot('meta', true, {
+            'activeCollection': 'permits_active_collection',
+            'status': 'syncing',
+          }),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.permitSyncStatus, 'syncing');
 
-      permitsController.addError('Permits Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingPermits, isFalse);
+        permitsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('perm1', {'referenceNumber': 12345}),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingPermits, isFalse);
+        expect(notifier.permitRecords.first['referenceNumber'], 12345);
 
-      permitMetadataController.addError('Metadata Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.permitSyncStatus, 'error');
+        permitsController.addError('Permits Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingPermits, isFalse);
 
-      notifier.dispose();
-    });
+        permitMetadataController.addError('Metadata Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.permitSyncStatus, 'error');
+
+        notifier.dispose();
+      },
+    );
 
     test('PermitsNotifier handles empty permit metadata snapshot', () async {
-      final notifier = PermitsNotifier(isTesting: false, testFirestore: mockFirestore);
+      final notifier = PermitsNotifier(
+        isTesting: false,
+        testFirestore: mockFirestore,
+      );
       notifier.initPermitMetadataListener();
       permitMetadataController.add(FakeDocumentSnapshot('meta', false, null));
       await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -796,138 +938,187 @@ void main() {
       notifier.dispose();
     });
 
-    test('PermitsNotifier handles init failure / isFirebaseInitialized false path', () async {
-      AppStateNotifier.testIsFirebaseInitialized = false;
-      final notifier = PermitsNotifier(isTesting: false);
-      notifier.initPermitMetadataListener();
-      expect(notifier.isLoadingPermits, isFalse);
-      notifier.dispose();
-    });
+    test(
+      'PermitsNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = PermitsNotifier(isTesting: false);
+        notifier.initPermitMetadataListener();
+        expect(notifier.isLoadingPermits, isFalse);
+        notifier.dispose();
+      },
+    );
 
-    test('LiquidationNotifier handles real Firestore stream and error path', () async {
-      final notifier = LiquidationNotifier(isTesting: false, testFirestore: mockFirestore);
-      notifier.initLiquidationListener();
+    test(
+      'LiquidationNotifier handles real Firestore stream and error path',
+      () async {
+        final notifier = LiquidationNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initLiquidationListener();
 
-      liquidationController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('liq1', {
-          'liquidationCaseId': 999,
-          'companyName': 'Liquidation Case 1',
-        })
-      ]));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingLiquidation, isFalse);
-      expect(notifier.liquidationRecords.first.liquidationCaseId, 999);
+        liquidationController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('liq1', {
+              'liquidationCaseId': 999,
+              'companyName': 'Liquidation Case 1',
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingLiquidation, isFalse);
+        expect(notifier.liquidationRecords.first.liquidationCaseId, 999);
 
-      liquidationController.addError('Liquidation Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingLiquidation, isFalse);
+        liquidationController.addError('Liquidation Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingLiquidation, isFalse);
 
-      notifier.dispose();
-    });
+        notifier.dispose();
+      },
+    );
 
-    test('LiquidationNotifier handles init failure / isFirebaseInitialized false path', () async {
-      AppStateNotifier.testIsFirebaseInitialized = false;
-      final notifier = LiquidationNotifier(isTesting: false);
-      notifier.initLiquidationListener();
-      expect(notifier.isLoadingLiquidation, isFalse);
-      notifier.dispose();
-    });
+    test(
+      'LiquidationNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = LiquidationNotifier(isTesting: false);
+        notifier.initLiquidationListener();
+        expect(notifier.isLoadingLiquidation, isFalse);
+        notifier.dispose();
+      },
+    );
 
-    test('DoctorsNotifier handles real Firestore stream and error path', () async {
-      final notifier = DoctorsNotifier(isTesting: false, testFirestore: mockFirestore);
-      notifier.initDoctorsListener();
+    test(
+      'DoctorsNotifier handles real Firestore stream and error path',
+      () async {
+        final notifier = DoctorsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initDoctorsListener();
 
-      doctorsController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('doc1', {
-          'id': 'doc1',
-          'licenseNumber': 8888,
-        })
-      ]));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingDoctors, isFalse);
-      expect(notifier.doctorRecords.first.licenseNumber, 8888);
+        doctorsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('doc1', {
+              'id': 'doc1',
+              'licenseNumber': 8888,
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingDoctors, isFalse);
+        expect(notifier.doctorRecords.first.licenseNumber, 8888);
 
-      doctorsController.addError('Doctors Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier.isLoadingDoctors, isFalse);
+        doctorsController.addError('Doctors Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingDoctors, isFalse);
 
-      notifier.dispose();
-    });
+        notifier.dispose();
+      },
+    );
 
-    test('DoctorsNotifier handles init failure / isFirebaseInitialized false path', () async {
-      AppStateNotifier.testIsFirebaseInitialized = false;
-      final notifier = DoctorsNotifier(isTesting: false);
-      notifier.initDoctorsListener();
-      expect(notifier.isLoadingDoctors, isFalse);
-      notifier.dispose();
-    });
+    test(
+      'DoctorsNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = DoctorsNotifier(isTesting: false);
+        notifier.initDoctorsListener();
+        expect(notifier.isLoadingDoctors, isFalse);
+        notifier.dispose();
+      },
+    );
 
-    test('TelemetryNotifier handles real Firestore streams and error paths', () async {
-      final notifier = TelemetryNotifier(isTesting: false, testFirestore: mockFirestore);
-      notifier.initAdminMetadataListener();
-      notifier.initDirectoryListener();
+    test(
+      'TelemetryNotifier handles real Firestore streams and error paths',
+      () async {
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initAdminMetadataListener();
+        notifier.initDirectoryListener();
 
-      telemetryMetadataController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('meta1', {
-          'activeCollection': 'coll1',
-        })
-      ]));
-      telemetryHealthController.add(FakeDocumentSnapshot('data_gov_il', true, {
-        'status': 'up',
-      }));
-      telemetryScraperRunsController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('run1', {
-          'startTime': '2026-06-02T18:00:00Z',
-        })
-      ]));
-      telemetryDirectoryController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('dir1', {
-          'datasetId': 'government-budget-dataset-id',
-          'datasetTitle': 'Budget',
-          'resourceCount': 5,
-        })
-      ]));
-      telemetryRequestsController.add(FakeQuerySnapshot([
-        FakeQueryDocumentSnapshot('government-budget-dataset-id', {
-          'requestCount': 25,
-        })
-      ]));
+        telemetryMetadataController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('meta1', {'activeCollection': 'coll1'}),
+          ]),
+        );
+        telemetryHealthController.add(
+          FakeDocumentSnapshot('data_gov_il', true, {'status': 'up'}),
+        );
+        telemetryScraperRunsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('run1', {
+              'startTime': '2026-06-02T18:00:00Z',
+            }),
+          ]),
+        );
+        telemetryDirectoryController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('dir1', {
+              'datasetId': 'government-budget-dataset-id',
+              'datasetTitle': 'Budget',
+              'resourceCount': 5,
+            }),
+          ]),
+        );
+        telemetryRequestsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('government-budget-dataset-id', {
+              'requestCount': 25,
+            }),
+          ]),
+        );
 
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(notifier.isLoadingAdminMetadata, isFalse);
-      expect(notifier.isLoadingTelemetry, isFalse);
-      expect(notifier.isLoadingDirectory, isFalse);
-      expect(notifier.datasetMetadataMap['meta1']?['activeCollection'], 'coll1');
-      expect(notifier.apiHealth['status'], 'up');
-      expect(notifier.scraperRuns.first['startTime'], '2026-06-02T18:00:00Z');
-      expect(notifier.directoryRecords.first.datasetId, 'government-budget-dataset-id');
-      expect(notifier.getRequestCount('government-budget-dataset-id'), 25);
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(notifier.isLoadingAdminMetadata, isFalse);
+        expect(notifier.isLoadingTelemetry, isFalse);
+        expect(notifier.isLoadingDirectory, isFalse);
+        expect(
+          notifier.datasetMetadataMap['meta1']?['activeCollection'],
+          'coll1',
+        );
+        expect(notifier.apiHealth['status'], 'up');
+        expect(notifier.scraperRuns.first['startTime'], '2026-06-02T18:00:00Z');
+        expect(
+          notifier.directoryRecords.first.datasetId,
+          'government-budget-dataset-id',
+        );
+        expect(notifier.getRequestCount('government-budget-dataset-id'), 25);
 
-      telemetryMetadataController.addError('Error');
-      telemetryHealthController.addError('Error');
-      telemetryScraperRunsController.addError('Error');
-      telemetryDirectoryController.addError('Error');
-      telemetryRequestsController.addError('Error');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        telemetryMetadataController.addError('Error');
+        telemetryHealthController.addError('Error');
+        telemetryScraperRunsController.addError('Error');
+        telemetryDirectoryController.addError('Error');
+        telemetryRequestsController.addError('Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      notifier.dispose();
-    });
+        notifier.dispose();
+      },
+    );
 
-    test('TelemetryNotifier handles init failure / isFirebaseInitialized false path', () async {
-      AppStateNotifier.testIsFirebaseInitialized = false;
-      final notifier = TelemetryNotifier(isTesting: false);
-      notifier.initAdminMetadataListener();
-      notifier.initDirectoryListener();
-      expect(notifier.isLoadingAdminMetadata, isFalse);
-      expect(notifier.isLoadingTelemetry, isFalse);
-      expect(notifier.isLoadingDirectory, isFalse);
-      notifier.dispose();
-    });
+    test(
+      'TelemetryNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = TelemetryNotifier(isTesting: false);
+        notifier.initAdminMetadataListener();
+        notifier.initDirectoryListener();
+        expect(notifier.isLoadingAdminMetadata, isFalse);
+        expect(notifier.isLoadingTelemetry, isFalse);
+        expect(notifier.isLoadingDirectory, isFalse);
+        notifier.dispose();
+      },
+    );
 
     test('AuthNotifier handles real Firebase and Firestore flows', () async {
       final authStreamController = StreamController<User?>.broadcast();
       final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-      final fakeAuth = FakeFirebaseAuth(mockCurrentUser: fakeUser, authChanges: authStreamController.stream);
+      final fakeAuth = FakeFirebaseAuth(
+        mockCurrentUser: fakeUser,
+        authChanges: authStreamController.stream,
+      );
       final mockRepo = FakeUserProfileRepository(tProfile);
 
       final notifier = AuthNotifier(
@@ -955,315 +1146,400 @@ void main() {
       await authStreamController.close();
     });
 
-    test('AuthNotifier covers remote data source initialization, errors in local storage, and other operations', () async {
-      AppStateNotifier.isTesting = false;
-      AppStateNotifier.testIsFirebaseInitialized = true;
-      final authStreamController = StreamController<User?>.broadcast();
-      final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-      final fakeAuth = FakeFirebaseAuth(mockCurrentUser: fakeUser, authChanges: authStreamController.stream);
+    test(
+      'AuthNotifier covers remote data source initialization, errors in local storage, and other operations',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
 
-      // Verify remote data source is instantiated
-      final notifier = AuthNotifier(
-        isTesting: false,
-        testAuthChangesStream: authStreamController.stream,
-        testFirestore: mockFirestore,
-        testAuth: fakeAuth,
-      );
-      expect(notifier.isAuthenticated, isFalse);
+        // Verify remote data source is instantiated
+        final notifier = AuthNotifier(
+          isTesting: false,
+          testAuthChangesStream: authStreamController.stream,
+          testFirestore: mockFirestore,
+          testAuth: fakeAuth,
+        );
+        expect(notifier.isAuthenticated, isFalse);
 
-      // Wait for LocalStorage.init() to complete successfully first
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+        // Wait for LocalStorage.init() to complete successfully first
+        await Future<void>.delayed(const Duration(milliseconds: 20));
 
-      // 2. Set platform to throwing implementation for writes
-      final originalPlatform = SharedPreferencesStorePlatform.instance;
-      SharedPreferencesStorePlatform.instance = ThrowingSharedPreferencesStore();
+        // 2. Set platform to throwing implementation for writes
+        final originalPlatform = SharedPreferencesStorePlatform.instance;
+        SharedPreferencesStorePlatform.instance =
+            ThrowingSharedPreferencesStore();
 
-      await notifier.toggleFavorite('fav-dataset');
-      await notifier.addRecent('recent-dataset');
-      notifier.setGuestMode(true);
+        await notifier.toggleFavorite('fav-dataset');
+        await notifier.addRecent('recent-dataset');
+        notifier.setGuestMode(true);
 
-      // Restore platform
-      SharedPreferencesStorePlatform.instance = originalPlatform;
-      notifier.dispose();
-      await authStreamController.close();
-      AppStateNotifier.isTesting = true;
-    });
+        // Restore platform
+        SharedPreferencesStorePlatform.instance = originalPlatform;
+        notifier.dispose();
+        await authStreamController.close();
+        AppStateNotifier.isTesting = true;
+      },
+    );
 
-    test('AuthNotifier covers SharedPreferences initialization exceptions and listener errors', () async {
-      AppStateNotifier.isTesting = false;
-      AppStateNotifier.testIsFirebaseInitialized = true;
+    test(
+      'AuthNotifier covers SharedPreferences initialization exceptions and listener errors',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
 
-      // 1. SharedPreferences initialization throws exception (by setting mock initial values with wrong types)
-      SharedPreferences.setMockInitialValues({
-        'favorites': 123, // getStringList on integer will throw a cast/type error
-        'recents': 'not-a-list', // getStringList on string will throw
-        'guest_mode': 'not-a-bool', // getBool on string will throw
-      });
+        // 1. SharedPreferences initialization throws exception (by setting mock initial values with wrong types)
+        SharedPreferences.setMockInitialValues({
+          'favorites':
+              123, // getStringList on integer will throw a cast/type error
+          'recents': 'not-a-list', // getStringList on string will throw
+          'guest_mode': 'not-a-bool', // getBool on string will throw
+        });
 
-      final notifier = AuthNotifier(isTesting: false, testFirestore: mockFirestore);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        final notifier = AuthNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      // 2. Auth changes stream listener onError callback
-      final authStreamController = StreamController<User?>.broadcast();
-      final fakeAuth = FakeFirebaseAuth(mockCurrentUser: null, authChanges: authStreamController.stream);
-      final notifier2 = AuthNotifier(
-        isTesting: false,
-        testAuth: fakeAuth,
-        testProfileRepository: FakeUserProfileRepository(tProfile),
-      );
+        // 2. Auth changes stream listener onError callback
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: null,
+          authChanges: authStreamController.stream,
+        );
+        final notifier2 = AuthNotifier(
+          isTesting: false,
+          testAuth: fakeAuth,
+          testProfileRepository: FakeUserProfileRepository(tProfile),
+        );
 
-      // Trigger success user login first to cover success listener path lines 216-223
-      final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-      authStreamController.add(fakeUser);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Trigger success user login first to cover success listener path lines 216-223
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        authStreamController.add(fakeUser);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      authStreamController.addError(Exception('Auth stream failure'));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        authStreamController.addError(Exception('Auth stream failure'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      // 3. User profile update exception path
-      final mockRepo = FakeUserProfileRepository(tProfile);
-      mockRepo.throwOnUpdate = true;
-      final notifier3 = AuthNotifier(
-        isTesting: false,
-        testAuthChangesStream: authStreamController.stream,
-        testProfileRepository: mockRepo,
-      );
+        // 3. User profile update exception path
+        final mockRepo = FakeUserProfileRepository(tProfile);
+        mockRepo.throwOnUpdate = true;
+        final notifier3 = AuthNotifier(
+          isTesting: false,
+          testAuthChangesStream: authStreamController.stream,
+          testProfileRepository: mockRepo,
+        );
 
-      // Add user to trigger profile listener setup so it listens to mockRepo.controller
-      authStreamController.add(fakeUser);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Add user to trigger profile listener setup so it listens to mockRepo.controller
+        authStreamController.add(fakeUser);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      expect(() => notifier3.updateUserProfile(tProfile), throwsException);
+        expect(() => notifier3.updateUserProfile(tProfile), throwsException);
 
-      // 4. Profile listen stream onError callback
-      mockRepo.controller.addError(Exception('Profile stream listener error'));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        // 4. Profile listen stream onError callback
+        mockRepo.controller.addError(
+          Exception('Profile stream listener error'),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      // 5. Sign in and sign out errors
-      final fakeAuthError = FakeFirebaseAuth(
-        mockCurrentUser: null,
-        authChanges: authStreamController.stream,
-        onSignInWithPopup: () => throw Exception('Google sign in error'),
-        onSignOut: () => throw Exception('Sign out error'),
-      );
-      final notifier4 = AuthNotifier(
-        isTesting: false,
-        testAuth: fakeAuthError,
-        testProfileRepository: mockRepo,
-      );
+        // 5. Sign in and sign out errors
+        final fakeAuthError = FakeFirebaseAuth(
+          mockCurrentUser: null,
+          authChanges: authStreamController.stream,
+          onSignInWithPopup: () => throw Exception('Google sign in error'),
+          onSignOut: () => throw Exception('Sign out error'),
+        );
+        final notifier4 = AuthNotifier(
+          isTesting: false,
+          testAuth: fakeAuthError,
+          testProfileRepository: mockRepo,
+        );
 
-      expect(() => notifier4.signInWithGoogle(), throwsException);
-      await notifier4.signOut();
+        expect(() => notifier4.signInWithGoogle(), throwsException);
+        await notifier4.signOut();
 
-      notifier.dispose();
-      notifier2.dispose();
-      notifier3.dispose();
-      notifier4.dispose();
-      await authStreamController.close();
+        notifier.dispose();
+        notifier2.dispose();
+        notifier3.dispose();
+        notifier4.dispose();
+        await authStreamController.close();
 
-      // Clean up mock values
-      SharedPreferences.setMockInitialValues({});
-      AppStateNotifier.isTesting = true;
-    });
+        // Clean up mock values
+        SharedPreferences.setMockInitialValues({});
+        AppStateNotifier.isTesting = true;
+      },
+    );
 
     test('AntennasNotifier handles Firestore snapshots exception', () async {
       final mockFirestoreThrow = FakeFirebaseFirestore((path) {
         throw Exception('Collection snapshots exception');
       });
-      final notifier = AntennasNotifier(isTesting: false, testFirestore: mockFirestoreThrow);
+      final notifier = AntennasNotifier(
+        isTesting: false,
+        testFirestore: mockFirestoreThrow,
+      );
       notifier.initAntennaListener();
       expect(notifier.isLoadingAntennas, isFalse);
       notifier.dispose();
     });
 
-    test('PermitsNotifier handles duplicate active collection metadata, subscription errors, and binding exceptions', () async {
-      // 1. PermitsNotifier metadata listener handles same active collection
-      final notifier = PermitsNotifier(isTesting: false, testFirestore: mockFirestore);
-      notifier.initPermitMetadataListener();
+    test(
+      'PermitsNotifier handles duplicate active collection metadata, subscription errors, and binding exceptions',
+      () async {
+        // 1. PermitsNotifier metadata listener handles same active collection
+        final notifier = PermitsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initPermitMetadataListener();
 
-      permitMetadataController.add(FakeDocumentSnapshot('meta', true, {
-        'activeCollection': 'permits_active_collection',
-        'status': 'syncing',
-      }));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        permitMetadataController.add(
+          FakeDocumentSnapshot('meta', true, {
+            'activeCollection': 'permits_active_collection',
+            'status': 'syncing',
+          }),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      // Send same metadata, should not bind again, hits the else branch
-      permitMetadataController.add(FakeDocumentSnapshot('meta', true, {
-        'activeCollection': 'permits_active_collection',
-        'status': 'syncing',
-      }));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Send same metadata, should not bind again, hits the else branch
+        permitMetadataController.add(
+          FakeDocumentSnapshot('meta', true, {
+            'activeCollection': 'permits_active_collection',
+            'status': 'syncing',
+          }),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      // 2. Permits collection snapshots throws exception on bind
-      final mockFirestoreThrow = FakeFirebaseFirestore((path) {
-        if (path == 'dataset_metadata') {
-          return FakeCollectionReference(
-            docBuilder: (docId) => FakeDocumentReference(snapshotStream: permitMetadataController.stream),
-          );
-        }
-        throw Exception('Collection snapshots exception on permits list');
-      });
-
-      final notifier2 = PermitsNotifier(isTesting: false, testFirestore: mockFirestoreThrow);
-      notifier2.initPermitMetadataListener();
-
-      permitMetadataController.add(FakeDocumentSnapshot('meta', true, {
-        'activeCollection': 'permits_active_collection',
-        'status': 'syncing',
-      }));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier2.permitSyncStatus, 'error');
-
-      // 3. Permits metadata snapshots throws exception on bind
-      final mockFirestoreThrowMeta = FakeFirebaseFirestore((path) {
-        throw Exception('Collection metadata snapshots exception');
-      });
-      final notifier3 = PermitsNotifier(isTesting: false, testFirestore: mockFirestoreThrowMeta);
-      notifier3.initPermitMetadataListener();
-      expect(notifier3.permitSyncStatus, 'error');
-
-      notifier.dispose();
-      notifier2.dispose();
-      notifier3.dispose();
-    });
-
-    test('LiquidationNotifier and DoctorsNotifier handle snapshots exception', () async {
-      final mockFirestoreThrow = FakeFirebaseFirestore((path) {
-        throw Exception('Firestore exception');
-      });
-
-      final notifierLiq = LiquidationNotifier(isTesting: false, testFirestore: mockFirestoreThrow);
-      notifierLiq.initLiquidationListener();
-      expect(notifierLiq.isLoadingLiquidation, isFalse);
-
-      final notifierDoc = DoctorsNotifier(isTesting: false, testFirestore: mockFirestoreThrow);
-      notifierDoc.initDoctorsListener();
-      expect(notifierDoc.isLoadingDoctors, isFalse);
-
-      notifierLiq.dispose();
-      notifierDoc.dispose();
-    });
-
-    test('TelemetryNotifier handles exception in listeners and triggers manual sync / activation', () async {
-      // 1. TelemetryNotifier handles exceptions in all metadata/health/runs/dir/requests subscriptions
-      final mockFirestoreThrow = FakeFirebaseFirestore((path) {
-        throw Exception('Telemetry Firestore exception');
-      });
-
-      final notifier = TelemetryNotifier(isTesting: false, testFirestore: mockFirestoreThrow);
-      notifier.initAdminMetadataListener();
-      notifier.initDirectoryListener();
-      expect(notifier.isLoadingAdminMetadata, isFalse);
-      expect(notifier.isLoadingTelemetry, isFalse);
-      expect(notifier.isLoadingDirectory, isFalse);
-
-      // 2. Health snapshot is empty (exists: false)
-      final notifier2 = TelemetryNotifier(isTesting: false, testFirestore: mockFirestore);
-      notifier2.initAdminMetadataListener();
-      telemetryHealthController.add(FakeDocumentSnapshot('data_gov_il', false, null));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifier2.apiHealth.isEmpty, isTrue);
-
-      // 3. triggerApiHealthCheck triggers catch block and http.get fallback
-      await notifier2.triggerApiHealthCheck();
-
-      final notifierFailPing = TelemetryNotifier(
-        isTesting: false,
-        testFirestore: mockFirestore,
-        httpClient: FakeHttpClient(
-          onGet: (url, {headers}) => throw Exception('Ping failed'),
-        ),
-      );
-      await notifierFailPing.triggerApiHealthCheck();
-      notifierFailPing.dispose();
-
-      // 4. requestDatasetActivation with different paths:
-      // A. isFirebaseInitialized is false
-      AppStateNotifier.testIsFirebaseInitialized = false;
-      final success1 = await notifier2.requestDatasetActivation('some-id', 'some-title');
-      expect(success1, isFalse);
-
-      // B. isFirebaseInitialized is true
-      AppStateNotifier.testIsFirebaseInitialized = true;
-      final authStreamController = StreamController<User?>.broadcast();
-      final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-      final fakeAuth = FakeFirebaseAuth(mockCurrentUser: fakeUser, authChanges: authStreamController.stream);
-
-      final mockFirestoreTrans = FakeFirebaseFirestore((path) {
-        return FakeCollectionReference();
-      });
-
-      final notifier3 = TelemetryNotifier(
-        isTesting: false,
-        testFirestore: mockFirestoreTrans,
-        testAuth: fakeAuth,
-      );
-
-      // B1. User is not null, transaction works and doc does not exist
-      mockFirestoreTrans.transactionExists = false;
-      final success2 = await notifier3.requestDatasetActivation('dataset-1', 'Title 1');
-      expect(success2, isTrue);
-
-      // B2. User is null, signInAnonymously is called, transaction works and doc exists
-      final fakeAuthNull = FakeFirebaseAuth(
-        mockCurrentUser: null,
-        authChanges: authStreamController.stream,
-        onSignInAnonymously: () async => FakeUserCredential(),
-      );
-      final notifier4 = TelemetryNotifier(
-        isTesting: false,
-        testFirestore: mockFirestoreTrans,
-        testAuth: fakeAuthNull,
-      );
-      mockFirestoreTrans.transactionExists = true;
-      final success3 = await notifier4.requestDatasetActivation('dataset-2', 'Title 2');
-      expect(success3, isTrue);
-
-      // B3. Transaction throws error
-      mockFirestoreTrans.throwOnTransaction = true;
-      final success4 = await notifier4.requestDatasetActivation('dataset-3', 'Title 3');
-      expect(success4, isFalse);
-
-      // 5. triggerManualSync fetches auth token
-      final fakeAuthUser = FakeFirebaseAuth(
-        mockCurrentUser: fakeUser,
-        authChanges: authStreamController.stream,
-      );
-      var checkedAuthHeader = false;
-      final httpClient = FakeHttpClient(
-        onPost: (url, {body, headers}) {
-          if (headers != null && headers['Authorization'] == 'Bearer mock-id-token') {
-            checkedAuthHeader = true;
+        // 2. Permits collection snapshots throws exception on bind
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          if (path == 'dataset_metadata') {
+            return FakeCollectionReference(
+              docBuilder: (docId) => FakeDocumentReference(
+                snapshotStream: permitMetadataController.stream,
+              ),
+            );
           }
-          return http.Response('{"message":"Sync started", "count": 22}', 200);
-        },
-      );
-      final notifier5 = TelemetryNotifier(
-        isTesting: false,
-        testFirestore: mockFirestore,
-        testAuth: fakeAuthUser,
-        httpClient: httpClient,
-      );
+          throw Exception('Collection snapshots exception on permits list');
+        });
 
-      await notifier5.triggerManualSync('8935c8e5-ec77-421f-af86-d970583195f8');
-      expect(checkedAuthHeader, isTrue);
+        final notifier2 = PermitsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+        notifier2.initPermitMetadataListener();
 
-      // 6. triggerManualSync without httpClient to cover the http.post fallback
-      final notifierNoClient = TelemetryNotifier(
-        isTesting: false,
-        testFirestore: mockFirestore,
-        testAuth: fakeAuthUser,
-      );
-      await notifierNoClient.triggerManualSync('8935c8e5-ec77-421f-af86-d970583195f8');
+        permitMetadataController.add(
+          FakeDocumentSnapshot('meta', true, {
+            'activeCollection': 'permits_active_collection',
+            'status': 'syncing',
+          }),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier2.permitSyncStatus, 'error');
 
-      notifier.dispose();
-      notifier2.dispose();
-      notifier3.dispose();
-      notifier4.dispose();
-      notifier5.dispose();
-      notifierNoClient.dispose();
-      await authStreamController.close();
-    });
+        // 3. Permits metadata snapshots throws exception on bind
+        final mockFirestoreThrowMeta = FakeFirebaseFirestore((path) {
+          throw Exception('Collection metadata snapshots exception');
+        });
+        final notifier3 = PermitsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrowMeta,
+        );
+        notifier3.initPermitMetadataListener();
+        expect(notifier3.permitSyncStatus, 'error');
+
+        notifier.dispose();
+        notifier2.dispose();
+        notifier3.dispose();
+      },
+    );
+
+    test(
+      'LiquidationNotifier and DoctorsNotifier handle snapshots exception',
+      () async {
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Firestore exception');
+        });
+
+        final notifierLiq = LiquidationNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+        notifierLiq.initLiquidationListener();
+        expect(notifierLiq.isLoadingLiquidation, isFalse);
+
+        final notifierDoc = DoctorsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+        notifierDoc.initDoctorsListener();
+        expect(notifierDoc.isLoadingDoctors, isFalse);
+
+        notifierLiq.dispose();
+        notifierDoc.dispose();
+      },
+    );
+
+    test(
+      'TelemetryNotifier handles exception in listeners and triggers manual sync / activation',
+      () async {
+        // 1. TelemetryNotifier handles exceptions in all metadata/health/runs/dir/requests subscriptions
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Telemetry Firestore exception');
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+        notifier.initAdminMetadataListener();
+        notifier.initDirectoryListener();
+        expect(notifier.isLoadingAdminMetadata, isFalse);
+        expect(notifier.isLoadingTelemetry, isFalse);
+        expect(notifier.isLoadingDirectory, isFalse);
+
+        // 2. Health snapshot is empty (exists: false)
+        final notifier2 = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier2.initAdminMetadataListener();
+        telemetryHealthController.add(
+          FakeDocumentSnapshot('data_gov_il', false, null),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier2.apiHealth.isEmpty, isTrue);
+
+        // 3. triggerApiHealthCheck triggers catch block and http.get fallback
+        await notifier2.triggerApiHealthCheck();
+
+        final notifierFailPing = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          httpClient: FakeHttpClient(
+            onGet: (url, {headers}) => throw Exception('Ping failed'),
+          ),
+        );
+        await notifierFailPing.triggerApiHealthCheck();
+        notifierFailPing.dispose();
+
+        // 4. requestDatasetActivation with different paths:
+        // A. isFirebaseInitialized is false
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final success1 = await notifier2.requestDatasetActivation(
+          'some-id',
+          'some-title',
+        );
+        expect(success1, isFalse);
+
+        // B. isFirebaseInitialized is true
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+
+        final mockFirestoreTrans = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference();
+        });
+
+        final notifier3 = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreTrans,
+          testAuth: fakeAuth,
+        );
+
+        // B1. User is not null, transaction works and doc does not exist
+        mockFirestoreTrans.transactionExists = false;
+        final success2 = await notifier3.requestDatasetActivation(
+          'dataset-1',
+          'Title 1',
+        );
+        expect(success2, isTrue);
+
+        // B2. User is null, signInAnonymously is called, transaction works and doc exists
+        final fakeAuthNull = FakeFirebaseAuth(
+          mockCurrentUser: null,
+          authChanges: authStreamController.stream,
+          onSignInAnonymously: () async => FakeUserCredential(),
+        );
+        final notifier4 = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreTrans,
+          testAuth: fakeAuthNull,
+        );
+        mockFirestoreTrans.transactionExists = true;
+        final success3 = await notifier4.requestDatasetActivation(
+          'dataset-2',
+          'Title 2',
+        );
+        expect(success3, isTrue);
+
+        // B3. Transaction throws error
+        mockFirestoreTrans.throwOnTransaction = true;
+        final success4 = await notifier4.requestDatasetActivation(
+          'dataset-3',
+          'Title 3',
+        );
+        expect(success4, isFalse);
+
+        // 5. triggerManualSync fetches auth token
+        final fakeAuthUser = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+        var checkedAuthHeader = false;
+        final httpClient = FakeHttpClient(
+          onPost: (url, {body, headers}) {
+            if (headers != null &&
+                headers['Authorization'] == 'Bearer mock-id-token') {
+              checkedAuthHeader = true;
+            }
+            return http.Response(
+              '{"message":"Sync started", "count": 22}',
+              200,
+            );
+          },
+        );
+        final notifier5 = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          testAuth: fakeAuthUser,
+          httpClient: httpClient,
+        );
+
+        await notifier5.triggerManualSync(
+          '8935c8e5-ec77-421f-af86-d970583195f8',
+        );
+        expect(checkedAuthHeader, isTrue);
+
+        // 6. triggerManualSync without httpClient to cover the http.post fallback
+        final notifierNoClient = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          testAuth: fakeAuthUser,
+        );
+        await notifierNoClient.triggerManualSync(
+          '8935c8e5-ec77-421f-af86-d970583195f8',
+        );
+
+        notifier.dispose();
+        notifier2.dispose();
+        notifier3.dispose();
+        notifier4.dispose();
+        notifier5.dispose();
+        notifierNoClient.dispose();
+        await authStreamController.close();
+      },
+    );
   });
 }
 
@@ -1301,24 +1577,37 @@ class FakeTransaction implements Transaction {
   FakeTransaction({this.exists = true});
 
   @override
-  Future<DocumentSnapshot<T>> get<T extends Object?>(DocumentReference<T> documentReference) async {
-    return FakeDocumentSnapshot(documentReference.id, exists, {'requestCount': 5}) as DocumentSnapshot<T>;
+  Future<DocumentSnapshot<T>> get<T extends Object?>(
+    DocumentReference<T> documentReference,
+  ) async {
+    return FakeDocumentSnapshot(documentReference.id, exists, {
+          'requestCount': 5,
+        })
+        as DocumentSnapshot<T>;
   }
 
   @override
   Transaction delete(DocumentReference documentReference) => this;
 
   @override
-  Transaction set<T>(DocumentReference<T> documentReference, T data, [SetOptions? options]) => this;
+  Transaction set<T>(
+    DocumentReference<T> documentReference,
+    T data, [
+    SetOptions? options,
+  ]) => this;
 
   @override
-  Transaction update(DocumentReference documentReference, Map<Object, Object?> data) => this;
+  Transaction update(
+    DocumentReference documentReference,
+    Map<Object, Object?> data,
+  ) => this;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeCollectionReference implements CollectionReference<Map<String, dynamic>> {
+class FakeCollectionReference
+    implements CollectionReference<Map<String, dynamic>> {
   final Query Function(int)? limitBuilder;
   final Stream<QuerySnapshot<Map<String, dynamic>>>? stream;
   final DocumentReference<Map<String, dynamic>> Function(String)? docBuilder;
@@ -1355,7 +1644,8 @@ class FakeCollectionReference implements CollectionReference<Map<String, dynamic
 class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
   final String _id;
   final Stream<DocumentSnapshot<Map<String, dynamic>>>? snapshotStream;
-  FakeDocumentReference({String id = 'mock-id', this.snapshotStream}) : _id = id;
+  FakeDocumentReference({String id = 'mock-id', this.snapshotStream})
+    : _id = id;
 
   @override
   String get id => _id;
@@ -1371,7 +1661,9 @@ class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
       return snapshotStream ?? const Stream.empty();
     }
     if (invocation.memberName == #get) {
-      return Future.value(FakeDocumentSnapshot(_id, false, {'requestCount': 5}));
+      return Future.value(
+        FakeDocumentSnapshot(_id, false, {'requestCount': 5}),
+      );
     }
     return super.noSuchMethod(invocation);
   }
@@ -1439,17 +1731,21 @@ class ThrowingSharedPreferencesStore extends SharedPreferencesStorePlatform
   Future<bool> clear() => throw Exception('Prefs write error');
 
   @override
-  Future<bool> clearWithParameters(ClearParameters parameters) => throw Exception('Prefs write error');
+  Future<bool> clearWithParameters(ClearParameters parameters) =>
+      throw Exception('Prefs write error');
 
   @override
   Future<Map<String, Object>> getAll() => throw Exception('Prefs read error');
 
   @override
-  Future<Map<String, Object>> getAllWithParameters(GetAllParameters parameters) => throw Exception('Prefs read error');
+  Future<Map<String, Object>> getAllWithParameters(
+    GetAllParameters parameters,
+  ) => throw Exception('Prefs read error');
 
   @override
   Future<bool> remove(String key) => throw Exception('Prefs write error');
 
   @override
-  Future<bool> setValue(String valueType, String key, Object value) => throw Exception('Prefs write error');
+  Future<bool> setValue(String valueType, String key, Object value) =>
+      throw Exception('Prefs write error');
 }

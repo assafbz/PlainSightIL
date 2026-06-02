@@ -55,7 +55,8 @@ class AppStateNotifier extends ChangeNotifier {
   Map<String, String>? get mockUser => authNotifier.mockUser;
 
   // Delegated Getters for AntennasNotifier
-  List<Map<String, dynamic>> get antennaRecords => antennasNotifier.antennaRecords;
+  List<Map<String, dynamic>> get antennaRecords =>
+      antennasNotifier.antennaRecords;
   bool get isLoadingAntennas => antennasNotifier.isLoadingAntennas;
 
   // Delegated Getters for PermitsNotifier
@@ -64,20 +65,24 @@ class AppStateNotifier extends ChangeNotifier {
   String get permitSyncStatus => permitsNotifier.permitSyncStatus;
 
   // Delegated Getters for LiquidationNotifier
-  List<LiquidationRecordModel> get liquidationRecords => liquidationNotifier.liquidationRecords;
+  List<LiquidationRecordModel> get liquidationRecords =>
+      liquidationNotifier.liquidationRecords;
   bool get isLoadingLiquidation => liquidationNotifier.isLoadingLiquidation;
 
   // Delegated Getters for DoctorsNotifier
-  List<DoctorLicenseRecordModel> get doctorRecords => doctorsNotifier.doctorRecords;
+  List<DoctorLicenseRecordModel> get doctorRecords =>
+      doctorsNotifier.doctorRecords;
   bool get isLoadingDoctors => doctorsNotifier.isLoadingDoctors;
 
   // Delegated Getters for TelemetryNotifier
-  Map<String, Map<String, dynamic>> get datasetMetadataMap => telemetryNotifier.datasetMetadataMap;
+  Map<String, Map<String, dynamic>> get datasetMetadataMap =>
+      telemetryNotifier.datasetMetadataMap;
   bool get isLoadingAdminMetadata => telemetryNotifier.isLoadingAdminMetadata;
   Map<String, dynamic> get apiHealth => telemetryNotifier.apiHealth;
   List<Map<String, dynamic>> get scraperRuns => telemetryNotifier.scraperRuns;
   bool get isLoadingTelemetry => telemetryNotifier.isLoadingTelemetry;
-  List<DatasetMetadataModel> get directoryRecords => telemetryNotifier.directoryRecords;
+  List<DatasetMetadataModel> get directoryRecords =>
+      telemetryNotifier.directoryRecords;
   bool get isLoadingDirectory => telemetryNotifier.isLoadingDirectory;
   bool get isCheckingApiHealth => telemetryNotifier.isCheckingApiHealth;
 
@@ -91,7 +96,10 @@ class AppStateNotifier extends ChangeNotifier {
     permitsNotifier = PermitsNotifier(isTesting: isTesting);
     liquidationNotifier = LiquidationNotifier(isTesting: isTesting);
     doctorsNotifier = DoctorsNotifier(isTesting: isTesting);
-    telemetryNotifier = TelemetryNotifier(isTesting: isTesting, functionsPort: functionsPort);
+    telemetryNotifier = TelemetryNotifier(
+      isTesting: isTesting,
+      functionsPort: functionsPort,
+    );
 
     // Listen to changes in sub-notifiers and forward notifications safely
     authNotifier.addListener(_onSubNotifierChanged);
@@ -124,25 +132,32 @@ class AppStateNotifier extends ChangeNotifier {
 
   void initAntennaListener() => antennasNotifier.initAntennaListener();
   void initDirectoryListener() => telemetryNotifier.initDirectoryListener();
-  void initLiquidationListener() => liquidationNotifier.initLiquidationListener();
+  void initLiquidationListener() =>
+      liquidationNotifier.initLiquidationListener();
   void initDoctorsListener() => doctorsNotifier.initDoctorsListener();
   void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
 
   // Delegated Methods for AuthNotifier
-  void setMockProfile(UserProfile? profile) => authNotifier.setMockProfile(profile);
+  void setMockProfile(UserProfile? profile) =>
+      authNotifier.setMockProfile(profile);
   bool isFavorite(String datasetId) => authNotifier.isFavorite(datasetId);
-  Future<void> toggleFavorite(String datasetId) => authNotifier.toggleFavorite(datasetId);
+  Future<void> toggleFavorite(String datasetId) =>
+      authNotifier.toggleFavorite(datasetId);
   Future<void> addRecent(String datasetId) => authNotifier.addRecent(datasetId);
-  Future<void> updateUserProfile(UserProfile profile) => authNotifier.updateUserProfile(profile);
+  Future<void> updateUserProfile(UserProfile profile) =>
+      authNotifier.updateUserProfile(profile);
   Future<void> signInWithGoogle() => authNotifier.signInWithGoogle();
   Future<void> signOut() => authNotifier.signOut();
   void setGuestMode(bool enabled) => authNotifier.setGuestMode(enabled);
 
   // Delegated Methods for TelemetryNotifier
   int getRequestCount(String id) => telemetryNotifier.getRequestCount(id);
-  Future<void> triggerApiHealthCheck() => telemetryNotifier.triggerApiHealthCheck();
-  Future<bool> requestDatasetActivation(String datasetId, String datasetTitle) =>
-      telemetryNotifier.requestDatasetActivation(datasetId, datasetTitle);
+  Future<void> triggerApiHealthCheck() =>
+      telemetryNotifier.triggerApiHealthCheck();
+  Future<bool> requestDatasetActivation(
+    String datasetId,
+    String datasetTitle,
+  ) => telemetryNotifier.requestDatasetActivation(datasetId, datasetTitle);
   Future<Map<String, dynamic>> triggerManualSync(String datasetId) =>
       telemetryNotifier.triggerManualSync(datasetId);
 

@@ -22,14 +22,19 @@ class UserProfileRemoteDataSourceImpl implements UserProfileRemoteDataSource {
   @override
   Stream<UserProfileModel?> getUserProfile(String uid) {
     try {
-      return firestore.collection('users').doc(uid).snapshots().map((doc) {
-        if (!doc.exists || doc.data() == null) {
-          return null;
-        }
-        return UserProfileModel.fromMap(doc.data()!);
-      }).handleError((Object error) {
-        throw ServerException(error.toString());
-      });
+      return firestore
+          .collection('users')
+          .doc(uid)
+          .snapshots()
+          .map((doc) {
+            if (!doc.exists || doc.data() == null) {
+              return null;
+            }
+            return UserProfileModel.fromMap(doc.data()!);
+          })
+          .handleError((Object error) {
+            throw ServerException(error.toString());
+          });
     } catch (e) {
       throw ServerException(e.toString());
     }

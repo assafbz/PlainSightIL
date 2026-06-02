@@ -54,7 +54,9 @@ class AntennasNotifier extends ChangeNotifier {
       _isLoadingAntennas = true;
       _antennaSubscription = testFirestoreStream!.listen(
         (snapshot) {
-          _antennaRecords = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          _antennaRecords = snapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
           _isLoadingAntennas = false;
           notifyListeners();
         },
@@ -112,7 +114,9 @@ class AntennasNotifier extends ChangeNotifier {
       return;
     }
 
-    AppLogger.info('Initializing cellular antennas listener in AntennasNotifier');
+    AppLogger.info(
+      'Initializing cellular antennas listener in AntennasNotifier',
+    );
     try {
       _antennaSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('8935c8e5-ec77-421f-af86-d970583195f8')
@@ -126,13 +130,19 @@ class AntennasNotifier extends ChangeNotifier {
             onError: (Object err) {
               _isLoadingAntennas = false;
               notifyListeners();
-              AppLogger.error('Firestore antenna collection listener error', err);
+              AppLogger.error(
+                'Firestore antenna collection listener error',
+                err,
+              );
             },
           );
     } catch (e) {
       _isLoadingAntennas = false;
       notifyListeners();
-      AppLogger.error('Failed to bind Firestore antennas in AntennasNotifier', e);
+      AppLogger.error(
+        'Failed to bind Firestore antennas in AntennasNotifier',
+        e,
+      );
     }
   }
 

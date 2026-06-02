@@ -30,11 +30,18 @@ class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
   final Function(Map<String, dynamic>)? onSet;
   final Stream<DocumentSnapshot<Map<String, dynamic>>>? _stream;
 
-  FakeDocumentReference(this._exists, this._data, {this.onUpdate, this.onSet, Stream<DocumentSnapshot<Map<String, dynamic>>>? stream})
-      : _stream = stream;
+  FakeDocumentReference(
+    this._exists,
+    this._data, {
+    this.onUpdate,
+    this.onSet,
+    Stream<DocumentSnapshot<Map<String, dynamic>>>? stream,
+  }) : _stream = stream;
 
   @override
-  Future<DocumentSnapshot<Map<String, dynamic>>> get([GetOptions? options]) async {
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([
+    GetOptions? options,
+  ]) async {
     return FakeDocumentSnapshot(_exists, _data);
   }
 
@@ -62,7 +69,8 @@ class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
   }
 }
 
-class FakeCollectionReference implements CollectionReference<Map<String, dynamic>> {
+class FakeCollectionReference
+    implements CollectionReference<Map<String, dynamic>> {
   final FakeDocumentReference Function(String) docBuilder;
   FakeCollectionReference(this.docBuilder);
 
@@ -90,7 +98,8 @@ class FakeFirebaseFirestore implements FirebaseFirestore {
 
 // Fake remote data source for repository testing
 class FakeUserProfileRemoteDataSource implements UserProfileRemoteDataSource {
-  final StreamController<UserProfileModel?> controller = StreamController<UserProfileModel?>.broadcast();
+  final StreamController<UserProfileModel?> controller =
+      StreamController<UserProfileModel?>.broadcast();
   UserProfileModel? lastUpdatedModel;
 
   @override
@@ -163,50 +172,32 @@ void main() {
 
     test('_parseDateTime covers other data formats', () {
       // 1. Null
-      final mapNull = {
-        'uid': 'user_1',
-        'createdAt': null,
-      };
+      final mapNull = {'uid': 'user_1', 'createdAt': null};
       final modelNull = UserProfileModel.fromMap(mapNull);
       expect(modelNull.createdAt, isNotNull);
 
       // 2. ISO 8601 String
-      final mapStr = {
-        'uid': 'user_1',
-        'createdAt': '2026-06-01T12:00:00.000Z',
-      };
+      final mapStr = {'uid': 'user_1', 'createdAt': '2026-06-01T12:00:00.000Z'};
       final modelStr = UserProfileModel.fromMap(mapStr);
       expect(modelStr.createdAt.year, 2026);
 
       // 2b. Invalid String
-      final mapStrInv = {
-        'uid': 'user_1',
-        'createdAt': 'invalid-date-string',
-      };
+      final mapStrInv = {'uid': 'user_1', 'createdAt': 'invalid-date-string'};
       final modelStrInv = UserProfileModel.fromMap(mapStrInv);
       expect(modelStrInv.createdAt, isNotNull);
 
       // 3. Milliseconds Int
-      final mapMs = {
-        'uid': 'user_1',
-        'createdAt': 1779840000000,
-      };
+      final mapMs = {'uid': 'user_1', 'createdAt': 1779840000000};
       final modelMs = UserProfileModel.fromMap(mapMs);
       expect(modelMs.createdAt.year, 2026);
 
       // 4. Seconds Int (length 10)
-      final mapSec = {
-        'uid': 'user_1',
-        'createdAt': 1779840000,
-      };
+      final mapSec = {'uid': 'user_1', 'createdAt': 1779840000};
       final modelSec = UserProfileModel.fromMap(mapSec);
       expect(modelSec.createdAt.year, 2026);
 
       // 5. Invalid type (e.g. double)
-      final mapDouble = {
-        'uid': 'user_1',
-        'createdAt': 123.456,
-      };
+      final mapDouble = {'uid': 'user_1', 'createdAt': 123.456};
       final modelDouble = UserProfileModel.fromMap(mapDouble);
       expect(modelDouble.createdAt, isNotNull);
     });
@@ -328,28 +319,36 @@ void main() {
       expect(result, isNull);
     });
 
-    test('getUserProfile handles stream errors by throwing ServerException', () async {
-      final streamController = StreamController<DocumentSnapshot<Map<String, dynamic>>>();
-      final fakeDoc = FakeDocumentReference(true, null, stream: streamController.stream);
-      final fakeCol = FakeCollectionReference((path) => fakeDoc);
-      final fakeFirestore = FakeFirebaseFirestore((path) => fakeCol);
+    test(
+      'getUserProfile handles stream errors by throwing ServerException',
+      () async {
+        final streamController =
+            StreamController<DocumentSnapshot<Map<String, dynamic>>>();
+        final fakeDoc = FakeDocumentReference(
+          true,
+          null,
+          stream: streamController.stream,
+        );
+        final fakeCol = FakeCollectionReference((path) => fakeDoc);
+        final fakeFirestore = FakeFirebaseFirestore((path) => fakeCol);
 
-      final dataSource = UserProfileRemoteDataSourceImpl(fakeFirestore);
-      final stream = dataSource.getUserProfile('user_1');
+        final dataSource = UserProfileRemoteDataSourceImpl(fakeFirestore);
+        final stream = dataSource.getUserProfile('user_1');
 
-      final done = Completer<void>();
-      stream.listen(
-        (_) {},
-        onError: (Object err) {
-          expect(err, isA<ServerException>());
-          done.complete();
-        },
-      );
+        final done = Completer<void>();
+        stream.listen(
+          (_) {},
+          onError: (Object err) {
+            expect(err, isA<ServerException>());
+            done.complete();
+          },
+        );
 
-      streamController.addError('Firestore error');
-      await done.future;
-      await streamController.close();
-    });
+        streamController.addError('Firestore error');
+        await done.future;
+        await streamController.close();
+      },
+    );
 
     test('updateUserProfile calls update if doc exists', () async {
       var updateCalled = false;
@@ -363,12 +362,16 @@ void main() {
         updatedAt: tDate,
       );
 
-      final fakeDoc = FakeDocumentReference(true, mapData, onUpdate: (data) {
-        updateCalled = true;
-        expect(data['firstName'], 'Assaf');
-        expect(data['lastName'], 'Benzaken');
-        expect(data['updatedAt'], isA<FieldValue>());
-      });
+      final fakeDoc = FakeDocumentReference(
+        true,
+        mapData,
+        onUpdate: (data) {
+          updateCalled = true;
+          expect(data['firstName'], 'Assaf');
+          expect(data['lastName'], 'Benzaken');
+          expect(data['updatedAt'], isA<FieldValue>());
+        },
+      );
       final fakeCol = FakeCollectionReference((path) => fakeDoc);
       final fakeFirestore = FakeFirebaseFirestore((path) => fakeCol);
 
@@ -390,16 +393,20 @@ void main() {
         updatedAt: tDate,
       );
 
-      final fakeDoc = FakeDocumentReference(false, null, onSet: (data) {
-        setCalled = true;
-        expect(data['uid'], 'user_1');
-        expect(data['firstName'], 'Assaf');
-        expect(data['lastName'], 'Benzaken');
-        expect(data['email'], 'assaf@plainsight.il');
-        expect(data['role'], 'user');
-        expect(data['createdAt'], isA<FieldValue>());
-        expect(data['updatedAt'], isA<FieldValue>());
-      });
+      final fakeDoc = FakeDocumentReference(
+        false,
+        null,
+        onSet: (data) {
+          setCalled = true;
+          expect(data['uid'], 'user_1');
+          expect(data['firstName'], 'Assaf');
+          expect(data['lastName'], 'Benzaken');
+          expect(data['email'], 'assaf@plainsight.il');
+          expect(data['role'], 'user');
+          expect(data['createdAt'], isA<FieldValue>());
+          expect(data['updatedAt'], isA<FieldValue>());
+        },
+      );
       final fakeCol = FakeCollectionReference((path) => fakeDoc);
       final fakeFirestore = FakeFirebaseFirestore((path) => fakeCol);
 

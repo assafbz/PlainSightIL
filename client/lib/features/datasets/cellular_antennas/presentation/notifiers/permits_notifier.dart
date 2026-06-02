@@ -153,39 +153,47 @@ class PermitsNotifier extends ChangeNotifier {
     AppLogger.info('Initializing permit metadata listener in PermitsNotifier');
     _permitMetadataSubscription?.cancel();
     try {
-      _permitMetadataSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('dataset_metadata')
-          .doc('ff398c7e-c522-4ee8-a53a-312b188a573d')
-          .snapshots()
-          .listen(
-            (metaSnapshot) {
-              if (metaSnapshot.exists && metaSnapshot.data() != null) {
-                final data = metaSnapshot.data()!;
-                final newActive = data['activeCollection'] as String? ?? '';
-                _permitSyncStatus = data['status'] as String? ?? 'idle';
+      _permitMetadataSubscription =
+          (testFirestore ?? FirebaseFirestore.instance)
+              .collection('dataset_metadata')
+              .doc('ff398c7e-c522-4ee8-a53a-312b188a573d')
+              .snapshots()
+              .listen(
+                (metaSnapshot) {
+                  if (metaSnapshot.exists && metaSnapshot.data() != null) {
+                    final data = metaSnapshot.data()!;
+                    final newActive = data['activeCollection'] as String? ?? '';
+                    _permitSyncStatus = data['status'] as String? ?? 'idle';
 
-                if (newActive.isNotEmpty && newActive != _activePermitCollection) {
-                  _bindActivePermitCollection(newActive);
-                } else {
+                    if (newActive.isNotEmpty &&
+                        newActive != _activePermitCollection) {
+                      _bindActivePermitCollection(newActive);
+                    } else {
+                      notifyListeners();
+                    }
+                  } else {
+                    _isLoadingPermits = false;
+                    notifyListeners();
+                  }
+                },
+                onError: (Object err) {
+                  _isLoadingPermits = false;
+                  _permitSyncStatus = 'error';
                   notifyListeners();
-                }
-              } else {
-                _isLoadingPermits = false;
-                notifyListeners();
-              }
-            },
-            onError: (Object err) {
-              _isLoadingPermits = false;
-              _permitSyncStatus = 'error';
-              notifyListeners();
-              AppLogger.error('Firestore permit metadata listener error', err);
-            },
-          );
+                  AppLogger.error(
+                    'Firestore permit metadata listener error',
+                    err,
+                  );
+                },
+              );
     } catch (e) {
       _isLoadingPermits = false;
       _permitSyncStatus = 'error';
       notifyListeners();
-      AppLogger.error('Failed to bind Firestore metadata in PermitsNotifier', e);
+      AppLogger.error(
+        'Failed to bind Firestore metadata in PermitsNotifier',
+        e,
+      );
     }
   }
 
@@ -198,7 +206,9 @@ class PermitsNotifier extends ChangeNotifier {
     if (testPermitsStream != null) {
       _permitSubscription = testPermitsStream!.listen(
         (snapshot) {
-          _permitRecords = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          _permitRecords = snapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
           _isLoadingPermits = false;
           notifyListeners();
         },
@@ -206,7 +216,10 @@ class PermitsNotifier extends ChangeNotifier {
           _isLoadingPermits = false;
           _permitSyncStatus = 'error';
           notifyListeners();
-          AppLogger.error('Firestore permit collection listener error for $newCollection', err);
+          AppLogger.error(
+            'Firestore permit collection listener error for $newCollection',
+            err,
+          );
         },
       );
       return;
@@ -226,14 +239,20 @@ class PermitsNotifier extends ChangeNotifier {
               _isLoadingPermits = false;
               _permitSyncStatus = 'error';
               notifyListeners();
-              AppLogger.error('Firestore permit collection listener error for $newCollection', err);
+              AppLogger.error(
+                'Firestore permit collection listener error for $newCollection',
+                err,
+              );
             },
           );
     } catch (e) {
       _isLoadingPermits = false;
       _permitSyncStatus = 'error';
       notifyListeners();
-      AppLogger.error('Failed to bind Firestore collection $newCollection in PermitsNotifier', e);
+      AppLogger.error(
+        'Failed to bind Firestore collection $newCollection in PermitsNotifier',
+        e,
+      );
     }
   }
 

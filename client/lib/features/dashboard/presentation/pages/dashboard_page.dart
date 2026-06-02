@@ -45,8 +45,7 @@ class DashboardScreen extends StatelessWidget {
   }
 
   void _openDataset(BuildContext context, String id) {
-    if (id == DatasetIds.cellularAntennas ||
-        id == DatasetIds.cellularPermits) {
+    if (id == DatasetIds.cellularAntennas || id == DatasetIds.cellularPermits) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => CellularAntennasScreen(appState: appState),
@@ -162,8 +161,7 @@ class DashboardScreen extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: recentRecords.map((item) {
-          final isLiquidation =
-              item.id == DatasetIds.companiesLiquidation;
+          final isLiquidation = item.id == DatasetIds.companiesLiquidation;
           final isDoctors = item.id == DatasetIds.doctorsLicenses;
           final accentColor = isLiquidation
               ? AppColors.danger

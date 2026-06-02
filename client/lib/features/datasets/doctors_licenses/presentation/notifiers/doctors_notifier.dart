@@ -56,7 +56,11 @@ class DoctorsNotifier extends ChangeNotifier {
       _doctorsSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _doctorRecords = snapshot.docs
-              .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data() as Map<String, dynamic>))
+              .map(
+                (doc) => DoctorLicenseRecordModel.fromMap(
+                  doc.data() as Map<String, dynamic>,
+                ),
+              )
               .toList();
           _isLoadingDoctors = false;
           notifyListeners();
@@ -130,13 +134,19 @@ class DoctorsNotifier extends ChangeNotifier {
             onError: (Object err) {
               _isLoadingDoctors = false;
               notifyListeners();
-              AppLogger.error('Firestore doctors collection listener error', err);
+              AppLogger.error(
+                'Firestore doctors collection listener error',
+                err,
+              );
             },
           );
     } catch (e) {
       _isLoadingDoctors = false;
       notifyListeners();
-      AppLogger.error('Failed to initialize doctors listener in DoctorsNotifier', e);
+      AppLogger.error(
+        'Failed to initialize doctors listener in DoctorsNotifier',
+        e,
+      );
     }
   }
 

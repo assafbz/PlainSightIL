@@ -16,7 +16,7 @@ import 'package:plainsight/core/state/app_state.dart';
 class TelemetryNotifier extends ChangeNotifier {
   /// Local indicator if we are running in unit/widget mock testing mode.
   bool get _isTesting => AppStateNotifier.isTesting;
-  
+
   final int _functionsPort;
 
   Map<String, Map<String, dynamic>> _datasetMetadataMap = {};
@@ -52,7 +52,8 @@ class TelemetryNotifier extends ChangeNotifier {
   http.Client? httpClient;
 
   /// Returns admin datasets metadata mapped by ID.
-  Map<String, Map<String, dynamic>> get datasetMetadataMap => _datasetMetadataMap;
+  Map<String, Map<String, dynamic>> get datasetMetadataMap =>
+      _datasetMetadataMap;
 
   /// Checks if admin metadata collection is loading.
   bool get isLoadingAdminMetadata => _isLoadingAdminMetadata;
@@ -224,7 +225,9 @@ class TelemetryNotifier extends ChangeNotifier {
       if (testScraperRunsStream != null) {
         _scraperRunsSubscription = testScraperRunsStream!.listen(
           (snapshot) {
-            _scraperRuns = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+            _scraperRuns = snapshot.docs
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
             notifyListeners();
           },
           onError: (Object err) {
@@ -240,13 +243,19 @@ class TelemetryNotifier extends ChangeNotifier {
         'isReachable': true,
         'statusCode': 200,
         'latencyMs': 142,
-        'lastChecked': DateTime.now().subtract(const Duration(minutes: 2)).toIso8601String(),
+        'lastChecked': DateTime.now()
+            .subtract(const Duration(minutes: 2))
+            .toIso8601String(),
       };
       _scraperRuns = [
         {
           'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'startTime': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
-          'endTime': DateTime.now().subtract(const Duration(hours: 1, seconds: 5)).toIso8601String(),
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 1, seconds: 5))
+              .toIso8601String(),
           'durationMs': 4800,
           'status': 'success',
           'recordsProcessed': 9840,
@@ -257,8 +266,12 @@ class TelemetryNotifier extends ChangeNotifier {
         },
         {
           'datasetId': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          'startTime': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
-          'endTime': DateTime.now().subtract(const Duration(hours: 2, seconds: 1)).toIso8601String(),
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 2, seconds: 1))
+              .toIso8601String(),
           'durationMs': 1200,
           'status': 'success',
           'recordsProcessed': 3,
@@ -269,8 +282,12 @@ class TelemetryNotifier extends ChangeNotifier {
         },
         {
           'datasetId': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          'startTime': DateTime.now().subtract(const Duration(hours: 1, minutes: 30)).toIso8601String(),
-          'endTime': DateTime.now().subtract(const Duration(hours: 1, minutes: 29)).toIso8601String(),
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 1, minutes: 30))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 1, minutes: 29))
+              .toIso8601String(),
           'durationMs': 3200,
           'status': 'success',
           'recordsProcessed': 100,
@@ -345,7 +362,11 @@ class TelemetryNotifier extends ChangeNotifier {
         _directorySubscription = testDirectoryStream!.listen(
           (snapshot) {
             _directoryRecords = snapshot.docs
-                .map((doc) => DatasetMetadataModel.fromMap(doc.data() as Map<String, dynamic>))
+                .map(
+                  (doc) => DatasetMetadataModel.fromMap(
+                    doc.data() as Map<String, dynamic>,
+                  ),
+                )
                 .toList();
             _isLoadingDirectory = false;
             notifyListeners();
@@ -362,7 +383,11 @@ class TelemetryNotifier extends ChangeNotifier {
           (snapshot) {
             final Map<String, int> counts = {};
             for (final doc in snapshot.docs) {
-              counts[doc.id] = ((doc.data() as Map<String, dynamic>)['requestCount'] as num? ?? 0).toInt();
+              counts[doc.id] =
+                  ((doc.data() as Map<String, dynamic>)['requestCount']
+                              as num? ??
+                          0)
+                      .toInt();
             }
             _datasetRequestCounts = counts;
             notifyListeners();
@@ -393,7 +418,8 @@ class TelemetryNotifier extends ChangeNotifier {
           datasetId: '4e9111d8-e842-40ec-b587-629e684e85ac',
           name: 'cellular_permit_applications',
           title: 'בקשות להיתרי הקמה של אנטנות',
-          notes: 'היתרי הקמה והפעלה למוקדי שידור סלולריים הנמצאים בהליכי אישור.',
+          notes:
+              'היתרי הקמה והפעלה למוקדי שידור סלולריים הנמצאים בהליכי אישור.',
           publisher: 'המשרד להגנת הסביבה',
           resourceCount: 1,
           lastUpdated: DateTime(2026, 5, 29),
@@ -405,7 +431,8 @@ class TelemetryNotifier extends ChangeNotifier {
           datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
           name: 'pr2018',
           title: 'מאגר הכונס הרשמי',
-          notes: 'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
+          notes:
+              'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
           publisher: 'רשות התאגידים',
           resourceCount: 3,
           lastUpdated: DateTime(2026, 6, 1),
@@ -463,7 +490,8 @@ class TelemetryNotifier extends ChangeNotifier {
             (snapshot) {
               final Map<String, int> counts = {};
               for (final doc in snapshot.docs) {
-                counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0).toInt();
+                counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0)
+                    .toInt();
               }
               _datasetRequestCounts = counts;
               notifyListeners();
@@ -519,9 +547,13 @@ class TelemetryNotifier extends ChangeNotifier {
   }
 
   /// Request registration activation vote for un-supported directories.
-  Future<bool> requestDatasetActivation(String datasetId, String datasetTitle) async {
+  Future<bool> requestDatasetActivation(
+    String datasetId,
+    String datasetTitle,
+  ) async {
     if (_isTesting) {
-      _datasetRequestCounts[datasetId] = (_datasetRequestCounts[datasetId] ?? 0) + 1;
+      _datasetRequestCounts[datasetId] =
+          (_datasetRequestCounts[datasetId] ?? 0) + 1;
       notifyListeners();
       return true;
     }
@@ -532,7 +564,8 @@ class TelemetryNotifier extends ChangeNotifier {
       final user = (testAuth ?? FirebaseAuth.instance).currentUser;
       String? uid = user?.uid;
       if (uid == null) {
-        final authResult = await (testAuth ?? FirebaseAuth.instance).signInAnonymously();
+        final authResult = await (testAuth ?? FirebaseAuth.instance)
+            .signInAnonymously();
         uid = authResult.user?.uid;
       }
 
@@ -547,7 +580,9 @@ class TelemetryNotifier extends ChangeNotifier {
       final voteSnap = await voteRef.get();
       if (voteSnap.exists) return false;
 
-      await (testFirestore ?? FirebaseFirestore.instance).runTransaction((transaction) async {
+      await (testFirestore ?? FirebaseFirestore.instance).runTransaction((
+        transaction,
+      ) async {
         final requestRef = (testFirestore ?? FirebaseFirestore.instance)
             .collection('dataset_requests')
             .doc(datasetId);
@@ -557,7 +592,8 @@ class TelemetryNotifier extends ChangeNotifier {
         transaction.set(voteRef, {'votedAt': FieldValue.serverTimestamp()});
 
         if (requestSnap.exists) {
-          final currentCount = (requestSnap.data()?['requestCount'] as num? ?? 0).toInt();
+          final currentCount =
+              (requestSnap.data()?['requestCount'] as num? ?? 0).toInt();
           transaction.update(requestRef, {
             'requestCount': currentCount + 1,
             'lastRequestedAt': FieldValue.serverTimestamp(),
@@ -642,15 +678,19 @@ class TelemetryNotifier extends ChangeNotifier {
             );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
         return {
           'success': true,
           'message': data['message'] ?? 'Sync completed successfully',
           'count': data['count'] ?? 0,
         };
       } else {
-        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
-        final String errorMessage = (data['error'] ?? data['message'] ?? 'Failed to trigger sync').toString();
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final String errorMessage =
+            (data['error'] ?? data['message'] ?? 'Failed to trigger sync')
+                .toString();
         _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
         notifyListeners();
         return {'success': false, 'message': errorMessage};
@@ -667,7 +707,8 @@ class TelemetryNotifier extends ChangeNotifier {
   String get functionsBaseUrl {
     const String projectId = 'demo-plainsightil';
     const String region = 'us-central1';
-    final bool isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final bool isAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
     return 'http://$host:$_functionsPort/$projectId/$region';
   }
