@@ -28,6 +28,7 @@ void main() async {
     // or compile-time environment flags, falling back to defaults.
     int firestorePort = 8081;
     int authPort = 9099;
+    int functionsPort = 5002;
 
     try {
       final baseUri = Uri.base;
@@ -50,6 +51,19 @@ void main() async {
       } else {
         authPort = const int.fromEnvironment('AUTH_PORT', defaultValue: 9099);
       }
+
+      if (queryParams.containsKey('functions_port')) {
+        functionsPort = int.parse(queryParams['functions_port']!);
+      } else {
+        functionsPort = const int.fromEnvironment(
+          'FUNCTIONS_PORT',
+          defaultValue: 0,
+        );
+        if (functionsPort == 0) {
+          final int offset = firestorePort - 8081;
+          functionsPort = 5002 + offset;
+        }
+      }
     } catch (e) {
       AppLogger.error('⚠️ Error parsing query parameters for ports', e);
       firestorePort = const int.fromEnvironment(
@@ -57,10 +71,20 @@ void main() async {
         defaultValue: 8081,
       );
       authPort = const int.fromEnvironment('AUTH_PORT', defaultValue: 9099);
+      functionsPort = const int.fromEnvironment(
+        'FUNCTIONS_PORT',
+        defaultValue: 0,
+      );
+      if (functionsPort == 0) {
+        final int offset = firestorePort - 8081;
+        functionsPort = 5002 + offset;
+      }
     }
 
+    AppStateNotifier.functionsPort = functionsPort;
+
     AppLogger.info(
-      '🔌 Connecting to emulators. Host: $host, Firestore: $firestorePort, Auth: $authPort',
+      '🔌 Connecting to emulators. Host: $host, Firestore: $firestorePort, Auth: $authPort, Functions: $functionsPort',
     );
     // Connect to local Firestore emulator
     FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);

@@ -201,7 +201,8 @@ function runPlaywright() {
       ...process.env,
       CLIENT_PORT: ports.client.toString(),
       FIRESTORE_PORT: ports.firestore.toString(),
-      AUTH_PORT: ports.auth.toString()
+      AUTH_PORT: ports.auth.toString(),
+      FUNCTIONS_PORT: ports.functions.toString()
     },
     stdio: 'inherit',
     shell: true

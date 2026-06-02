@@ -21,6 +21,7 @@ import '../../features/profile/data/repositories/user_profile_repository_impl.da
 
 class AppStateNotifier extends ChangeNotifier {
   static bool isTesting = false;
+  static int functionsPort = 5002;
 
   String _locale = 'en';
   int _activeTab = 0;
@@ -1031,13 +1032,7 @@ class AppStateNotifier extends ChangeNotifier {
     if (!isFirebaseInitialized) return;
 
     try {
-      String host = 'localhost';
-      if (!kIsWeb && Platform.isAndroid) {
-        host = '10.0.2.2';
-      }
-      final url = Uri.parse(
-        'http://$host:5002/plainsightil-dev/us-central1/manualApiHealthCheck',
-      );
+      final url = Uri.parse('$functionsBaseUrl/manualApiHealthCheck');
       final response = await http.get(url).timeout(const Duration(seconds: 15));
       AppLogger.info(
         'Manual API health check triggered. Status: ${response.statusCode}',
@@ -1146,13 +1141,13 @@ class AppStateNotifier extends ChangeNotifier {
     const String region = 'us-central1';
 
     if (isTesting) {
-      return 'http://127.0.0.1:5002/$projectId/$region';
+      return 'http://127.0.0.1:$functionsPort/$projectId/$region';
     }
 
     final bool isAndroid =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
-    return 'http://$host:5002/$projectId/$region';
+    return 'http://$host:$functionsPort/$projectId/$region';
   }
 
   Future<Map<String, dynamic>> triggerManualSync(String datasetId) async {

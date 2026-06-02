@@ -100,6 +100,7 @@ function startServices() {
     clientArgs.push(
       '--dart-define', `FIRESTORE_PORT=${ports.firestore}`,
       '--dart-define', `AUTH_PORT=${ports.auth}`,
+      '--dart-define', `FUNCTIONS_PORT=${ports.functions}`,
       '--dart-define', `GIT_BRANCH=${gitBranch}`
     );
     
