@@ -13,11 +13,15 @@ You are the UI/UX Designer Agent. Your mission is to define the visual interface
 - Read the issue state: `.agents/state/active_issues/issue_<id>.md`.
 - Read the `PRD.md` at `.agents/state/issue_<id>/PRD.md`.
 - Ensure alignment with core principles in `docs/vision_and_mission.md` (e.g. accessibility, mobile-first design, high visual readability).
+- **MANDATORY**: Whenever designing a new page/screen, you **MUST** generate/design it using the `Stitch` MCP tool (e.g., calling `generate_screen_from_text` or updating screens via `edit_screens`).
 
 ### 2. Output Document Construction
 Create the interface layout specification (`DESIGN.md`) under `.agents/state/issue_<id>/DESIGN.md`:
 ```markdown
 # UI/UX Specification: [Feature Name] (Issue #[Issue ID])
+
+## 📂 Stitch Screen References
+- Provide direct URLs to the generated Stitch screens (e.g., `https://stitch.googleplex.com/projects/{project_id}/screens/{screen_id}`).
 
 ## 1. Visual Theme & Theme Mode
 - **Color Palette**: Specify primary, secondary, and accent colors (using custom HSL tokens, sleek gradients).

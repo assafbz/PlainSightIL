@@ -205,6 +205,7 @@ class AppStateNotifier extends ChangeNotifier {
   User? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null || _isMockAuthenticated;
   bool get isGuestMode => _isGuestMode;
+  bool get isAdmin => _isMockAuthenticated || (_userProfile?.role == 'admin');
 
   Map<String, String>? get mockUser => _isMockAuthenticated
       ? {'name': 'Assaf Benzaken', 'email': 'assaf@plainsight.il'}
@@ -302,6 +303,14 @@ class AppStateNotifier extends ChangeNotifier {
   List<LiquidationRecordModel> get liquidationRecords => _liquidationRecords;
   bool get isLoadingLiquidation => _isLoadingLiquidation;
 
+  // Admin Metadata state fields
+  Map<String, Map<String, dynamic>> _datasetMetadataMap = {};
+  bool _isLoadingAdminMetadata = true;
+  StreamSubscription<QuerySnapshot>? _adminMetadataSubscription;
+
+  Map<String, Map<String, dynamic>> get datasetMetadataMap => _datasetMetadataMap;
+  bool get isLoadingAdminMetadata => _isLoadingAdminMetadata;
+
   List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
   bool get isLoadingDirectory => _isLoadingDirectory;
   int getRequestCount(String id) => _datasetRequestCounts[id] ?? 0;
@@ -331,6 +340,7 @@ class AppStateNotifier extends ChangeNotifier {
     initAntennaListener();
     initDirectoryListener();
     initLiquidationListener();
+    initAdminMetadataListener();
 
     if (isTesting) {
       _permitSyncStatus = 'idle';
@@ -772,6 +782,68 @@ class AppStateNotifier extends ChangeNotifier {
     }
   }
 
+  /// Initialize real-time snapshot listener on dataset_metadata collection
+  void initAdminMetadataListener() {
+    _adminMetadataSubscription?.cancel();
+    if (isTesting) {
+      _datasetMetadataMap = {
+        'cellular_antennas': {
+          'id': 'cellular_antennas',
+          'recordCount': 9840,
+          'lastUpdated': '2026-05-30T12:00:00Z',
+          'status': 'idle',
+        },
+        'cellular_permit_applications': {
+          'id': 'cellular_permit_applications',
+          'recordCount': 120,
+          'lastUpdated': '2026-05-29T14:30:00Z',
+          'status': 'idle',
+        },
+        'd8715392-287f-49b7-9ae3-f21ec5bf55f3': {
+          'id': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+          'recordCount': 3,
+          'lastUpdated': '2026-06-01T09:15:00Z',
+          'status': 'idle',
+        },
+      };
+      _isLoadingAdminMetadata = false;
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) {
+      _isLoadingAdminMetadata = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      _adminMetadataSubscription = FirebaseFirestore.instance
+          .collection('dataset_metadata')
+          .snapshots()
+          .listen(
+            (snapshot) {
+              final Map<String, Map<String, dynamic>> newMap = {};
+              for (final doc in snapshot.docs) {
+                newMap[doc.id] = doc.data();
+              }
+              _datasetMetadataMap = newMap;
+              _isLoadingAdminMetadata = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingAdminMetadata = false;
+              notifyListeners();
+              debugPrint('Firestore admin metadata listener error: $err');
+            },
+          );
+    } catch (e) {
+      _isLoadingAdminMetadata = false;
+      notifyListeners();
+      debugPrint('Failed to initialize admin metadata listener: $e');
+    }
+  }
+
   Future<bool> requestDatasetActivation(
     String datasetId,
     String datasetTitle,
@@ -900,6 +972,8 @@ class AppStateNotifier extends ChangeNotifier {
     _directorySubscription?.cancel();
     _requestsSubscription?.cancel();
     _liquidationSubscription?.cancel();
+    _adminMetadataSubscription?.cancel();
+    _profileSubscription?.cancel();
     super.dispose();
   }
 
@@ -1021,6 +1095,19 @@ class AppStateNotifier extends ChangeNotifier {
       'profile_update_error': 'Failed to update profile.',
       'edit_profile': 'Edit Profile',
       'profile_loading': 'Loading profile...',
+      'nav_admin': 'Admin Portal',
+      'admin_title': 'Admin Dashboard',
+      'admin_desc': 'Monitor and manage supported civic datasets.',
+      'search_datasets': 'Search datasets...',
+      'filter_status_all': 'All Statuses',
+      'filter_status_idle': 'Idle',
+      'filter_status_syncing': 'Syncing',
+      'filter_status_error': 'Error',
+      'dataset_records': 'Records: ',
+      'last_sync': 'Last Sync: ',
+      'resource_id': 'Resource ID: ',
+      'source_agency': 'Source Agency: ',
+      'status_label': 'Status: ',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -1138,6 +1225,19 @@ class AppStateNotifier extends ChangeNotifier {
       'profile_update_error': 'עדכון הפרופיל נכשל.',
       'edit_profile': 'ערוך פרופיל',
       'profile_loading': 'טוען פרופיל...',
+      'nav_admin': 'פורטל מנהל',
+      'admin_title': 'לוח בקרה מנהל',
+      'admin_desc': 'מעקב וניהול מאגרי מידע אזרחיים נתמכים.',
+      'search_datasets': 'חפש מאגרי מידע...',
+      'filter_status_all': 'כל הסטטוסים',
+      'filter_status_idle': 'בלתי פעיל',
+      'filter_status_syncing': 'מסנכרן',
+      'filter_status_error': 'שגיאה',
+      'dataset_records': 'רשומות: ',
+      'last_sync': 'סנכרון אחרון: ',
+      'resource_id': 'מזהה משאב: ',
+      'source_agency': 'סוכנות מקור: ',
+      'status_label': 'סטטוס: ',
     },
   };
 
