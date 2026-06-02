@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 // Translation mapping for case statuses
 const STATUS_TRANSLATIONS: Record<string, string> = {
@@ -50,6 +51,7 @@ export interface CompaniesLiquidationRecord {
   cityOfActivity: string;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // Clean trailing and extra whitespace
@@ -105,6 +107,8 @@ export function parseLiquidationRecord(
   const closureDate = parseDateString(record["תאריך סגירת תיק"]) || null;
   const closureReason = cleanString(record["סיבת סגירה"]) || null;
 
+  const lastUpdated = liquidationOrderDate || submissionDate || new Date().toISOString();
+
   return {
     id,
     companyId,
@@ -118,7 +122,7 @@ export function parseLiquidationRecord(
     closureReason,
     districtCourt,
     cityOfActivity,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated,
   };
 }
 
@@ -165,29 +169,43 @@ export async function scrapeAndSyncCompaniesLiquidation(
         const chunk = parsedRecords.slice(i, i + 500);
         const docRefs = chunk.map((r) => targetRef.doc(r.id));
 
+        // Lookup existing documents in batch
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
           if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+            existingMap.set(snap.id, snap.data());
           }
         }
 
+        // Prepare and write chunk
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
+          } else {
+            r.createdAt = now;
+            r.updatedAt = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
       }
 
       offset += limit;

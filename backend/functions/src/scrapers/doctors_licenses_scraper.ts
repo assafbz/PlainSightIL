@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 /**
  * Interface representing the raw record layout received from data.gov.il CKAN datastore API.
@@ -32,6 +33,7 @@ export interface DoctorLicenseRecord {
   specialtyName: string | null;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -115,6 +117,8 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
     : null;
   const specialtyName = record["שם התמחות"] ? String(record["שם התמחות"]).trim() : null;
 
+  const lastUpdated = licenseRegistrationDate || new Date().toISOString();
+
   return {
     id,
     _id: rawId,
@@ -125,7 +129,7 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
     specialtyCertificateNumber,
     specialtyRegistrationDate: specialtyRegistrationDate || null,
     specialtyName: specialtyName || null,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated,
   };
 }
 
@@ -184,28 +188,40 @@ export async function scrapeAndSyncDoctorsLicenses(
 
         // Read existing entries to retain their original createdAt timestamp
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
           if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+            existingMap.set(snap.id, snap.data());
           }
         }
 
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
+          } else {
+            r.createdAt = now;
+            r.updatedAt = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
       }
 
       offset += limit;

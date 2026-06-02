@@ -1,6 +1,4 @@
----
-name: "Dataset Integration Playbook"
-description: "Guidelines and checklist for integrating new datasets from data.gov.il into the PlainSightIL platform, utilizing a blue-green zero-downtime double-buffering pattern."
+description: "Guidelines and checklist for integrating new datasets from data.gov.il into the PlainSightIL platform, utilizing an in-place update policy with a triple-timestamp schema (createdAt, updatedAt, and lastUpdated) to prevent redundant database writes."
 ---
 
 # PlainSightIL: Dataset Integration Playbook
@@ -77,7 +75,7 @@ Create a local mapping sheet translating Hebrew keys to clean English CamelCase 
 To maintain a clean, scalable codebase and prevent naming confusion:
 
 #### 1. Database Collection & Document Naming
-* **Firestore Collections**: All raw dataset collections (and their blue/green partitions) MUST be named using their unique resource GUID (e.g., `8935c8e5-ec77-421f-af86-d970583195f8_blue` and `8935c8e5-ec77-421f-af86-d970583195f8_green`).
+* **Firestore Collections**: All raw dataset collections MUST be named using their unique resource GUID (e.g., `8935c8e5-ec77-421f-af86-d970583195f8`).
 * **Metadata Documents**: In the `dataset_metadata` collection, each document ID representing a dataset's metadata MUST be the exact resource GUID (e.g., `8935c8e5-ec77-421f-af86-d970583195f8`).
 
 #### 2. Client-side Code Directory Layout
@@ -109,42 +107,46 @@ The general list catalog/search screen (where all datasets are displayed togethe
 
 ### Step 2.1: The Ingestion Metadata Schema
 
-To support monthly dataset refreshes without causing UI downtime or displaying partially updated (inconsistent) states to users, we implement a **Blue-Green Ingestion (Double Buffering) Pattern** at the database level.
+To support dataset refreshes efficiently and create alerts on records that are new or updated, we implement an **In-place Update Policy with a Triple-Timestamp Schema** at the database level.
 
 ```mermaid
 flowchart TD
-    A[Client queries Active Collection pointer from Metadata] --> B{activeCollection == 'blue'? }
-    B -- Yes --> C[Query blue_collection]
-    B -- No --> D[Query green_collection]
-    E[Cloud Scraper runs once a month] --> F[Purge Inactive targetCollection]
-    F --> G[Stream writes to targetCollection]
-    G --> H[Atomic transaction updates activeCollection pointer]
-    H --> I[Deferred cleanup of old active collection]
+    A[Cloud Scraper fetches raw records] --> B[Get existing Firestore records in chunks]
+    B --> C{Record exists?}
+    C -- Yes --> D{Data or lastUpdated changed?}
+    D -- Yes --> E[Set updatedAt = now, preserve createdAt, update lastUpdated & write]
+    D -- No --> F[Skip writing to avoid unnecessary operations]
+    C -- No --> G[Set createdAt = now, updatedAt = now, write new record]
+    E --> H[Atomic metadata update at end]
+    F --> H
+    G --> H
 ```
 
 ### Step 2.1: The Ingestion Metadata Schema
-Create a central collection `dataset_metadata` in Firestore containing pointers to the current active partitions:
+Create a central collection `dataset_metadata` in Firestore containing pointers and statuses for all datasets:
 
 ```typescript
 // Document ID: resource GUID (e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d")
 export interface DatasetMetadata {
   id: string;                    // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d"
-  activeCollection: string;      // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d_blue" or "ff398c7e-c522-4ee8-a53a-312b188a573d_green"
+  activeCollection: string;      // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d"
   lastUpdated: string;           // ISO timestamp of last successful sync
   recordCount: number;           // Total count of records imported
   status: "idle" | "syncing" | "error";
 }
 ```
 
-### Step 2.2: Dual Collections Setup
-Define two collections for your dataset (e.g., `<resource_guid>_blue` and `<resource_guid>_green`). Both must share identical schemas:
+### Step 2.2: Collection Setup
+Define a collection for your dataset named exactly after the resource GUID (e.g., `<resource_guid>`). The documents must use the triple-timestamp schema:
 
 ```typescript
 export interface NormalizedDatasetRecord {
   id: string;                         
   coordinates: admin.firestore.GeoPoint; 
   geohash: string;                    
-  lastUpdated: string;                
+  createdAt: string;                  // ISO timestamp of first document ingestion
+  updatedAt: string;                  // ISO timestamp of database document modification
+  lastUpdated: string;                // ISO timestamp of source metadata last modification
   
   // Dynamic translations are embedded in data structures
   company: {
@@ -158,39 +160,26 @@ export interface NormalizedDatasetRecord {
 ```
 
 ### Step 2.3: Security Rules Setup
-Modify `backend/firestore.rules` to authorize reads on both color partitions and restrict list sizes:
+Modify `backend/firestore.rules` to authorize reads on the collection and restrict list sizes:
 ```javascript
 match /dataset_metadata/{datasetId} {
   allow read: if true;
   allow write: if false;
 }
-match /<resource_guid>_blue/{docId} {
+match /<resource_guid>/{docId} {
   allow read: if true;
   allow write: if false;
   // Prevent scraping abuse (DoS) by enforcing query limits
   allow list: if request.query.limit <= 100;
 }
-match /<resource_guid>_green/{docId} {
-  allow read: if true;
-  allow write: if false;
-  allow list: if request.query.limit <= 100;
-}
 ```
 
 ### Step 2.4: Composite Query Indexing
-Apply indexes to both collections in `backend/firestore.indexes.json`:
+Apply indexes to the collection in `backend/firestore.indexes.json`:
 ```json
 [
   {
-    "collectionGroup": "<resource_guid>_blue",
-    "queryScope": "COLLECTION",
-    "fields": [
-      { "fieldPath": "company.en", "order": "ASCENDING" },
-      { "fieldPath": "geohash", "order": "ASCENDING" }
-    ]
-  },
-  {
-    "collectionGroup": "<resource_guid>_green",
+    "collectionGroup": "<resource_guid>",
     "queryScope": "COLLECTION",
     "fields": [
       { "fieldPath": "company.en", "order": "ASCENDING" },
@@ -198,6 +187,7 @@ Apply indexes to both collections in `backend/firestore.indexes.json`:
     ]
   }
 ]
+```
 ```
 
 ---
@@ -335,69 +325,84 @@ export async function scrapeAndSyncDataset(db: admin.firestore.Firestore): Promi
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    // 1. Fetch current active partition
-    const metaDoc = await metadataRef.get();
-    const currentActive = metaDoc.exists ? metaDoc.data()?.activeCollection : null;
-    
-    const targetCollectionName = currentActive === "<dataset_name>_blue" 
-      ? "<dataset_name>_green" 
-      : "<dataset_name>_blue";
-      
-    logger.info(`Sync starting. Target buffer collection: ${targetCollectionName}`);
+    logger.info(`Sync starting for: ${datasetId}`);
 
-    // 2. Unconditionally Purge Inactive Collection before Ingestion starts
-    await purgeCollection(db, targetCollectionName);
-    logger.info(`Purged target buffer collection: ${targetCollectionName}`);
-
-    // 3. Process Stream / Ingest
     let processedCount = 0;
-    let batch = db.batch();
-    const collectionRef = db.collection(targetCollectionName);
+    const collectionRef = db.collection(datasetId);
+    const now = new Date().toISOString();
 
-    await streamAndProcessCsv("<CSV_URL>", async (record) => {
-      // Clean and sanitize PII fields if present
-      delete record.owner_phone_number;
+    await streamAndProcessCsv("<CSV_URL>", async (recordsChunk) => {
+      // Ingest in chunks of 500
+      const docRefs = recordsChunk.map((r) => collectionRef.doc(String(r.ID ?? r.id)));
 
-      const normalizedId = String(record.ID ?? record.id);
-      let lat = parseFloat(record.latitude);
-      let lng = parseFloat(record.longitude);
-
-      // Coordinate converter boundary sanitization
-      if (!isNaN(lat) && !isNaN(lng) && isValidIsraelCoordinates(lat, lng)) {
-        const geohash = encodeGeohash(lat, lng);
-        const docData = {
-          id: normalizedId,
-          coordinates: new GeoPoint(lat, lng),
-          geohash,
-          lastUpdated: new Date().toISOString(),
-          company: getTranslatedField("חברה", record.company),
-        };
-
-        const docRef = collectionRef.doc(normalizedId);
-        batch.set(docRef, docData);
-        processedCount++;
-
-        if (processedCount % 500 === 0) {
-          await batch.commit();
-          batch = db.batch();
+      // Batch query existing records to check for changes and preserve createdAt
+      const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
+      const existingMap = new Map<string, admin.firestore.DocumentData>();
+      for (const snap of snapshots) {
+        if (snap.exists) {
+          existingMap.set(snap.id, snap.data());
         }
+      }
+
+      const batch = db.batch();
+      let hasWrites = false;
+
+      for (const record of recordsChunk) {
+        // Clean and sanitize PII fields if present
+        delete record.owner_phone_number;
+
+        const normalizedId = String(record.ID ?? record.id);
+        let lat = parseFloat(record.latitude);
+        let lng = parseFloat(record.longitude);
+
+        if (!isNaN(lat) && !isNaN(lng) && isValidIsraelCoordinates(lat, lng)) {
+          const geohash = encodeGeohash(lat, lng);
+          const lastUpdated = record.lastUpdated || now;
+
+          const docData = {
+            id: normalizedId,
+            coordinates: new GeoPoint(lat, lng),
+            geohash,
+            company: getTranslatedField("חברה", record.company),
+            lastUpdated,
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          const existingData = existingMap.get(normalizedId);
+          if (existingData) {
+            // areRecordsEqual checks equality of custom fields, excluding createdAt and updatedAt
+            const isIdentical = areRecordsEqual(existingData, docData);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            docData.createdAt = existingData.createdAt || now;
+            docData.updatedAt = now;
+          }
+
+          const docRef = collectionRef.doc(normalizedId);
+          batch.set(docRef, docData);
+          hasWrites = true;
+          processedCount++;
+        }
+      }
+
+      if (hasWrites) {
+        await batch.commit();
       }
     });
 
-    if (processedCount % 500 !== 0) {
-      await batch.commit();
-    }
-
-    // 4. Atomic Switch of activeCollection metadata pointer
+    // 4. Update metadata pointer
     await metadataRef.set({
       id: datasetId,
-      activeCollection: targetCollectionName,
-      lastUpdated: new Date().toISOString(),
+      activeCollection: datasetId,
+      lastUpdated: now,
       recordCount: processedCount,
       status: "idle"
     }, { merge: true });
 
-    logger.info(`Swapped active pointer to ${targetCollectionName}. Ingestion complete.`);
+    logger.info(`Ingestion complete for ${datasetId}.`);
     return { count: processedCount };
   } catch (error) {
     logger.error("Sync failed:", error);
