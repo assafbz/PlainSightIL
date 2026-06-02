@@ -133,13 +133,11 @@ class DashboardScreen extends StatelessWidget {
         final icon = isAtm
             ? Icons.atm
             : (isDoctors
-                ? Icons.badge_outlined
-                : (isLiquidation ? Icons.gavel : Icons.cell_tower));
+                  ? Icons.badge_outlined
+                  : (isLiquidation ? Icons.gavel : Icons.cell_tower));
         final accentColor = isAtm
             ? const Color(0xFF2E7D32)
-            : (isLiquidation
-                ? AppColors.danger
-                : AppColors.primary);
+            : (isLiquidation ? AppColors.danger : AppColors.primary);
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
@@ -182,14 +180,12 @@ class DashboardScreen extends StatelessWidget {
           final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
           final accentColor = isAtm
               ? const Color(0xFF2E7D32)
-              : (isLiquidation
-                  ? AppColors.danger
-                  : AppColors.primary);
+              : (isLiquidation ? AppColors.danger : AppColors.primary);
           final icon = isAtm
               ? Icons.atm
               : (isDoctors
-                  ? Icons.badge_outlined
-                  : (isLiquidation ? Icons.gavel : Icons.cell_tower));
+                    ? Icons.badge_outlined
+                    : (isLiquidation ? Icons.gavel : Icons.cell_tower));
           return Container(
             width: 200,
             margin: const EdgeInsetsDirectional.only(end: 12.0),
@@ -258,13 +254,11 @@ class DashboardScreen extends StatelessWidget {
         final icon = isAtm
             ? Icons.atm
             : (isDoctors
-                ? Icons.badge_outlined
-                : (isLiquidation ? Icons.gavel : Icons.cell_tower));
+                  ? Icons.badge_outlined
+                  : (isLiquidation ? Icons.gavel : Icons.cell_tower));
         final accentColor = isAtm
             ? const Color(0xFF2E7D32)
-            : (isLiquidation
-                ? AppColors.danger
-                : AppColors.primary);
+            : (isLiquidation ? AppColors.danger : AppColors.primary);
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(

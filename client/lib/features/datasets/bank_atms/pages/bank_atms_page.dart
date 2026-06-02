@@ -99,9 +99,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
             color: AppColors.surfaceLow,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(color: AppColors.glassBorder),
           ),
           child: SingleChildScrollView(
@@ -282,52 +280,56 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
     final services = <MapEntry<IconData, String>>[];
 
     if (record.hasCashWithdrawal) {
-      services.add(MapEntry(
-        Icons.money_outlined,
-        isRtl ? 'משיכת מזומנים' : 'Cash Withdrawal',
-      ));
+      services.add(
+        MapEntry(
+          Icons.money_outlined,
+          isRtl ? 'משיכת מזומנים' : 'Cash Withdrawal',
+        ),
+      );
     }
     if (record.hasCashDeposit) {
-      services.add(MapEntry(
-        Icons.savings_outlined,
-        isRtl ? 'הפקדת מזומנים' : 'Cash Deposit',
-      ));
+      services.add(
+        MapEntry(
+          Icons.savings_outlined,
+          isRtl ? 'הפקדת מזומנים' : 'Cash Deposit',
+        ),
+      );
     }
     if (record.hasChequeDeposit) {
-      services.add(MapEntry(
-        Icons.receipt_long_outlined,
-        isRtl ? 'הפקדת שיקים' : 'Cheque Deposit',
-      ));
+      services.add(
+        MapEntry(
+          Icons.receipt_long_outlined,
+          isRtl ? 'הפקדת שיקים' : 'Cheque Deposit',
+        ),
+      );
     }
     if (record.hasEnvelopeDeposit) {
-      services.add(MapEntry(
-        Icons.mail_outlined,
-        isRtl ? 'הפקדת מעטפות' : 'Envelope Deposit',
-      ));
+      services.add(
+        MapEntry(
+          Icons.mail_outlined,
+          isRtl ? 'הפקדת מעטפות' : 'Envelope Deposit',
+        ),
+      );
     }
     if (record.hasForexTransaction) {
-      services.add(MapEntry(
-        Icons.currency_exchange_outlined,
-        isRtl ? 'מט"ח' : 'Forex',
-      ));
+      services.add(
+        MapEntry(Icons.currency_exchange_outlined, isRtl ? 'מט"ח' : 'Forex'),
+      );
     }
     if (record.hasAdditionalTransactions) {
-      services.add(MapEntry(
-        Icons.more_horiz,
-        isRtl ? 'פעולות נוספות' : 'Additional',
-      ));
+      services.add(
+        MapEntry(Icons.more_horiz, isRtl ? 'פעולות נוספות' : 'Additional'),
+      );
     }
     if (record.hasHandicapAccess) {
-      services.add(MapEntry(
-        Icons.accessible_outlined,
-        isRtl ? 'נגישות' : 'Accessible',
-      ));
+      services.add(
+        MapEntry(Icons.accessible_outlined, isRtl ? 'נגישות' : 'Accessible'),
+      );
     }
     if (record.hasCommission) {
-      services.add(MapEntry(
-        Icons.attach_money_outlined,
-        isRtl ? 'עמלה' : 'Commission',
-      ));
+      services.add(
+        MapEntry(Icons.attach_money_outlined, isRtl ? 'עמלה' : 'Commission'),
+      );
     }
 
     return services.map((entry) {
@@ -336,9 +338,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF2E7D32).withAlpha(20),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFF2E7D32).withAlpha(60),
-          ),
+          border: Border.all(color: const Color(0xFF2E7D32).withAlpha(60)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -367,9 +367,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF2E7D32).withAlpha(15),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: const Color(0xFF2E7D32).withAlpha(40),
-          ),
+          border: Border.all(color: const Color(0xFF2E7D32).withAlpha(40)),
         ),
         child: Icon(icon, color: const Color(0xFF2E7D32), size: 14),
       ),
@@ -668,21 +666,24 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
                                                     vertical: 2,
                                                   ),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF2E7D32)
-                                                    .withAlpha(20),
+                                                color: const Color(
+                                                  0xFF2E7D32,
+                                                ).withAlpha(20),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
                                                 border: Border.all(
-                                                  color: const Color(0xFF2E7D32)
-                                                      .withAlpha(80),
+                                                  color: const Color(
+                                                    0xFF2E7D32,
+                                                  ).withAlpha(80),
                                                 ),
                                               ),
                                               child: Text(
                                                 'ATM #${item.atmNum}',
                                                 style: AppTypography.labelXs(
                                                   context,
-                                                  color:
-                                                      const Color(0xFF2E7D32),
+                                                  color: const Color(
+                                                    0xFF2E7D32,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -730,9 +731,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
                                             if (item.hasHandicapAccess)
                                               _buildServiceIcon(
                                                 Icons.accessible_outlined,
-                                                isRtl
-                                                    ? 'נגישות'
-                                                    : 'Accessible',
+                                                isRtl ? 'נגישות' : 'Accessible',
                                               ),
                                             if (item.hasChequeDeposit)
                                               _buildServiceIcon(
@@ -765,8 +764,10 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
                                             ),
                                             Text(
                                               item.lastUpdated.length >= 10
-                                                  ? item.lastUpdated
-                                                        .substring(0, 10)
+                                                  ? item.lastUpdated.substring(
+                                                      0,
+                                                      10,
+                                                    )
                                                   : item.lastUpdated,
                                               style: AppTypography.labelXs(
                                                 context,

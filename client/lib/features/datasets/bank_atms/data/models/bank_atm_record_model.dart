@@ -100,10 +100,12 @@ class BankAtmRecordModel {
     final coords = map['coordinates'];
     if (coords != null) {
       if (coords is Map) {
-        lat = (coords['latitude'] as num?)?.toDouble() ??
+        lat =
+            (coords['latitude'] as num?)?.toDouble() ??
             (coords['_latitude'] as num?)?.toDouble() ??
             0.0;
-        lng = (coords['longitude'] as num?)?.toDouble() ??
+        lng =
+            (coords['longitude'] as num?)?.toDouble() ??
             (coords['_longitude'] as num?)?.toDouble() ??
             0.0;
       } else {
