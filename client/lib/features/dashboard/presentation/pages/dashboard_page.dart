@@ -5,6 +5,7 @@ import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
 import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
+import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -24,6 +25,8 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('budget_title');
     } else if (item.id == DatasetIds.doctorsLicenses) {
       return appState.translate('doctors_title');
+    } else if (item.id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+      return appState.translate('atm_title');
     }
     return item.title;
   }
@@ -40,6 +43,8 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('budget_desc');
     } else if (item.id == DatasetIds.doctorsLicenses) {
       return appState.translate('doctors_desc');
+    } else if (item.id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+      return appState.translate('atm_desc');
     }
     return item.notes;
   }
@@ -61,6 +66,12 @@ class DashboardScreen extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => DoctorsLicensesScreen(appState: appState),
+        ),
+      );
+    } else if (id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => BankAtmsScreen(appState: appState),
         ),
       );
     }
@@ -118,12 +129,15 @@ class DashboardScreen extends StatelessWidget {
       children: favRecords.map((item) {
         final isLiquidation = item.id == DatasetIds.companiesLiquidation;
         final isDoctors = item.id == DatasetIds.doctorsLicenses;
-        final icon = isDoctors
-            ? Icons.badge_outlined
-            : (isLiquidation ? Icons.gavel : Icons.cell_tower);
-        final accentColor = isLiquidation
-            ? AppColors.danger
-            : AppColors.primary;
+        final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
+        final icon = isAtm
+            ? Icons.atm
+            : (isDoctors
+                  ? Icons.badge_outlined
+                  : (isLiquidation ? Icons.gavel : Icons.cell_tower));
+        final accentColor = isAtm
+            ? const Color(0xFF2E7D32)
+            : (isLiquidation ? AppColors.danger : AppColors.primary);
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
@@ -163,12 +177,15 @@ class DashboardScreen extends StatelessWidget {
         children: recentRecords.map((item) {
           final isLiquidation = item.id == DatasetIds.companiesLiquidation;
           final isDoctors = item.id == DatasetIds.doctorsLicenses;
-          final accentColor = isLiquidation
-              ? AppColors.danger
-              : AppColors.primary;
-          final icon = isDoctors
-              ? Icons.badge_outlined
-              : (isLiquidation ? Icons.gavel : Icons.cell_tower);
+          final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
+          final accentColor = isAtm
+              ? const Color(0xFF2E7D32)
+              : (isLiquidation ? AppColors.danger : AppColors.primary);
+          final icon = isAtm
+              ? Icons.atm
+              : (isDoctors
+                    ? Icons.badge_outlined
+                    : (isLiquidation ? Icons.gavel : Icons.cell_tower));
           return Container(
             width: 200,
             margin: const EdgeInsetsDirectional.only(end: 12.0),
@@ -233,12 +250,15 @@ class DashboardScreen extends StatelessWidget {
       children: supported.map((item) {
         final isLiquidation = item.id == DatasetIds.companiesLiquidation;
         final isDoctors = item.id == DatasetIds.doctorsLicenses;
-        final icon = isDoctors
-            ? Icons.badge_outlined
-            : (isLiquidation ? Icons.gavel : Icons.cell_tower);
-        final accentColor = isLiquidation
-            ? AppColors.danger
-            : AppColors.primary;
+        final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
+        final icon = isAtm
+            ? Icons.atm
+            : (isDoctors
+                  ? Icons.badge_outlined
+                  : (isLiquidation ? Icons.gavel : Icons.cell_tower));
+        final accentColor = isAtm
+            ? const Color(0xFF2E7D32)
+            : (isLiquidation ? AppColors.danger : AppColors.primary);
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(

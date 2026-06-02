@@ -5,12 +5,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
+import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 import '../../features/auth/presentation/notifiers/auth_notifier.dart';
 import '../../features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
 import '../../features/datasets/cellular_antennas/presentation/notifiers/permits_notifier.dart';
 import '../../features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
 import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
+import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
@@ -38,6 +40,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final PermitsNotifier permitsNotifier;
   late final LiquidationNotifier liquidationNotifier;
   late final DoctorsNotifier doctorsNotifier;
+  late final BankAtmsNotifier bankAtmsNotifier;
   late final TelemetryNotifier telemetryNotifier;
 
   // Configuration Getters
@@ -79,6 +82,10 @@ class AppStateNotifier extends ChangeNotifier {
       doctorsNotifier.doctorRecords;
   bool get isLoadingDoctors => doctorsNotifier.isLoadingDoctors;
 
+  // Delegated Getters for BankAtmsNotifier
+  List<BankAtmRecordModel> get atmRecords => bankAtmsNotifier.atmRecords;
+  bool get isLoadingAtms => bankAtmsNotifier.isLoadingAtms;
+
   // Delegated Getters for TelemetryNotifier
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>
       telemetryNotifier.datasetMetadataMap;
@@ -101,6 +108,7 @@ class AppStateNotifier extends ChangeNotifier {
     permitsNotifier = PermitsNotifier(isTesting: isTesting);
     liquidationNotifier = LiquidationNotifier(isTesting: isTesting);
     doctorsNotifier = DoctorsNotifier(isTesting: isTesting);
+    bankAtmsNotifier = BankAtmsNotifier(isTesting: isTesting);
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
       functionsPort: functionsPort,
@@ -112,6 +120,7 @@ class AppStateNotifier extends ChangeNotifier {
     permitsNotifier.addListener(_onSubNotifierChanged);
     liquidationNotifier.addListener(_onSubNotifierChanged);
     doctorsNotifier.addListener(_onSubNotifierChanged);
+    bankAtmsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
     _initPackageInfo();
@@ -142,6 +151,7 @@ class AppStateNotifier extends ChangeNotifier {
     telemetryNotifier.initDirectoryListener();
     liquidationNotifier.initLiquidationListener();
     doctorsNotifier.initDoctorsListener();
+    bankAtmsNotifier.initBankAtmsListener();
   }
 
   void initAdminMetadataListener() {
@@ -153,6 +163,7 @@ class AppStateNotifier extends ChangeNotifier {
   void initLiquidationListener() =>
       liquidationNotifier.initLiquidationListener();
   void initDoctorsListener() => doctorsNotifier.initDoctorsListener();
+  void initBankAtmsListener() => bankAtmsNotifier.initBankAtmsListener();
   void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
 
   // Delegated Methods for AuthNotifier
@@ -214,6 +225,7 @@ class AppStateNotifier extends ChangeNotifier {
     permitsNotifier.removeListener(_onSubNotifierChanged);
     liquidationNotifier.removeListener(_onSubNotifierChanged);
     doctorsNotifier.removeListener(_onSubNotifierChanged);
+    bankAtmsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
 
     authNotifier.dispose();
@@ -221,6 +233,7 @@ class AppStateNotifier extends ChangeNotifier {
     permitsNotifier.dispose();
     liquidationNotifier.dispose();
     doctorsNotifier.dispose();
+    bankAtmsNotifier.dispose();
     telemetryNotifier.dispose();
     super.dispose();
   }
@@ -301,6 +314,10 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'Licensed / Active',
       'doctor_unlicensed': 'Muted / Inactive',
       'doctors_publisher': 'Ministry of Health - Medical Professions Registry',
+      'atm_title': 'Bank ATMs',
+      'atm_desc': 'ATM locations across Israel from the Bank of Israel.',
+      'atm_search_placeholder': 'Search by city or bank...',
+      'atm_publisher': 'Bank of Israel',
       'trustee_publisher': 'Ministry of Justice - Corporations Authority',
       'filter_all': 'All',
       'filter_active': 'Supported',
@@ -457,6 +474,10 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'מורשה / פעיל',
       'doctor_unlicensed': 'לא מורשה',
       'doctors_publisher': 'משרד הבריאות - האגף לרישוי מקצועות רפואיים',
+      'atm_title': 'כספומטים',
+      'atm_desc': 'מיקומי כספומטים בנקאיים ברחבי ישראל.',
+      'atm_search_placeholder': 'חיפוש לפי עיר או בנק...',
+      'atm_publisher': 'בנק ישראל',
       'trustee_publisher': 'משרד המשפטים - רשות התאגידים',
       'filter_all': 'הכל',
       'filter_active': 'נתמכים',

@@ -149,6 +149,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyEn': 'Ministry of Health',
         'agencyHe': 'משרד הבריאות',
       },
+      {
+        'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'titleEn': 'Bank ATMs',
+        'titleHe': 'כספומטים',
+        'resourceId': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'agencyEn': 'Bank of Israel',
+        'agencyHe': 'בנק ישראל',
+      },
     ];
 
     return ListenableBuilder(
@@ -801,6 +809,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': DatasetIds.doctorsLicenses,
         'titleEn': 'Doctors Licenses',
         'titleHe': 'רישיונות רופאים',
+      },
+      {
+        'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'titleEn': 'Bank ATMs',
+        'titleHe': 'כספומטים',
       },
       {
         'id': 'datasets_metadata',

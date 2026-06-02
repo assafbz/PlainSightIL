@@ -6,6 +6,7 @@ import 'package:plainsight/features/directory/data/models/dataset_metadata_model
 import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
 import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
+import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
@@ -129,6 +130,12 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         MaterialPageRoute<void>(
           builder: (context) =>
               DoctorsLicensesScreen(appState: widget.appState),
+        ),
+      );
+    } else if (dataset.id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => BankAtmsScreen(appState: widget.appState),
         ),
       );
     }
