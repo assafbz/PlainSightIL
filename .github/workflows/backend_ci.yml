@@ -66,8 +66,14 @@ jobs:
         working-directory: backend/functions
 
       - name: Run Unit Tests
-        run: npm run test
+        run: npm run test:coverage
         working-directory: backend/functions
+
+      - name: Run Test Existence Validation
+        run: node scripts/check-test-existence.js
+
+      - name: Verify Backend Coverage Thresholds
+        run: node scripts/check-coverage-thresholds.js --backend
 
       - name: Build TypeScript
         run: npm run build

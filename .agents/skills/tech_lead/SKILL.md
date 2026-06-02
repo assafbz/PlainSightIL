@@ -31,12 +31,19 @@ Declare the variables, functions, and modules to be introduced:
 - `class MyWidget extends StatelessWidget`: describe interface and parameters
 - ChangeNotifier / State Notifier class declarations
 
-## 4. Documentation Checklist
+## 4. Testing & Coverage Strategy Checklist
+Specify files to test, mocking requirements, and expected coverage targets:
+- `[ ]` Task T1: Implement corresponding unit/widget test files under the appropriate test directory for all new/modified source files.
+- `[ ]` Task T2: Ensure Domain & Data layer files achieve **90%+** unit test coverage.
+- `[ ]` Task T3: Ensure State Notifier and ChangeNotifier files achieve **100%** flow coverage (all line execution paths verified).
+- `[ ]` Task T4: Run coverage check scripts locally to confirm validation success.
+
+## 5. Documentation Checklist
 Verify and enforce in-code documentation targets:
 - `[ ]` Task D1: Document all new/modified public APIs (classes, methods, interfaces, constructors) using three-slash (`///`) comments for Dart/Flutter or JSDoc (`/** ... */`) for TypeScript.
 - `[ ]` Task D2: Add clear inline comments explaining non-obvious code workarounds, math, canvas coordinates/pixel transformations, or complex logic.
 
-## 5. Compilation & Verification Targets
+## 6. Compilation & Verification Targets
 - Command to install dependencies: `flutter pub get`
 - Command to run static analysis: `flutter analyze`
 - Command to execute unit tests: `flutter test`
