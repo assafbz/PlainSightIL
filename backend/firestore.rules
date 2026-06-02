@@ -73,5 +73,16 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt']);
       allow delete: if false; // Deletion is managed by administrative cleanup systems only
     }
+
+    match /system_health/{document} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if false;
+    }
+
+    match /scraper_runs/{document} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if false;
+      allow list: if request.query.limit <= 50;
+    }
   }
 }

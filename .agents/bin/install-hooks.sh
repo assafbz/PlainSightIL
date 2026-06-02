@@ -36,5 +36,14 @@ else
   echo "⚠️  WARNING: pre-push hook template not found in $BIN_DIR"
 fi
 
+# Copy post-checkout hook
+if [ -f "$BIN_DIR/post-checkout" ]; then
+  cp "$BIN_DIR/post-checkout" "$HOOKS_DIR/post-checkout"
+  chmod +x "$HOOKS_DIR/post-checkout"
+  echo "✅ Installed post-checkout hook (Process and cache cleanup)"
+else
+  echo "⚠️  WARNING: post-checkout hook template not found in $BIN_DIR"
+fi
+
 echo "🎉 SDLC Git Hooks successfully installed!"
 exit 0

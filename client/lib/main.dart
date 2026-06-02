@@ -23,10 +23,49 @@ void main() async {
     final String host = kIsWeb
         ? '127.0.0.1'
         : (Platform.isAndroid ? '10.0.2.2' : '127.0.0.1');
+
+    // Retrieve ports dynamically from URL query parameters (for E2E/parallel runs)
+    // or compile-time environment flags, falling back to defaults.
+    int firestorePort = 8081;
+    int authPort = 9099;
+
+    try {
+      final baseUri = Uri.base;
+      final queryParams = baseUri.queryParameters;
+      AppLogger.info(
+        '🔍 Booting client. Uri: $baseUri, QueryParams: $queryParams',
+      );
+
+      if (queryParams.containsKey('firestore_port')) {
+        firestorePort = int.parse(queryParams['firestore_port']!);
+      } else {
+        firestorePort = const int.fromEnvironment(
+          'FIRESTORE_PORT',
+          defaultValue: 8081,
+        );
+      }
+
+      if (queryParams.containsKey('auth_port')) {
+        authPort = int.parse(queryParams['auth_port']!);
+      } else {
+        authPort = const int.fromEnvironment('AUTH_PORT', defaultValue: 9099);
+      }
+    } catch (e) {
+      AppLogger.error('⚠️ Error parsing query parameters for ports', e);
+      firestorePort = const int.fromEnvironment(
+        'FIRESTORE_PORT',
+        defaultValue: 8081,
+      );
+      authPort = const int.fromEnvironment('AUTH_PORT', defaultValue: 9099);
+    }
+
+    AppLogger.info(
+      '🔌 Connecting to emulators. Host: $host, Firestore: $firestorePort, Auth: $authPort',
+    );
     // Connect to local Firestore emulator
-    FirebaseFirestore.instance.useFirestoreEmulator(host, 8081);
+    FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
     // Connect to local Auth emulator
-    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+    await FirebaseAuth.instance.useAuthEmulator(host, authPort);
   } catch (e, stack) {
     AppLogger.error('Firebase initialization failure', e, stack);
   }

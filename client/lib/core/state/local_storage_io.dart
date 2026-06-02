@@ -49,6 +49,24 @@ class LocalStorageIO implements LocalStorageImpl {
   Future<void> saveGuestMode(bool enabled) async {
     await _prefs?.setBool('guest_mode', enabled);
   }
+
+  /// Wipes all key-value pairs stored in the platform's SharedPreferences.
+  @override
+  Future<void> clearAll() async {
+    await _prefs?.clear();
+  }
+
+  /// Retrieves the cached git branch name from SharedPreferences.
+  @override
+  String? getLastSavedBranch() {
+    return _prefs?.getString('last_git_branch');
+  }
+
+  /// Persists the active git branch name in SharedPreferences.
+  @override
+  Future<void> saveLastSavedBranch(String branch) async {
+    await _prefs?.setString('last_git_branch', branch);
+  }
 }
 
 /// Native factory method returning a new [LocalStorageIO] instance.

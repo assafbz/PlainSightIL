@@ -1,32 +1,112 @@
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as functions from "firebase-functions/v1";
+import { logger } from "firebase-functions";
+import axios from "axios";
+
 import { scrapeAndSyncAntennas } from "./scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
 import { scrapeAndSyncPermitApplications } from "./scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+import { ScraperTelemetryTracker } from "./utils/telemetry";
 
 admin.initializeApp();
 
 const db = admin.firestore();
+
+/**
+ * Benchmark reachability status and response latency of the government open data API,
+ * writing health statistics to the system_health collection.
+ * @param firestoreDb Firestore database instance
+ */
+async function checkAndLogApiReachability(
+  firestoreDb: admin.firestore.Firestore,
+): Promise<{ isReachable: boolean; statusCode: number; latencyMs: number }> {
+  const url = "https://data.gov.il";
+  const startTime = Date.now();
+  try {
+    logger.info(`Pinging government open data API at: ${url}`);
+    // Pinging package_search endpoint with row limit of 1 to minimize payload size and avoid rate limiting
+    const response = await axios.get(`${url}/api/3/action/package_search?rows=1`, {
+      timeout: 10000,
+    });
+    const latencyMs = Date.now() - startTime;
+    const statusCode = response.status;
+    const isReachable = statusCode >= 200 && statusCode < 400;
+
+    await firestoreDb.collection("system_health").doc("data_gov_il").set({
+      url,
+      isReachable,
+      statusCode,
+      latencyMs,
+      lastChecked: new Date().toISOString(),
+    });
+
+    logger.info("API reachability check passed successfully", { statusCode, latencyMs });
+    return { isReachable, statusCode, latencyMs };
+  } catch (error) {
+    const latencyMs = Date.now() - startTime;
+    const err = error as { response?: { status: number }; message?: string };
+    const statusCode = err.response ? err.response.status : 500;
+
+    await firestoreDb.collection("system_health").doc("data_gov_il").set({
+      url,
+      isReachable: false,
+      statusCode,
+      latencyMs,
+      lastChecked: new Date().toISOString(),
+    });
+
+    logger.error("API reachability check failed", { statusCode, error: err.message });
+    return { isReachable: false, statusCode, latencyMs };
+  }
+}
+
+/**
+ * Scheduled Cloud Function checking the health of the government open data API every 15 minutes.
+ */
+export const scheduledApiHealthCheck = functions.pubsub.schedule("*/15 * * * *").onRun(async () => {
+  logger.info("scheduledApiHealthCheck trigger invoked");
+  await checkAndLogApiReachability(db);
+});
+
+/**
+ * HTTPS Cloud Function for manually triggering an API reachability check.
+ */
+export const manualApiHealthCheck = functions.https.onRequest(async (req, res) => {
+  logger.info("manualApiHealthCheck HTTPS trigger invoked");
+  try {
+    const result = await checkAndLogApiReachability(db);
+    res.status(200).json(result);
+  } catch (error) {
+    const err = error as Error;
+    res.status(500).json({
+      message: "API check execution failed",
+      error: err.message || String(error),
+    });
+  }
+});
 
 // Scheduled Cloud Function for Active Antennas - runs daily at midnight (Israel timezone)
 export const scheduledAntennaScraper = functions.pubsub
   .schedule("0 0 * * *")
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
-    functions.logger.info("scheduledAntennaScraper trigger invoked");
+    logger.info("scheduledAntennaScraper trigger invoked");
+    const tracker = ScraperTelemetryTracker.start("cellular_antennas");
     try {
       const result = await scrapeAndSyncAntennas(db);
-      functions.logger.info("scheduledAntennaScraper completed successfully", {
+      logger.info("scheduledAntennaScraper completed successfully", {
         count: result.count,
       });
+      await tracker.complete(db, result.count);
     } catch (error) {
       const err = error as Error;
-      functions.logger.error("scheduledAntennaScraper execution failed", {
+      logger.error("scheduledAntennaScraper execution failed", {
         error: err.message,
         stack: err.stack,
       });
+      await tracker.fail(db, err);
       throw error;
     }
   });
@@ -108,32 +188,34 @@ async function validateAdminRequest(
 
 // HTTPS Triggered Cloud Function for Active Antennas - for manual invocation and dev triggers
 export const manualSyncAntennas = functions.https.onRequest(async (req, res) => {
-  functions.logger.info("manualSyncAntennas HTTPS trigger invoked");
+  logger.info("manualSyncAntennas HTTPS trigger invoked");
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
   const datasetId = "cellular_antennas";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
+  const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
     await metadataRef.set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncAntennas(db);
-    functions.logger.info("manualSyncAntennas sync completed successfully", {
+    logger.info("manualSyncAntennas sync completed successfully", {
       count: result.count,
     });
+    await tracker.complete(db, result.count);
     res.status(200).json({
       message: "Sync completed successfully",
       count: result.count,
     });
   } catch (error) {
     const err = error as Error;
-    functions.logger.error("manualSyncAntennas sync failed", {
+    logger.error("manualSyncAntennas sync failed", {
       error: err.message,
       stack: err.stack,
     });
     await metadataRef.set({ status: "error" }, { merge: true });
+    await tracker.fail(db, err);
     res.status(500).json({
       message: "Sync failed",
       error: err.message || String(error),
@@ -146,50 +228,55 @@ export const scheduledPermitAppsScraper = functions.pubsub
   .schedule("0 0 * * 0")
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
-    functions.logger.info("scheduledPermitAppsScraper trigger invoked");
+    logger.info("scheduledPermitAppsScraper trigger invoked");
+    const tracker = ScraperTelemetryTracker.start("cellular_permit_applications");
     try {
       const result = await scrapeAndSyncPermitApplications(db);
-      functions.logger.info("scheduledPermitAppsScraper completed successfully", {
+      logger.info("scheduledPermitAppsScraper completed successfully", {
         count: result.count,
       });
+      await tracker.complete(db, result.count);
     } catch (error) {
       const err = error as Error;
-      functions.logger.error("scheduledPermitAppsScraper execution failed", {
+      logger.error("scheduledPermitAppsScraper execution failed", {
         error: err.message,
         stack: err.stack,
       });
+      await tracker.fail(db, err);
       throw error;
     }
   });
 
 // HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
 export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
-  functions.logger.info("manualSyncPermitApps HTTPS trigger invoked");
+  logger.info("manualSyncPermitApps HTTPS trigger invoked");
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
   const datasetId = "cellular_permit_applications";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
+  const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
     await metadataRef.set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncPermitApplications(db);
-    functions.logger.info("manualSyncPermitApps sync completed successfully", {
+    logger.info("manualSyncPermitApps sync completed successfully", {
       count: result.count,
     });
+    await tracker.complete(db, result.count);
     res.status(200).json({
       message: "Sync completed successfully",
       count: result.count,
     });
   } catch (error) {
     const err = error as Error;
-    functions.logger.error("manualSyncPermitApps sync failed", {
+    logger.error("manualSyncPermitApps sync failed", {
       error: err.message,
       stack: err.stack,
     });
     await metadataRef.set({ status: "error" }, { merge: true });
+    await tracker.fail(db, err);
     res.status(500).json({
       message: "Sync failed",
       error: err.message || String(error),
@@ -202,43 +289,49 @@ export const scheduledMetadataScraper = functions.pubsub
   .schedule("0 1 * * 0")
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
-    functions.logger.info("scheduledMetadataScraper trigger invoked");
+    logger.info("scheduledMetadataScraper trigger invoked");
+    const tracker = ScraperTelemetryTracker.start("datasets_metadata");
     try {
       const result = await scrapeAndSyncDatasetMetadata(db);
-      functions.logger.info("scheduledMetadataScraper completed successfully", {
+      logger.info("scheduledMetadataScraper completed successfully", {
         count: result.count,
       });
+      await tracker.complete(db, result.count);
     } catch (error) {
       const err = error as Error;
-      functions.logger.error("scheduledMetadataScraper execution failed", {
+      logger.error("scheduledMetadataScraper execution failed", {
         error: err.message,
         stack: err.stack,
       });
+      await tracker.fail(db, err);
       throw error;
     }
   });
 
 // HTTPS Triggered Cloud Function for Dataset Metadata - manual sync
 export const manualSyncMetadata = functions.https.onRequest(async (req, res) => {
-  functions.logger.info("manualSyncMetadata HTTPS trigger invoked");
+  logger.info("manualSyncMetadata HTTPS trigger invoked");
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
+  const tracker = ScraperTelemetryTracker.start("datasets_metadata");
   try {
     const result = await scrapeAndSyncDatasetMetadata(db);
-    functions.logger.info("manualSyncMetadata sync completed successfully", {
+    logger.info("manualSyncMetadata sync completed successfully", {
       count: result.count,
     });
+    await tracker.complete(db, result.count);
     res.status(200).json({
       message: "Metadata sync completed successfully",
       count: result.count,
     });
   } catch (error) {
     const err = error as Error;
-    functions.logger.error("manualSyncMetadata sync failed", {
+    logger.error("manualSyncMetadata sync failed", {
       error: err.message,
       stack: err.stack,
     });
+    await tracker.fail(db, err);
     res.status(500).json({
       message: "Metadata sync failed",
       error: err.message || String(error),
@@ -251,50 +344,55 @@ export const scheduledCompaniesLiquidationScraper = functions.pubsub
   .schedule("0 2 * * 0")
   .timeZone("Asia/Jerusalem")
   .onRun(async () => {
-    functions.logger.info("scheduledCompaniesLiquidationScraper trigger invoked");
+    logger.info("scheduledCompaniesLiquidationScraper trigger invoked");
+    const tracker = ScraperTelemetryTracker.start("companies_liquidation");
     try {
       const result = await scrapeAndSyncCompaniesLiquidation(db);
-      functions.logger.info("scheduledCompaniesLiquidationScraper completed successfully", {
+      logger.info("scheduledCompaniesLiquidationScraper completed successfully", {
         count: result.count,
       });
+      await tracker.complete(db, result.count);
     } catch (error) {
       const err = error as Error;
-      functions.logger.error("scheduledCompaniesLiquidationScraper execution failed", {
+      logger.error("scheduledCompaniesLiquidationScraper execution failed", {
         error: err.message,
         stack: err.stack,
       });
+      await tracker.fail(db, err);
       throw error;
     }
   });
 
 // HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
-  functions.logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
+  logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
   const datasetId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
+  const tracker = ScraperTelemetryTracker.start("companies_liquidation");
   try {
     // Set status to syncing in Firestore immediately
     await metadataRef.set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncCompaniesLiquidation(db);
-    functions.logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
+    logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
       count: result.count,
     });
+    await tracker.complete(db, result.count);
     res.status(200).json({
       message: "Companies in liquidation sync completed successfully",
       count: result.count,
     });
   } catch (error) {
     const err = error as Error;
-    functions.logger.error("manualSyncCompaniesLiquidation sync failed", {
+    logger.error("manualSyncCompaniesLiquidation sync failed", {
       error: err.message,
       stack: err.stack,
     });
     await metadataRef.set({ status: "error" }, { merge: true });
+    await tracker.fail(db, err);
     res.status(500).json({
       message: "Companies in liquidation sync failed",
       error: err.message || String(error),
@@ -307,7 +405,7 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
  * Creates an initial user profile in the users Firestore collection.
  */
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
-  functions.logger.info("onUserCreate triggered with user:", JSON.stringify(user));
+  logger.info("onUserCreate triggered with user:", JSON.stringify(user));
   const uid = user.uid;
   const email = user.email || "";
   const displayName = user.displayName || "";
@@ -329,8 +427,8 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
 
   try {
     await admin.firestore().collection("users").doc(uid).set(userDoc);
-    functions.logger.info(`Initialized user profile document for UID: ${uid}`);
+    logger.info(`Initialized user profile document for UID: ${uid}`);
   } catch (error) {
-    functions.logger.error(`Failed to initialize user profile document for UID: ${uid}`, error);
+    logger.error(`Failed to initialize user profile document for UID: ${uid}`, error);
   }
 });
