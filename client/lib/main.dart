@@ -1045,7 +1045,7 @@ class NavigationDrawerWidget extends StatelessWidget {
               ),
               // App Version
               Text(
-                'v1.0.0',
+                appState.appVersion.isNotEmpty ? 'v${appState.appVersion}' : '',
                 style: AppTypography.getTextStyle(
                   context,
                   fontSize: 11,

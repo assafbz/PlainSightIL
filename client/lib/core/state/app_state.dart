@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
@@ -43,6 +44,10 @@ class AppStateNotifier extends ChangeNotifier {
   String get locale => _locale;
   int get activeTab => _activeTab;
   bool get isDarkMode => _isDarkMode;
+
+  // App version loaded dynamically from pubspec.yaml via package_info_plus
+  String _appVersion = '';
+  String get appVersion => _appVersion;
 
   // Delegated Getters for AuthNotifier
   User? get currentUser => authNotifier.currentUser;
@@ -108,6 +113,19 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier.addListener(_onSubNotifierChanged);
     doctorsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
+
+    _initPackageInfo();
+  }
+
+  Future<void> _initPackageInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      _appVersion = info.version;
+      AppLogger.info('Package version loaded: $_appVersion');
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error('Error loading package info', e);
+    }
   }
 
   void _onSubNotifierChanged() {
