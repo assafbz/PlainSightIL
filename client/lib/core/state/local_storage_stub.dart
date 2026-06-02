@@ -24,4 +24,6 @@ abstract class LocalStorageImpl {
 }
 
 /// Factory stub method to instantiate the platform-specific local storage implementation.
-LocalStorageImpl getLocalStorage() => throw UnsupportedError('Cannot create local storage without html or io libraries.');
+LocalStorageImpl getLocalStorage() => throw UnsupportedError(
+  'Cannot create local storage without html or io libraries.',
+);
