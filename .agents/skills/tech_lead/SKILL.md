@@ -39,7 +39,8 @@ Verify and enforce in-code documentation targets:
 ## 5. Compilation & Verification Targets
 - Command to install dependencies: `flutter pub get`
 - Command to run static analysis: `flutter analyze`
-- Command to execute tests: `flutter test`
+- Command to execute unit tests: `flutter test`
+- Command to run E2E/CI tests locally (shifted by issue ID): `PORT_OFFSET=<issue_id> npm run test:e2e:ci`
 
 ## 6. Technical Lead Blueprinting Observations
 Document any blueprint implementation constraints, dynamic adjustments made during execution, or task layout complexities. This will be harvested by the final Lessons Learned phase.

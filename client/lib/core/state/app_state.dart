@@ -10,8 +10,6 @@ import 'local_storage.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:http/http.dart' as http;
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/directory/data/models/liquidation_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
@@ -1221,7 +1219,8 @@ class AppStateNotifier extends ChangeNotifier {
         final Map<String, dynamic> data =
             jsonDecode(response.body) as Map<String, dynamic>;
         final String errorMessage =
-            data['error'] ?? data['message'] ?? 'Failed to trigger sync';
+            (data['error'] ?? data['message'] ?? 'Failed to trigger sync')
+                .toString();
 
         // Reset local status to error
         _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
