@@ -966,20 +966,20 @@ class _AdminPageState extends State<AdminPage> {
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton.icon(
+              child: OutlinedButton.icon(
                 onPressed: widget.appState.isCheckingApiHealth
                     ? null
                     : () async {
                         await widget.appState.triggerApiHealthCheck();
                       },
                 icon: widget.appState.isCheckingApiHealth
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white70),
+                              AlwaysStoppedAnimation<Color>(AppColors.primary),
                         ),
                       )
                     : const Icon(Icons.refresh),
@@ -987,17 +987,26 @@ class _AdminPageState extends State<AdminPage> {
                   widget.appState.isCheckingApiHealth
                       ? widget.appState.translate('checking')
                       : widget.appState.translate('check_now'),
+                  style: AppTypography.labelXs(
+                    context,
+                    color: widget.appState.isCheckingApiHealth
+                        ? AppColors.textTertiary
+                        : AppColors.primary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: AppColors.onPrimary,
-                  backgroundColor: AppColors.primary.withAlpha(30),
-                  shadowColor: Colors.transparent,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  backgroundColor: widget.appState.isCheckingApiHealth
+                      ? AppColors.surfaceLow
+                      : AppColors.primary.withAlpha(15),
+                  side: BorderSide(
+                    color: widget.appState.isCheckingApiHealth
+                        ? AppColors.glassBorder
+                        : AppColors.primary.withAlpha(80),
+                    width: 1.5,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
-                    side: BorderSide(
-                      color: AppColors.primary.withAlpha(60),
-                      width: 1.5,
-                    ),
                   ),
                 ),
               ),
