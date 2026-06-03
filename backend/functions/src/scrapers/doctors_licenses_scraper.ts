@@ -167,7 +167,7 @@ export async function scrapeAndSyncDoctorsLicenses(
       const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching doctors licenses data from: ${url}`);
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { timeout: 15000 });
       const records: HebrewDoctorRecord[] = response.data?.result?.records ?? [];
 
       if (records.length === 0) {

@@ -284,7 +284,7 @@ export async function scrapeAndSyncAntennas(
         : `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
 
       logger.info(`Fetching data from: ${url}`);
-      const response = await axios.get(url);
+      const response = await axios.get(url, { timeout: 15000 });
       const records: HebrewAntennaRecord[] = response.data?.result?.records ?? [];
 
       if (records.length === 0) {
