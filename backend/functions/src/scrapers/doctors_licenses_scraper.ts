@@ -1,6 +1,8 @@
 import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
+import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 /**
  * Interface representing the raw record layout received from data.gov.il CKAN datastore API.
@@ -31,6 +33,7 @@ export interface DoctorLicenseRecord {
   specialtyName: string | null;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -114,6 +117,8 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
     : null;
   const specialtyName = record["שם התמחות"] ? String(record["שם התמחות"]).trim() : null;
 
+  const lastUpdated = licenseRegistrationDate || new Date().toISOString();
+
   return {
     id,
     _id: rawId,
@@ -124,7 +129,7 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
     specialtyCertificateNumber,
     specialtyRegistrationDate: specialtyRegistrationDate || null,
     specialtyName: specialtyName || null,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated,
   };
 }
 
@@ -138,17 +143,18 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
  */
 export async function scrapeAndSyncDoctorsLicenses(
   db: admin.firestore.Firestore,
-  resourceId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e",
+  resourceId = DATASET_IDS.DOCTORS_LICENSES,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+  const datasetId = DATASET_IDS.DOCTORS_LICENSES;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+    const targetCollection = DATASET_IDS.DOCTORS_LICENSES;
     logger.info(`Starting doctors licenses sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -157,7 +163,8 @@ export async function scrapeAndSyncDoctorsLicenses(
 
     // Loop and page through the datastore
     while (hasMore) {
-      const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching doctors licenses data from: ${url}`);
 
       const response = await axios.get(url);
@@ -183,28 +190,46 @@ export async function scrapeAndSyncDoctorsLicenses(
 
         // Read existing entries to retain their original createdAt timestamp
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
-          if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+          const data = snap.data();
+          if (snap.exists && data) {
+            existingMap.set(snap.id, data);
           }
         }
 
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
+          } else {
+            r.createdAt = now;
+            r.updatedAt = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
+      }
+
+      if (isEmulator) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;

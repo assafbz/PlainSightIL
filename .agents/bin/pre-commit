@@ -93,6 +93,36 @@ if [ "$STATUS" != "in-progress" ] && [ "$STATUS" != "blueprint-revision" ]; then
   exit 1
 fi
 
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+# ----------------- FORMATTING & LINTING GATE -----------------
+# Check if any client files are staged
+CLIENT_STAGED=$(echo "$STAGED_FILES" | grep -E "^client/")
+if [ -n "$CLIENT_STAGED" ]; then
+  echo "📱 Running pre-commit format check for client..."
+  cd "$PROJECT_ROOT/client" || exit 1
+  if ! dart format --set-exit-if-changed .; then
+    echo "🛑 FORMAT GATE FAILURE: Client files have formatting issues. Run 'dart format .' to fix."
+    exit 1
+  fi
+  cd "$PROJECT_ROOT"
+fi
+
+# Check if any backend files are staged
+BACKEND_STAGED=$(echo "$STAGED_FILES" | grep -E "^backend/")
+if [ -n "$BACKEND_STAGED" ]; then
+  echo "☁️  Running pre-commit lint check for backend..."
+  cd "$PROJECT_ROOT/backend/functions" || exit 1
+  if [ ! -d "node_modules" ]; then
+    npm ci || npm install || exit 1
+  fi
+  if ! npm run lint; then
+    echo "🛑 LINT GATE FAILURE: Backend code contains lint errors. Please resolve them."
+    exit 1
+  fi
+  cd "$PROJECT_ROOT"
+fi
+
 # Run the automated version bumping system
 node scripts/bump-version.js
 

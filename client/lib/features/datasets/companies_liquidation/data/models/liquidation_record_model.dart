@@ -11,6 +11,15 @@ class LiquidationRecordModel {
   final String companyName;
   final int companyId;
 
+  /// Ingestion timestamp (optional ISO-8601 string)
+  final String? createdAt;
+
+  /// Firestore database modification timestamp (optional ISO-8601 string)
+  final String? updatedAt;
+
+  /// Source metadata modification timestamp (optional ISO-8601 string)
+  final String? lastUpdated;
+
   LiquidationRecordModel({
     required this.liquidationCaseId,
     required this.cityOfActivity,
@@ -23,6 +32,9 @@ class LiquidationRecordModel {
     required this.districtCourt,
     required this.companyName,
     required this.companyId,
+    this.createdAt,
+    this.updatedAt,
+    this.lastUpdated,
   });
 
   factory LiquidationRecordModel.fromMap(Map<String, dynamic> map) {
@@ -50,6 +62,9 @@ class LiquidationRecordModel {
       districtCourt: map['districtCourt'] as String? ?? '',
       companyName: map['companyName'] as String? ?? '',
       companyId: (map['companyId'] as num? ?? 0).toInt(),
+      createdAt: map['createdAt'] as String?,
+      updatedAt: map['updatedAt'] as String?,
+      lastUpdated: map['lastUpdated'] as String?,
     );
   }
 
@@ -66,6 +81,9 @@ class LiquidationRecordModel {
       'districtCourt': districtCourt,
       'companyName': companyName,
       'companyId': companyId,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'lastUpdated': lastUpdated,
     };
   }
 }

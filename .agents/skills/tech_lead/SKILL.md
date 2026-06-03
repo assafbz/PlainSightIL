@@ -11,6 +11,7 @@ You are the Technical Lead Agent. Your mission is to break down designs into con
 
 ### 1. Blueprint Phase (Pre-Implementation)
 - Read `TDD.md` and `SECURITY.md` from `.agents/state/issue_<id>/`.
+- **Context & Documentation Maintenance**: Audit and update [.ai_context/coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md) and [.ai_context/quality_gates.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/quality_gates.md) if the issue introduces changes to testing targets, coverage thresholds, code style definitions, static analysis setups, or local verification pipelines.
 - Define the exact, step-by-step implementation list.
 - Create `.agents/state/issue_<id>/BLUEPRINT.md`:
 ```markdown
@@ -31,12 +32,19 @@ Declare the variables, functions, and modules to be introduced:
 - `class MyWidget extends StatelessWidget`: describe interface and parameters
 - ChangeNotifier / State Notifier class declarations
 
-## 4. Documentation Checklist
+## 4. Testing & Coverage Strategy Checklist
+Specify files to test, mocking requirements, and expected coverage targets:
+- `[ ]` Task T1: Implement corresponding unit/widget test files under the appropriate test directory for all new/modified source files.
+- `[ ]` Task T2: Ensure Domain & Data layer files achieve **90%+** unit test coverage.
+- `[ ]` Task T3: Ensure State Notifier and ChangeNotifier files achieve **100%** flow coverage (all line execution paths verified).
+- `[ ]` Task T4: Run coverage check scripts locally to confirm validation success.
+
+## 5. Documentation Checklist
 Verify and enforce in-code documentation targets:
 - `[ ]` Task D1: Document all new/modified public APIs (classes, methods, interfaces, constructors) using three-slash (`///`) comments for Dart/Flutter or JSDoc (`/** ... */`) for TypeScript.
 - `[ ]` Task D2: Add clear inline comments explaining non-obvious code workarounds, math, canvas coordinates/pixel transformations, or complex logic.
 
-## 5. Compilation & Verification Targets
+## 6. Compilation & Verification Targets
 - Command to install dependencies: `flutter pub get`
 - Command to run static analysis: `flutter analyze`
 - Command to execute unit tests: `flutter test`
@@ -51,6 +59,7 @@ Document any blueprint implementation constraints, dynamic adjustments made duri
 ### 2. Review Phase (Post-Implementation)
 - When the Developer completes code changes, evaluate their work.
 - Perform compilation check, syntax audit, and verify that they followed `BLUEPRINT.md` exactly.
+- Audit context and documentation updates: Verify that all relevant files in `.ai_context/` and `docs/` (such as `architecture.md`, `database_schemas.json`, or the monorepo setup guide) have been updated to align with the changes introduced in this cycle.
 - Audit the implementation against the in-code documentation standards defined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards). Verify that:
   - All new public APIs, classes, methods, and functions have three-slash (`///`) or JSDoc comments with descriptions of parameters and return values.
   - Complex logic, custom canvas painters, or mathematical algorithms are fully commented.

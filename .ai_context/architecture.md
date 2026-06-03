@@ -129,7 +129,10 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   "radiationFrequency": 1800.0,
   "lastTestDate": "2026-05-15T00:00:00Z",
   "addressHebrew": "דיזנגוף 50, תל אביב",
-  "addressEnglish": "50 Dizengoff, Tel Aviv"
+  "addressEnglish": "50 Dizengoff, Tel Aviv",
+  "createdAt": "2026-05-15T12:00:00Z",
+  "updatedAt": "2026-06-01T22:30:00Z",
+  "lastUpdated": "2026-05-15T00:00:00Z"
 }
 ```
 
@@ -154,6 +157,8 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   },
   "geohash": "svz3qyfb8",
   "jurisdiction": "ירושלים",
+  "createdAt": "2026-04-10T12:00:00Z",
+  "updatedAt": "2026-06-01T22:30:00Z",
   "lastUpdated": "2026-06-01T22:30:00Z"
 }
 ```
@@ -176,7 +181,27 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   "closureReason": null,
   "districtCourt": "תל אביב",
   "cityOfActivity": "בני ברק",
+  "createdAt": "2026-03-20T12:00:00Z",
+  "updatedAt": "2026-06-01T22:39:22Z",
   "lastUpdated": "2026-06-01T22:39:22Z"
+}
+```
+
+#### Doctors Licenses (`doctors_licenses/{documentId}`)
+```json
+{
+  "id": "1",
+  "_id": 1,
+  "firstName": "מריו ה",
+  "lastName": "קורוב",
+  "licenseNumber": 4267,
+  "licenseRegistrationDate": "1969-07-28T00:00:00Z",
+  "specialtyCertificateNumber": null,
+  "specialtyRegistrationDate": null,
+  "specialtyName": null,
+  "createdAt": "2026-05-15T12:00:00Z",
+  "updatedAt": "2026-06-02T17:00:00Z",
+  "lastUpdated": "1969-07-28T00:00:00Z"
 }
 ```
 

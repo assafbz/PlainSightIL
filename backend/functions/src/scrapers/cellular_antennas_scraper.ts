@@ -1,9 +1,11 @@
 import * as admin from "firebase-admin";
 import { GeoPoint } from "firebase-admin/firestore";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
+import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -40,7 +42,7 @@ export function getTranslatedOperator(rawValue: string): { he: string; en: strin
 }
 
 export interface HebrewAntennaRecord {
-  ID?: number | string;
+  מזהה?: number | string;
   _id?: number;
   חברה?: string;
   "מס' אתר"?: string;
@@ -78,6 +80,7 @@ export interface CellularAntenna {
   addressHebrew: string;
   addressEnglish: string;
   createdAt?: string;
+  updatedAt?: string;
   lastUpdated?: string;
 }
 
@@ -139,7 +142,7 @@ function translateAddress(hebrewAddress: string): string {
 }
 
 export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null {
-  const rawId = record.ID ?? record._id;
+  const rawId = record.מזהה ?? record._id;
   const x = record.X_ITM;
   const y = record.Y_ITM;
 
@@ -194,6 +197,7 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
     lastTestDate,
     addressHebrew,
     addressEnglish,
+    lastUpdated: lastTestDate,
   };
 }
 
@@ -201,7 +205,7 @@ export async function saveAntennasToFirestore(
   db: admin.firestore.Firestore,
   antennas: CellularAntenna[],
 ): Promise<void> {
-  const collectionRef = db.collection("8935c8e5-ec77-421f-af86-d970583195f8");
+  const collectionRef = db.collection(DATASET_IDS.CELLULAR_ANTENNAS);
   const now = new Date().toISOString();
 
   // Process in chunks of 500
@@ -213,45 +217,58 @@ export async function saveAntennasToFirestore(
 
     // Lookup existing documents in batch
     const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-    const existingCreatedAtMap = new Map<string, string>();
+    const existingMap = new Map<string, admin.firestore.DocumentData>();
     for (const snap of snapshots) {
-      if (snap.exists) {
-        const data = snap.data();
-        if (data && data.createdAt) {
-          existingCreatedAtMap.set(snap.id, data.createdAt);
-        }
+      const data = snap.data();
+      if (snap.exists && data) {
+        existingMap.set(snap.id, data);
       }
     }
 
     // Prepare and write chunk
     const batch = db.batch();
+    let hasWrites = false;
     for (const a of chunk) {
       const docRef = collectionRef.doc(a.antennaId);
-      const existingCreatedAt = existingCreatedAtMap.get(a.antennaId);
+      const existingData = existingMap.get(a.antennaId);
 
-      a.createdAt = existingCreatedAt || now;
-      a.lastUpdated = now;
+      a.lastUpdated = a.lastUpdated || now;
+      if (existingData) {
+        const isIdentical = areRecordsEqual(existingData, a);
+        if (isIdentical) {
+          continue;
+        }
+        a.createdAt = existingData.createdAt || now;
+        a.updatedAt = now;
+      } else {
+        a.createdAt = now;
+        a.updatedAt = now;
+      }
 
       batch.set(docRef, a);
+      hasWrites = true;
     }
-    await batch.commit();
+    if (hasWrites) {
+      await batch.commit();
+    }
   }
 }
 
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
-  resourceIdOrUrl: string = "8935c8e5-ec77-421f-af86-d970583195f8",
+  resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
+  const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "8935c8e5-ec77-421f-af86-d970583195f8";
+    const targetCollection = DATASET_IDS.CELLULAR_ANTENNAS;
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator ? 10 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -261,9 +278,10 @@ export async function scrapeAndSyncAntennas(
     const isUrl = resourceIdOrUrl.startsWith("http");
 
     while (hasMore) {
+      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
       const url = isUrl
         ? resourceIdOrUrl
-        : `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
+        : `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
 
       logger.info(`Fetching data from: ${url}`);
       const response = await axios.get(url);
@@ -289,7 +307,7 @@ export async function scrapeAndSyncAntennas(
         processedCount += parsedRecords.length;
       }
 
-      if (isUrl) {
+      if (isEmulator || isUrl) {
         hasMore = false;
       } else {
         offset += limit;

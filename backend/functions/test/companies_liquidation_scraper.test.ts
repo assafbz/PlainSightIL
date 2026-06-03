@@ -4,7 +4,8 @@ import {
   getTranslatedStatus,
   parseLiquidationRecord,
   scrapeAndSyncCompaniesLiquidation,
-} from "../src/scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+} from "../src/scrapers/companies_liquidation_scraper";
+import { DATASET_IDS } from "../src/utils/constants";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -113,7 +114,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "d8715392-287f-49b7-9ae3-f21ec5bf55f3") {
+      if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
         return {
           set: mockMetadataSet,
         };
@@ -180,7 +181,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    expect(mockCollection).toHaveBeenCalledWith("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
+    expect(mockCollection).toHaveBeenCalledWith(DATASET_IDS.COMPANIES_LIQUIDATION);
     expect(mockGetAll).toHaveBeenCalled();
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
 
@@ -189,14 +190,193 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     expect(written.createdAt).toBeDefined();
     expect(written.lastUpdated).toBeDefined();
 
-    expect(mockDoc).toHaveBeenCalledWith("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.COMPANIES_LIQUIDATION);
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "d8715392-287f-49b7-9ae3-f21ec5bf55f3",
+        activeCollection: DATASET_IDS.COMPANIES_LIQUIDATION,
         status: "idle",
         recordCount: 1,
       }),
       { merge: true },
     );
+  });
+
+  it("should preserve initial createdAt timestamp if the record already exists", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "512345678",
+        data: () => ({ createdAt: initialCreatedAt }),
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              "מזהה תיק פירוק חברה": 12345,
+              "שם החברה": 'אלברט לוי הנדסה בע"מ',
+              "מספר זיהוי של החברה": 512345678,
+              "סטטוס תיק": "פירוק פעיל",
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncCompaniesLiquidation(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).toBeDefined();
+    expect(written.updatedAt).toBeDefined();
+  });
+
+  it("should skip writing if the record already exists and is identical", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      "מזהה תיק פירוק חברה": 12345,
+      "שם החברה": 'אלברט לוי הנדסה בע"מ',
+      "מספר זיהוי של החברה": 512345678,
+      "סטטוס תיק": "פירוק פעיל",
+    };
+
+    const parsed = parseLiquidationRecord(rawRecord)!;
+    const existing = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: parsed.lastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "512345678",
+        data: () => existing,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncCompaniesLiquidation(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should write and update lastUpdated if the record exists but has different data", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      "מזהה תיק פירוק חברה": 12345,
+      "שם החברה": 'אלברט לוי הנדסה בע"מ',
+      "מספר זיהוי של החברה": 512345678,
+      "סטטוס תיק": "פירוק פעיל",
+    };
+
+    const parsed = parseLiquidationRecord(rawRecord)!;
+    const existing = {
+      ...parsed,
+      cityOfActivity: "ירושלים",
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "512345678",
+        data: () => existing,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncCompaniesLiquidation(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.cityOfActivity).toBe("לא ידוע");
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).not.toBe(initialLastUpdated);
+    expect(written.updatedAt).toBeDefined();
+  });
+
+  it("should write and update updatedAt if ONLY lastUpdated has changed", async () => {
+    const initialCreatedAt = "2026-05-01T12:00:00.000Z";
+    const initialLastUpdated = "2026-05-01T12:00:00.000Z";
+
+    const rawRecord = {
+      "מזהה תיק פירוק חברה": 12345,
+      "שם החברה": 'אלברט לוי הנדסה בע"מ',
+      "מספר זיהוי של החברה": 512345678,
+      "סטטוס תיק": "פירוק פעיל",
+      "תאריך קבלת צו פירוק": "2026-05-15 00:00:00",
+    };
+
+    const parsed = parseLiquidationRecord(rawRecord)!;
+    const existing = {
+      ...parsed,
+      createdAt: initialCreatedAt,
+      lastUpdated: initialLastUpdated,
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "512345678",
+        data: () => existing,
+      },
+    ]);
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [rawRecord],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncCompaniesLiquidation(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+    const written = mockBatch.set.mock.calls[0][1];
+    expect(written.createdAt).toBe(initialCreatedAt);
+    expect(written.lastUpdated).toBe(parsed.lastUpdated);
+    expect(written.updatedAt).toBeDefined();
   });
 });

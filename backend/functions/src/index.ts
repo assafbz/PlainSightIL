@@ -1,33 +1,37 @@
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as functions from "firebase-functions/v1";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "./utils/logger";
 import axios from "axios";
 import { PubSub } from "@google-cloud/pubsub";
 
-import { scrapeAndSyncAntennas } from "./scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
-import { scrapeAndSyncPermitApplications } from "./scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
+import { scrapeAndSyncAntennas } from "./scrapers/cellular_antennas_scraper";
+import { scrapeAndSyncPermitApplications } from "./scrapers/cellular_permits_scraper";
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
-import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
-import { scrapeAndSyncDoctorsLicenses } from "./scrapers/9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
+import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
+import { scrapeAndSyncBankAtms } from "./scrapers/21fde05f-62e3-401b-81cf-5c385862026d";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
+import { DATASET_IDS } from "./utils/constants";
 
 const scraperRegistry: Record<
   string,
   (firestoreDb: admin.firestore.Firestore) => Promise<{ count: number }>
 > = {
-  "8935c8e5-ec77-421f-af86-d970583195f8": scrapeAndSyncAntennas,
-  "ff398c7e-c522-4ee8-a53a-312b188a573d": scrapeAndSyncPermitApplications,
-  "d8715392-287f-49b7-9ae3-f21ec5bf55f3": scrapeAndSyncCompaniesLiquidation,
-  "9c64c522-bbc2-48fe-96fb-3b2a8626f59e": scrapeAndSyncDoctorsLicenses,
+  [DATASET_IDS.CELLULAR_ANTENNAS]: scrapeAndSyncAntennas,
+  [DATASET_IDS.CELLULAR_PERMITS]: scrapeAndSyncPermitApplications,
+  [DATASET_IDS.COMPANIES_LIQUIDATION]: scrapeAndSyncCompaniesLiquidation,
+  [DATASET_IDS.DOCTORS_LICENSES]: scrapeAndSyncDoctorsLicenses,
+  "21fde05f-62e3-401b-81cf-5c385862026d": scrapeAndSyncBankAtms,
   datasets_metadata: scrapeAndSyncDatasetMetadata,
 };
 
 const defaultIntervals: Record<string, number> = {
-  "8935c8e5-ec77-421f-af86-d970583195f8": 24, // Cellular Antennas (daily)
-  "ff398c7e-c522-4ee8-a53a-312b188a573d": 168, // Cellular Permit Apps (weekly)
-  "d8715392-287f-49b7-9ae3-f21ec5bf55f3": 168, // Companies Liquidation (weekly)
-  "9c64c522-bbc2-48fe-96fb-3b2a8626f59e": 168, // Doctors Licenses (weekly)
+  [DATASET_IDS.CELLULAR_ANTENNAS]: 24, // Cellular Antennas (daily)
+  [DATASET_IDS.CELLULAR_PERMITS]: 168, // Cellular Permit Apps (weekly)
+  [DATASET_IDS.COMPANIES_LIQUIDATION]: 168, // Companies Liquidation (weekly)
+  [DATASET_IDS.DOCTORS_LICENSES]: 168, // Doctors Licenses (weekly)
+  "21fde05f-62e3-401b-81cf-5c385862026d": 168, // Bank ATMs (weekly)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
 
@@ -59,7 +63,7 @@ function handleCors(req: functions.https.Request, res: functions.Response): bool
 async function checkAndLogApiReachability(
   firestoreDb: admin.firestore.Firestore,
 ): Promise<{ isReachable: boolean; statusCode: number; latencyMs: number }> {
-  const url = "https://data.gov.il";
+  const url = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
   const startTime = Date.now();
   try {
     logger.info(`Pinging government open data API at: ${url}`);
@@ -181,7 +185,6 @@ export const scheduledScraperTicker = functions.pubsub
   .onRun(async () => {
     logger.info("scheduledScraperTicker trigger invoked");
     const now = new Date().toISOString();
-
     try {
       const snapshot = await db.collection("dataset_metadata")
         .where("scheduler.enabled", "==", true)
@@ -359,7 +362,7 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
+  const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
@@ -390,6 +393,7 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   }
 });
 
+
 // HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
 export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncPermitApps HTTPS trigger invoked");
@@ -397,7 +401,7 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
+  const datasetId = DATASET_IDS.CELLULAR_PERMITS;
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
@@ -462,6 +466,7 @@ export const manualSyncMetadata = functions.https.onRequest(async (req, res) => 
   }
 });
 
+
 // HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
@@ -469,7 +474,7 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
+  const datasetId = DATASET_IDS.COMPANIES_LIQUIDATION;
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
@@ -500,14 +505,17 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
   }
 });
 
+
 // HTTPS Triggered Cloud Function for Doctors Licenses - manual sync
-export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, res) => {
+export const manualSyncDoctorsLicenses = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .https.onRequest(async (req, res) => {
   logger.info("manualSyncDoctorsLicenses HTTPS trigger invoked");
   if (handleCors(req, res)) return;
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
+  const datasetId = DATASET_IDS.DOCTORS_LICENSES;
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
@@ -533,6 +541,44 @@ export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, r
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Doctors licenses sync failed",
+      error: err.message || String(error),
+    });
+  }
+});
+
+// HTTPS Triggered Cloud Function for Bank ATMs - manual sync
+export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => {
+  logger.info("manualSyncBankAtms HTTPS trigger invoked");
+  if (handleCors(req, res)) return;
+  const auth = await validateAdminRequest(req, res);
+  if (!auth) return;
+
+  const datasetId = "21fde05f-62e3-401b-81cf-5c385862026d";
+  const tracker = ScraperTelemetryTracker.start(datasetId);
+  try {
+    // Set status to syncing in Firestore immediately
+    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
+
+    const result = await scrapeAndSyncBankAtms(db);
+    logger.info("manualSyncBankAtms sync completed successfully", {
+      count: result.count,
+    });
+    await tracker.complete(db, result.count);
+    await updateSchedulerOnComplete(db, datasetId, "idle");
+    res.status(200).json({
+      message: "Bank ATMs sync completed successfully",
+      count: result.count,
+    });
+  } catch (error) {
+    const err = error as Error;
+    logger.error("manualSyncBankAtms sync failed", {
+      error: err.message,
+      stack: err.stack,
+    });
+    await updateSchedulerOnComplete(db, datasetId, "error");
+    await tracker.fail(db, err);
+    res.status(500).json({
+      message: "Bank ATMs sync failed",
       error: err.message || String(error),
     });
   }

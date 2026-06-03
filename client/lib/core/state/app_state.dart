@@ -1,1386 +1,209 @@
-import 'dart:async';
-import 'dart:convert';
+import 'dart:ui';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'local_storage.dart';
-import '../theme/design_system.dart';
-import '../utils/app_logger.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
+import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
-import '../../features/profile/domain/repositories/user_profile_repository.dart';
-import '../../features/profile/domain/usecases/get_user_profile.dart';
-import '../../features/profile/domain/usecases/update_user_profile.dart';
-import '../../features/profile/data/datasources/user_profile_remote_datasource.dart';
-import '../../features/profile/data/repositories/user_profile_repository_impl.dart';
+import '../../features/auth/presentation/notifiers/auth_notifier.dart';
+import '../../features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
+import '../../features/datasets/cellular_antennas/presentation/notifiers/permits_notifier.dart';
+import '../../features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
+import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
+import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
+import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
+import '../theme/design_system.dart';
+import '../utils/app_logger.dart';
 
+/// Central state coordinator that acts as a Facade for the underlying scoped
+/// feature notifiers to maintain full backward compatibility across the app UI.
 class AppStateNotifier extends ChangeNotifier {
+  /// Global indicator if we are running in testing/mock offline mode.
   static bool isTesting = false;
+
+  /// Global override for Firebase initialization state in tests.
+  static bool? testIsFirebaseInitialized;
+
+  /// Global custom functions emulator port value.
   static int functionsPort = 5002;
 
+  // Global layout configuration variables
   String _locale = 'en';
   int _activeTab = 0;
   bool _isDarkMode = true;
 
-  // Authentication states
-  User? _currentUser;
-  bool _isGuestMode = false;
-  bool _isMockAuthenticated = false;
+  // Composed Scoped Notifiers
+  late final AuthNotifier authNotifier;
+  late final AntennasNotifier antennasNotifier;
+  late final PermitsNotifier permitsNotifier;
+  late final LiquidationNotifier liquidationNotifier;
+  late final DoctorsNotifier doctorsNotifier;
+  late final BankAtmsNotifier bankAtmsNotifier;
+  late final TelemetryNotifier telemetryNotifier;
 
-  // Favorites and Recents
-  List<String> _favorites = [];
-  List<String> _recents = [];
-
-  List<String> get favorites => _favorites;
-  List<String> get recents => _recents;
-
-  // Profile management state
-  UserProfile? _userProfile;
-  StreamSubscription<UserProfile?>? _profileSubscription;
-  late final UserProfileRepository _profileRepository;
-  late final GetUserProfile _getUserProfileUseCase;
-  late final UpdateUserProfile _updateUserProfileUseCase;
-
-  UserProfile? get userProfile => _userProfile;
-
-  AppStateNotifier() {
-    AppLogger.info('Initializing AppStateNotifier (isTesting: $isTesting)');
-    _isMockAuthenticated = isTesting;
-    _initProfileUsecases();
-    _initAuthListener();
-    _initSharedPreferences();
-    if (_isMockAuthenticated) {
-      _updateProfileListener('mock_uid');
-    }
-  }
-
-  void _initProfileUsecases() {
-    if (!isTesting && isFirebaseInitialized) {
-      final datasource = UserProfileRemoteDataSourceImpl(
-        FirebaseFirestore.instance,
-      );
-      _profileRepository = UserProfileRepositoryImpl(datasource);
-    } else {
-      _profileRepository = _MockUserProfileRepository();
-    }
-    _getUserProfileUseCase = GetUserProfile(_profileRepository);
-    _updateUserProfileUseCase = UpdateUserProfile(_profileRepository);
-  }
-
-  /// Sets the mock user profile (available only in testing mode).
-  void setMockProfile(UserProfile? profile) {
-    if (!isTesting) return;
-    if (_profileRepository is _MockUserProfileRepository) {
-      final mockRepo = _profileRepository;
-      mockRepo._currentProfile = profile;
-      mockRepo._controller.add(profile);
-      _userProfile = profile;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _initSharedPreferences() async {
-    try {
-      await LocalStorage.init();
-
-      // Check if branch swapped and reset cache to prevent state pollution
-      const String activeBranch = String.fromEnvironment(
-        'GIT_BRANCH',
-        defaultValue: 'unknown',
-      );
-      final String? lastSavedBranch = LocalStorage.getLastSavedBranch();
-
-      if (activeBranch != 'unknown' && lastSavedBranch != activeBranch) {
-        AppLogger.warning(
-          '🔄 Git Branch Switch Detected! (Prev: $lastSavedBranch, Curr: $activeBranch). Flushing local cache...',
-        );
-        await LocalStorage.clearAll();
-        await LocalStorage.saveLastSavedBranch(activeBranch);
-      }
-
-      _favorites = LocalStorage.getFavorites();
-      _recents = LocalStorage.getRecents();
-      _isGuestMode = LocalStorage.getGuestMode();
-      AppLogger.info(
-        'SharedPreferences loaded: ${_favorites.length} favorites, ${_recents.length} recents, guestMode: $_isGuestMode',
-      );
-      if (_isGuestMode) {
-        initPermitMetadataListener();
-      }
-      notifyListeners();
-    } catch (e) {
-      AppLogger.error('Error initializing SharedPreferences', e);
-    }
-  }
-
-  bool isFavorite(String datasetId) {
-    return _favorites.contains(datasetId);
-  }
-
-  Future<void> toggleFavorite(String datasetId) async {
-    final isFav = _favorites.contains(datasetId);
-    AppLogger.info(
-      'Toggling favorite for dataset $datasetId (Currently favorite: $isFav)',
-    );
-    if (isFav) {
-      _favorites.remove(datasetId);
-    } else {
-      _favorites.add(datasetId);
-    }
-    notifyListeners();
-    try {
-      await LocalStorage.saveFavorites(_favorites);
-    } catch (e) {
-      AppLogger.error('Error saving favorites for dataset $datasetId', e);
-    }
-  }
-
-  Future<void> addRecent(String datasetId) async {
-    AppLogger.info('Adding dataset $datasetId to recents');
-    _recents.remove(datasetId);
-    _recents.insert(0, datasetId);
-    if (_recents.length > 5) {
-      _recents = _recents.sublist(0, 5);
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
-    try {
-      await LocalStorage.saveRecents(_recents);
-    } catch (e) {
-      AppLogger.error('Error saving recents for dataset $datasetId', e);
-    }
-  }
-
-  void _initAuthListener() {
-    if (isTesting || !isFirebaseInitialized) return;
-    try {
-      AppLogger.info('Initializing FirebaseAuth listener');
-      FirebaseAuth.instance.authStateChanges().listen((user) {
-        final bool userChanged = _currentUser?.uid != user?.uid;
-        _currentUser = user;
-        AppLogger.info(
-          'Auth state updated. User UID: ${user?.uid}, changed: $userChanged',
-        );
-        if (userChanged) {
-          // Clear profile and telemetry state to prevent race conditions or incorrect permissions checks
-          _userProfile = null;
-          _apiHealthSubscription?.cancel();
-          _scraperRunsSubscription?.cancel();
-          _apiHealth = {};
-          _scraperRuns = [];
-
-          // Re-bind Firestore listeners when the authentication state changes
-          // to ensure data is fetched under the updated auth credentials.
-          initPermitMetadataListener();
-          _updateProfileListener(user?.uid);
-        }
-        notifyListeners();
-      });
-    } catch (e) {
-      AppLogger.error('Auth listener init error', e);
-    }
-  }
-
-  void _updateProfileListener(String? uid) {
-    AppLogger.info('Updating profile stream listener for UID: $uid');
-    _profileSubscription?.cancel();
-    _profileSubscription = null;
-
-    if (uid == null) {
-      _userProfile = null;
-      _apiHealthSubscription?.cancel();
-      _scraperRunsSubscription?.cancel();
-      _apiHealth = {};
-      _scraperRuns = [];
-      notifyListeners();
-      return;
-    }
-
-    _profileSubscription = _getUserProfileUseCase
-        .call(uid)
-        .listen(
-          (profile) {
-            AppLogger.info(
-              'Profile stream emitted value for UID $uid: $profile',
-            );
-            if (_userProfile != profile) {
-              final bool wasAdmin = isAdmin;
-              _userProfile = profile;
-              if (isAdmin && !wasAdmin) {
-                initTelemetryListeners();
-              } else if (!isAdmin && wasAdmin) {
-                _apiHealthSubscription?.cancel();
-                _scraperRunsSubscription?.cancel();
-                _apiHealth = {};
-                _scraperRuns = [];
-              }
-              notifyListeners();
-            }
-          },
-          onError: (Object error) {
-            AppLogger.error('Profile stream error for UID: $uid', error);
-          },
-        );
-  }
-
-  /// Updates the user's profile and handles success/error states.
-  Future<void> updateUserProfile(UserProfile profile) async {
-    AppLogger.info('Updating user profile for UID: ${profile.uid}');
-    try {
-      await _updateUserProfileUseCase.call(profile);
-      AppLogger.info(
-        'Successfully updated user profile for UID: ${profile.uid}',
-      );
-    } catch (e) {
-      AppLogger.error('Error updating user profile for UID: ${profile.uid}', e);
-      rethrow;
-    }
-  }
-
-  User? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null || _isMockAuthenticated;
-  bool get isGuestMode => _isGuestMode;
-  bool get isAdmin => _isMockAuthenticated || (_userProfile?.role == 'admin');
-
-  Map<String, String>? get mockUser => _isMockAuthenticated
-      ? {'name': 'Assaf Benzaken', 'email': 'assaf@plainsight.il'}
-      : null;
-
-  Future<void> signInWithGoogle() async {
-    AppLogger.info('Initiating Google Sign-In');
-    if (isTesting || !isFirebaseInitialized) {
-      AppLogger.info('Using mock authentication mode');
-      _isMockAuthenticated = true;
-      _isGuestMode = false;
-      _updateProfileListener('mock_uid');
-      notifyListeners();
-      return;
-    }
-
-    try {
-      final provider = GoogleAuthProvider();
-      await FirebaseAuth.instance.signInWithPopup(provider);
-      _isGuestMode = false;
-      AppLogger.info(
-        'Successfully authenticated with Google. User UID: ${FirebaseAuth.instance.currentUser?.uid}',
-      );
-      notifyListeners();
-    } catch (e) {
-      AppLogger.error('Google Sign-In Error', e);
-      rethrow;
-    }
-  }
-
-  Future<void> signOut() async {
-    AppLogger.info('Signing out current user');
-    _isMockAuthenticated = false;
-    _isGuestMode = false;
-    _updateProfileListener(null);
-    try {
-      await LocalStorage.saveGuestMode(false);
-    } catch (_) {}
-    _permitRecords = [];
-    _antennaRecords = [];
-    _directoryRecords = [];
-    _isLoadingPermits = true;
-    _isLoadingAntennas = true;
-    _isLoadingDirectory = true;
-    if (isFirebaseInitialized) {
-      try {
-        await FirebaseAuth.instance.signOut();
-        AppLogger.info('Successfully signed out from FirebaseAuth');
-      } catch (e) {
-        AppLogger.error('Firebase Sign-Out Error', e);
-      }
-    }
-    notifyListeners();
-  }
-
-  void setGuestMode(bool enabled) {
-    AppLogger.info('Setting guest mode to: $enabled');
-    _isGuestMode = enabled;
-    if (enabled) {
-      initPermitMetadataListener();
-    }
-    notifyListeners();
-    try {
-      LocalStorage.saveGuestMode(enabled);
-    } catch (e) {
-      AppLogger.error('Error saving guest mode', e);
-    }
-  }
-
-  // Double-buffered Firestore subscriptions for permit applications
-  String _activePermitCollection = '';
-  List<Map<String, dynamic>> _permitRecords = [];
-  bool _isLoadingPermits = true;
-  String _permitSyncStatus = 'idle';
-  StreamSubscription<QuerySnapshot>? _permitSubscription;
-  StreamSubscription<DocumentSnapshot>? _permitMetadataSubscription;
-
-  // Active Antennas Firestore subscription and state
-  List<Map<String, dynamic>> _antennaRecords = [];
-  bool _isLoadingAntennas = true;
-  StreamSubscription<QuerySnapshot>? _antennaSubscription;
-
-  // Dataset Directory state fields
-  List<DatasetMetadataModel> _directoryRecords = [];
-  bool _isLoadingDirectory = true;
-  Map<String, int> _datasetRequestCounts = {};
-  StreamSubscription<QuerySnapshot>? _directorySubscription;
-  StreamSubscription<QuerySnapshot>? _requestsSubscription;
-
-  // Companies in Liquidation state fields
-  List<LiquidationRecordModel> _liquidationRecords = [];
-  bool _isLoadingLiquidation = true;
-  StreamSubscription<QuerySnapshot>? _liquidationSubscription;
-
-  List<LiquidationRecordModel> get liquidationRecords => _liquidationRecords;
-  bool get isLoadingLiquidation => _isLoadingLiquidation;
-
-  // Doctors Licenses state fields
-  List<DoctorLicenseRecordModel> _doctorRecords = [];
-  bool _isLoadingDoctors = true;
-  StreamSubscription<QuerySnapshot>? _doctorsSubscription;
-
-  List<DoctorLicenseRecordModel> get doctorRecords => _doctorRecords;
-  bool get isLoadingDoctors => _isLoadingDoctors;
-
-  // Admin Metadata state fields
-  Map<String, Map<String, dynamic>> _datasetMetadataMap = {};
-  bool _isLoadingAdminMetadata = true;
-  StreamSubscription<QuerySnapshot>? _adminMetadataSubscription;
-
-  Map<String, Map<String, dynamic>> get datasetMetadataMap =>
-      _datasetMetadataMap;
-  bool get isLoadingAdminMetadata => _isLoadingAdminMetadata;
-
-  // Telemetry state fields
-  Map<String, dynamic> _apiHealth = {};
-  List<Map<String, dynamic>> _scraperRuns = [];
-  bool _isLoadingTelemetry = true;
-  StreamSubscription<DocumentSnapshot>? _apiHealthSubscription;
-  StreamSubscription<QuerySnapshot>? _scraperRunsSubscription;
-
-  Map<String, dynamic> get apiHealth => _apiHealth;
-  List<Map<String, dynamic>> get scraperRuns => _scraperRuns;
-  bool get isLoadingTelemetry => _isLoadingTelemetry;
-
-  List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
-  bool get isLoadingDirectory => _isLoadingDirectory;
-  int getRequestCount(String id) => _datasetRequestCounts[id] ?? 0;
-
+  // Configuration Getters
   String get locale => _locale;
   int get activeTab => _activeTab;
   bool get isDarkMode => _isDarkMode;
 
-  List<Map<String, dynamic>> get permitRecords => _permitRecords;
-  bool get isLoadingPermits => _isLoadingPermits;
-  String get permitSyncStatus => _permitSyncStatus;
+  // App version loaded dynamically from pubspec.yaml via package_info_plus
+  String _appVersion = '';
+  String get appVersion => _appVersion;
 
-  List<Map<String, dynamic>> get antennaRecords => _antennaRecords;
-  bool get isLoadingAntennas => _isLoadingAntennas;
+  // Delegated Getters for AuthNotifier
+  User? get currentUser => authNotifier.currentUser;
+  bool get isAuthenticated => authNotifier.isAuthenticated;
+  bool get isGuestMode => authNotifier.isGuestMode;
+  bool get isAdmin => authNotifier.isAdmin;
+  List<String> get favorites => authNotifier.favorites;
+  List<String> get recents => authNotifier.recents;
+  UserProfile? get userProfile => authNotifier.userProfile;
+  Map<String, String>? get mockUser => authNotifier.mockUser;
 
-  /// Check if Firebase is initialized
-  bool get isFirebaseInitialized {
-    try {
-      return Firebase.apps.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
+  // Delegated Getters for AntennasNotifier
+  List<Map<String, dynamic>> get antennaRecords =>
+      antennasNotifier.antennaRecords;
+  bool get isLoadingAntennas => antennasNotifier.isLoadingAntennas;
 
-  /// Initialize metadata listener for cellular permits
-  void initPermitMetadataListener() {
-    initAntennaListener();
-    initDirectoryListener();
-    initLiquidationListener();
-    initDoctorsListener();
-    initAdminMetadataListener();
+  // Delegated Getters for PermitsNotifier
+  List<Map<String, dynamic>> get permitRecords => permitsNotifier.permitRecords;
+  bool get isLoadingPermits => permitsNotifier.isLoadingPermits;
+  String get permitSyncStatus => permitsNotifier.permitSyncStatus;
 
-    if (isTesting) {
-      _permitSyncStatus = 'idle';
-      _permitRecords = [
-        {
-          'id': '1',
-          'referenceNumber': 2081659,
-          'company': {'he': 'סלקום', 'en': 'Cellcom'},
-          'permitType': 'היתר הקמה',
-          'siteNumber': 'NN1845A',
-          'locality': 'אפיקים',
-          'addressDescription': 'קיבוץ אפיקים',
-          'focalPointType': 'קרקעי',
-          'jurisdiction': 'עמק הירדן',
-          'coordinates': const GeoPoint(32.6789, 35.5788),
-        },
-        {
-          'id': '2',
-          'referenceNumber': 2081660,
-          'company': {'he': 'פרטנר', 'en': 'Partner'},
-          'permitType': 'היתר הפעלה',
-          'siteNumber': 'PT1234B',
-          'locality': 'תל אביב - יפו',
-          'addressDescription': 'דיזנגוף 100',
-          'focalPointType': 'גג',
-          'jurisdiction': 'תל אביב',
-          'coordinates': const GeoPoint(32.0795, 34.7738),
-        },
-        {
-          'id': '3',
-          'referenceNumber': 2081661,
-          'company': {'he': 'הוט מובייל', 'en': 'Hot Mobile'},
-          'permitType': 'היתר הקמה',
-          'siteNumber': 'HT9876C',
-          'locality': 'חיפה',
-          'addressDescription': 'הרצל 12',
-          'focalPointType': 'קרקעי',
-          'jurisdiction': 'חיפה',
-          'coordinates': const GeoPoint(32.8090, 34.9890),
-        },
-        {
-          'id': '4',
-          'referenceNumber': 2081662,
-          'company': {'he': 'פלאפון', 'en': 'Pelephone'},
-          'permitType': 'היתר הקמה',
-          'siteNumber': 'PL4567D',
-          'locality': 'ירושלים',
-          'addressDescription': 'יפו 50',
-          'focalPointType': 'קרקעי',
-          'jurisdiction': 'ירושלים',
-          'coordinates': const GeoPoint(31.7833, 35.2167),
-        },
-      ];
-      _isLoadingPermits = false;
-      notifyListeners();
-      return;
-    }
+  // Delegated Getters for LiquidationNotifier
+  List<LiquidationRecordModel> get liquidationRecords =>
+      liquidationNotifier.liquidationRecords;
+  bool get isLoadingLiquidation => liquidationNotifier.isLoadingLiquidation;
 
-    if (!isFirebaseInitialized) {
-      _permitSyncStatus = 'error';
-      _isLoadingPermits = false;
-      notifyListeners();
-      AppLogger.warning(
-        'Firebase is not initialized. Skipping permit metadata listener.',
-      );
-      return;
-    }
+  // Delegated Getters for DoctorsNotifier
+  List<DoctorLicenseRecordModel> get doctorRecords =>
+      doctorsNotifier.doctorRecords;
+  bool get isLoadingDoctors => doctorsNotifier.isLoadingDoctors;
 
-    AppLogger.info('Initializing permit metadata listener');
-    _permitMetadataSubscription?.cancel();
-    try {
-      _permitMetadataSubscription = FirebaseFirestore.instance
-          .collection('dataset_metadata')
-          .doc('ff398c7e-c522-4ee8-a53a-312b188a573d')
-          .snapshots()
-          .listen(
-            (metaSnapshot) {
-              if (metaSnapshot.exists && metaSnapshot.data() != null) {
-                final data = metaSnapshot.data()!;
-                final newActive = data['activeCollection'] as String? ?? '';
-                _permitSyncStatus = data['status'] as String? ?? 'idle';
-                AppLogger.info(
-                  'Permit metadata loaded. activeCollection: $newActive, status: $_permitSyncStatus',
-                );
+  // Delegated Getters for BankAtmsNotifier
+  List<BankAtmRecordModel> get atmRecords => bankAtmsNotifier.atmRecords;
+  bool get isLoadingAtms => bankAtmsNotifier.isLoadingAtms;
 
-                if (newActive.isNotEmpty &&
-                    newActive != _activePermitCollection) {
-                  _bindActivePermitCollection(newActive);
-                } else {
-                  notifyListeners();
-                }
-              } else {
-                AppLogger.warning('Permit metadata document does not exist');
-                _isLoadingPermits = false;
-                notifyListeners();
-              }
-            },
-            onError: (Object err) {
-              _isLoadingPermits = false;
-              _permitSyncStatus = 'error';
-              notifyListeners();
-              AppLogger.error('Firestore permit metadata listener error', err);
-            },
-          );
-    } catch (e) {
-      _isLoadingPermits = false;
-      _permitSyncStatus = 'error';
-      notifyListeners();
-      AppLogger.error('Failed to bind Firestore metadata', e);
-    }
-  }
+  // Delegated Getters for TelemetryNotifier
+  Map<String, Map<String, dynamic>> get datasetMetadataMap =>
+      telemetryNotifier.datasetMetadataMap;
+  bool get isLoadingAdminMetadata => telemetryNotifier.isLoadingAdminMetadata;
+  Map<String, dynamic> get apiHealth => telemetryNotifier.apiHealth;
+  List<Map<String, dynamic>> get scraperRuns => telemetryNotifier.scraperRuns;
+  bool get isLoadingTelemetry => telemetryNotifier.isLoadingTelemetry;
+  List<DatasetMetadataModel> get directoryRecords =>
+      telemetryNotifier.directoryRecords;
+  bool get isLoadingDirectory => telemetryNotifier.isLoadingDirectory;
+  bool get isCheckingApiHealth => telemetryNotifier.isCheckingApiHealth;
 
-  void _bindActivePermitCollection(String newCollection) {
-    AppLogger.info('Binding active permit collection to: $newCollection');
-    _activePermitCollection = newCollection;
-    _isLoadingPermits = true;
-    notifyListeners();
+  bool _isDisposed = false;
 
-    _permitSubscription?.cancel();
-    if (!isFirebaseInitialized) {
-      _isLoadingPermits = false;
-      _permitSyncStatus = 'error';
-      notifyListeners();
-      return;
-    }
-
-    try {
-      _permitSubscription = FirebaseFirestore.instance
-          .collection(newCollection)
-          .limit(100)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              AppLogger.info(
-                'Permits fetched from Firestore ($newCollection): ${snapshot.docs.length} records',
-              );
-              // Swap only when data resolves to prevent flickering
-              _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
-              _isLoadingPermits = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingPermits = false;
-              _permitSyncStatus = 'error';
-              notifyListeners();
-              AppLogger.error(
-                'Firestore permit collection listener error for $newCollection',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingPermits = false;
-      _permitSyncStatus = 'error';
-      notifyListeners();
-      AppLogger.error('Failed to bind Firestore collection $newCollection', e);
-    }
-  }
-
-  void initAntennaListener() {
-    _antennaSubscription?.cancel();
-    if (isTesting) {
-      _antennaRecords = [
-        {
-          'antennaId': 'CELL-100',
-          'addressHebrew': 'דיזנגוף 50, תל אביב',
-          'addressEnglish': 'Dizengoff 50, Tel Aviv',
-          'operatorName': 'Pelephone',
-          'radiationFrequency': 1800,
-          'coordinates': const GeoPoint(32.0782, 34.7741),
-        },
-        {
-          'antennaId': 'CELL-101',
-          'addressHebrew': 'בן יהודה 80, תל אביב',
-          'addressEnglish': 'Ben Yehuda 80, Tel Aviv',
-          'operatorName': 'Partner',
-          'radiationFrequency': 3500,
-          'coordinates': const GeoPoint(32.0831, 34.7725),
-        },
-        {
-          'antennaId': 'CELL-102',
-          'addressHebrew': 'קיבוץ אפיקים, עמק הירדן',
-          'addressEnglish': 'Kibbutz Afikim, Jordan Valley',
-          'operatorName': 'Cellcom',
-          'radiationFrequency': 2100,
-          'coordinates': const GeoPoint(32.6795, 35.5792),
-        },
-        {
-          'antennaId': 'CELL-103',
-          'addressHebrew': 'שדרות רוטשילד 15, תל אביב',
-          'addressEnglish': 'Rothschild Blvd 15, Tel Aviv',
-          'operatorName': 'Hot Mobile',
-          'radiationFrequency': 1800,
-          'coordinates': const GeoPoint(32.0635, 34.7712),
-        },
-      ];
-      _isLoadingAntennas = false;
-      notifyListeners();
-      return;
-    }
-
-    if (!isFirebaseInitialized) {
-      _isLoadingAntennas = false;
-      notifyListeners();
-      return;
-    }
-
-    AppLogger.info('Initializing cellular antennas listener');
-    try {
-      _antennaSubscription = FirebaseFirestore.instance
-          .collection('8935c8e5-ec77-421f-af86-d970583195f8')
-          .snapshots()
-          .listen(
-            (snapshot) {
-              AppLogger.info(
-                'Antennas fetched from Firestore: ${snapshot.docs.length} records',
-              );
-              _antennaRecords = snapshot.docs.map((doc) => doc.data()).toList();
-              _isLoadingAntennas = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingAntennas = false;
-              notifyListeners();
-              AppLogger.error(
-                'Firestore antenna collection listener error',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingAntennas = false;
-      notifyListeners();
-      AppLogger.error('Failed to bind Firestore antennas', e);
-    }
-  }
-
-  void initDirectoryListener() {
-    _directorySubscription?.cancel();
-    _requestsSubscription?.cancel();
-
-    if (isTesting) {
-      _directoryRecords = [
-        DatasetMetadataModel(
-          id: '8935c8e5-ec77-421f-af86-d970583195f8',
-          datasetId: '995eb826-c471-4572-8fd3-39d92a3a9603',
-          name: 'active_antennas',
-          title: 'אנטנות סלולריות פעילות',
-          notes: 'רשימת מוקדי שידור סלולריים פעילים ובדיקות קרינה שנערכו להם.',
-          publisher: 'המשרד להגנת הסביבה',
-          resourceCount: 3,
-          lastUpdated: DateTime(2026, 5, 30),
-          tags: ['אנטנות', 'סלולר', 'קרינה'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: 'ff398c7e-c522-4ee8-a53a-312b188a573d',
-          datasetId: '4e9111d8-e842-40ec-b587-629e684e85ac',
-          name: 'cellular_permit_applications',
-          title: 'בקשות להיתרי הקמה של אנטנות',
-          notes:
-              'היתרי הקמה והפעלה למוקדי שידור סלולריים הנמצאים בהליכי אישור.',
-          publisher: 'המשרד להגנת הסביבה',
-          resourceCount: 1,
-          lastUpdated: DateTime(2026, 5, 29),
-          tags: ['היתרים', 'הקמה', 'סלולר'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
-          name: 'pr2018',
-          title: 'מאגר הכונס הרשמי',
-          notes:
-              'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
-          publisher: 'רשות התאגידים',
-          resourceCount: 3,
-          lastUpdated: DateTime(2026, 6, 1),
-          tags: ['פירוק', 'חברות', 'רשות התאגידים', 'משפט'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          datasetId: '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          name: 'doctors_licenses',
-          title: 'רישיונות רופאים',
-          notes: 'מאגר מורשי תעסוקה ברפואה בישראל כולל מספרי רישיון והתמחויות.',
-          publisher: 'משרד הבריאות',
-          resourceCount: 1,
-          lastUpdated: DateTime(2026, 6, 2),
-          tags: ['רופאים', 'רישיון', 'בריאות', 'התמחות'],
-          isSupported: true,
-        ),
-        DatasetMetadataModel(
-          id: 'government-budget-dataset-id',
-          datasetId: 'government-budget-dataset-id',
-          name: 'government_budget',
-          title: 'ספר התקציב ונתוני הוצאות',
-          notes: 'ספר התקציב הפתוח ונתוני ביצוע תקציב הממשלה.',
-          publisher: 'משרד האוצר',
-          resourceCount: 12,
-          lastUpdated: DateTime(2026, 5, 25),
-          tags: ['תקציב', 'אוצר', 'הוצאות'],
-          isSupported: false,
-        ),
-      ];
-      _datasetRequestCounts = {'government-budget-dataset-id': 18};
-      _isLoadingDirectory = false;
-      notifyListeners();
-      return;
-    }
-
-    if (!isFirebaseInitialized) {
-      _isLoadingDirectory = false;
-      notifyListeners();
-      return;
-    }
-
-    AppLogger.info(
-      'Initializing dataset directory metadata and requests listeners',
+  /// Construct and initialize the AppStateNotifier Facade.
+  AppStateNotifier() {
+    AppLogger.info('Initializing AppStateNotifier (isTesting: $isTesting)');
+    authNotifier = AuthNotifier(isTesting: isTesting);
+    antennasNotifier = AntennasNotifier(isTesting: isTesting);
+    permitsNotifier = PermitsNotifier(isTesting: isTesting);
+    liquidationNotifier = LiquidationNotifier(isTesting: isTesting);
+    doctorsNotifier = DoctorsNotifier(isTesting: isTesting);
+    bankAtmsNotifier = BankAtmsNotifier(isTesting: isTesting);
+    telemetryNotifier = TelemetryNotifier(
+      isTesting: isTesting,
+      functionsPort: functionsPort,
     );
-    try {
-      _directorySubscription = FirebaseFirestore.instance
-          .collection('datasets_metadata')
-          .snapshots()
-          .listen(
-            (snapshot) {
-              AppLogger.info(
-                'Directory metadata fetched from Firestore: ${snapshot.docs.length} records',
-              );
-              _directoryRecords = snapshot.docs
-                  .map((doc) => DatasetMetadataModel.fromMap(doc.data()))
-                  .toList();
-              _isLoadingDirectory = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingDirectory = false;
-              notifyListeners();
-              AppLogger.error('Firestore directory metadata error', err);
-            },
-          );
 
-      _requestsSubscription = FirebaseFirestore.instance
-          .collection('dataset_requests')
-          .snapshots()
-          .listen(
-            (snapshot) {
-              final Map<String, int> counts = {};
-              for (final doc in snapshot.docs) {
-                counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0)
-                    .toInt();
-              }
-              AppLogger.info(
-                'Dataset requests counts fetched from Firestore: ${counts.length} records',
-              );
-              _datasetRequestCounts = counts;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              AppLogger.error('Firestore dataset requests count error', err);
-            },
-          );
-    } catch (e) {
-      _isLoadingDirectory = false;
+    // Listen to changes in sub-notifiers and forward notifications safely
+    authNotifier.addListener(_onSubNotifierChanged);
+    antennasNotifier.addListener(_onSubNotifierChanged);
+    permitsNotifier.addListener(_onSubNotifierChanged);
+    liquidationNotifier.addListener(_onSubNotifierChanged);
+    doctorsNotifier.addListener(_onSubNotifierChanged);
+    bankAtmsNotifier.addListener(_onSubNotifierChanged);
+    telemetryNotifier.addListener(_onSubNotifierChanged);
+
+    _initPackageInfo();
+  }
+
+  Future<void> _initPackageInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      _appVersion = info.version;
+      AppLogger.info('Package version loaded: $_appVersion');
       notifyListeners();
-      AppLogger.error('Failed to initialize directory listener', e);
+    } catch (e) {
+      AppLogger.error('Error loading package info', e);
     }
   }
 
-  void initLiquidationListener() {
-    _liquidationSubscription?.cancel();
-
-    if (isTesting) {
-      _liquidationRecords = [
-        LiquidationRecordModel(
-          liquidationCaseId: 12345,
-          cityOfActivity: 'תל אביב - יפו',
-          caseStatus: const {'he': 'פירוק פעיל', 'en': 'Active Winding Up'},
-          submissionDate: '2024-05-12T00:00:00.000Z',
-          liquidationOrderDate: '2024-06-15T00:00:00.000Z',
-          districtCourt: 'מחוזי תל אביב',
-          companyName: 'אלברט לוי הנדסה בע"מ',
-          companyId: 512345678,
-        ),
-        LiquidationRecordModel(
-          liquidationCaseId: 12346,
-          cityOfActivity: 'חיפה',
-          caseStatus: const {'he': 'הקפאת הליכים', 'en': 'Frozen'},
-          submissionDate: '2024-03-10T00:00:00.000Z',
-          liquidationOrderDate: '2024-04-12T00:00:00.000Z',
-          cancellationFreezeDate: '2024-04-20T00:00:00.000Z',
-          districtCourt: 'מחוזי חיפה',
-          companyName: 'משה שירותי בנייה בע"מ',
-          companyId: 512345679,
-        ),
-        LiquidationRecordModel(
-          liquidationCaseId: 12347,
-          cityOfActivity: 'ירושלים',
-          caseStatus: const {'he': 'סגור', 'en': 'Closed'},
-          submissionDate: '2023-08-15T00:00:00.000Z',
-          liquidationOrderDate: '2023-09-20T00:00:00.000Z',
-          closureDate: '2024-01-10T00:00:00.000Z',
-          closureReason: 'הסדר נושים',
-          districtCourt: 'מחוזי ירושלים',
-          companyName: 'ישראל קומפני בע"מ',
-          companyId: 512345680,
-        ),
-      ];
-      _isLoadingLiquidation = false;
+  void _onSubNotifierChanged() {
+    if (!_isDisposed) {
       notifyListeners();
-      return;
-    }
-
-    if (!isFirebaseInitialized) {
-      _isLoadingLiquidation = false;
-      notifyListeners();
-      return;
-    }
-
-    AppLogger.info('Initializing companies liquidation listener');
-    try {
-      _liquidationSubscription = FirebaseFirestore.instance
-          .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
-          .limit(100)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              AppLogger.info(
-                'Companies liquidation fetched from Firestore: ${snapshot.docs.length} records',
-              );
-              _liquidationRecords = snapshot.docs
-                  .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
-                  .toList();
-              _isLoadingLiquidation = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingLiquidation = false;
-              notifyListeners();
-              AppLogger.error(
-                'Firestore liquidation collection listener error',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingLiquidation = false;
-      notifyListeners();
-      AppLogger.error('Failed to initialize liquidation listener', e);
     }
   }
 
-  /// Initialize doctors licenses snapshots listener
-  void initDoctorsListener() {
-    _doctorsSubscription?.cancel();
-    if (isTesting) {
-      _doctorRecords = [
-        DoctorLicenseRecordModel(
-          id: '1',
-          idNum: 1,
-          firstName: 'מריו ה',
-          lastName: 'קורוב',
-          licenseNumber: 4267,
-          licenseRegistrationDate: '1969-07-28T00:00:00.000Z',
-        ),
-        DoctorLicenseRecordModel(
-          id: '2',
-          idNum: 2,
-          firstName: 'אברהם',
-          lastName: 'שטיינברג',
-          licenseNumber: 11116,
-          licenseRegistrationDate: '1974-08-20T00:00:00.000Z',
-          specialtyCertificateNumber: 7656,
-          specialtyRegistrationDate: '1983-06-21T00:00:00.000Z',
-          specialtyName: 'רפואת ילדים',
-        ),
-        DoctorLicenseRecordModel(
-          id: '3',
-          idNum: 3,
-          firstName: 'אברהם',
-          lastName: 'שטיינברג',
-          licenseNumber: 11116,
-          licenseRegistrationDate: '1974-08-20T00:00:00.000Z',
-          specialtyCertificateNumber: 13230,
-          specialtyRegistrationDate: '1993-12-02T00:00:00.000Z',
-          specialtyName: 'נוירולוגיית ילדים',
-        ),
-      ];
-      _isLoadingDoctors = false;
-      notifyListeners();
-      return;
-    }
-
-    if (!isFirebaseInitialized) {
-      _isLoadingDoctors = false;
-      notifyListeners();
-      return;
-    }
-
-    AppLogger.info('Initializing doctors licenses listener');
-    try {
-      _doctorsSubscription = FirebaseFirestore.instance
-          .collection('9c64c522-bbc2-48fe-96fb-3b2a8626f59e')
-          .limit(100)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              AppLogger.info(
-                'Doctors licenses fetched from Firestore: ${snapshot.docs.length} records',
-              );
-              _doctorRecords = snapshot.docs
-                  .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data()))
-                  .toList();
-              _isLoadingDoctors = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingDoctors = false;
-              notifyListeners();
-              AppLogger.error(
-                'Firestore doctors collection listener error',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingDoctors = false;
-      notifyListeners();
-      AppLogger.error('Failed to initialize doctors listener', e);
-    }
+  // Legacy initialization method for backwards compatibility
+  void initPermitMetadataListener() {
+    antennasNotifier.initAntennaListener();
+    permitsNotifier.initPermitMetadataListener();
+    telemetryNotifier.initAdminMetadataListener();
+    telemetryNotifier.initDirectoryListener();
+    liquidationNotifier.initLiquidationListener();
+    doctorsNotifier.initDoctorsListener();
+    bankAtmsNotifier.initBankAtmsListener();
   }
 
-  /// Initialize real-time snapshot listener on dataset_metadata collection
   void initAdminMetadataListener() {
-    _adminMetadataSubscription?.cancel();
-    initTelemetryListeners();
-    if (isTesting) {
-      _datasetMetadataMap = {
-        '8935c8e5-ec77-421f-af86-d970583195f8': {
-          'id': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'recordCount': 9840,
-          'lastUpdated': '2026-05-30T12:00:00Z',
-          'status': 'idle',
-        },
-        'ff398c7e-c522-4ee8-a53a-312b188a573d': {
-          'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
-          'recordCount': 120,
-          'lastUpdated': '2026-05-29T14:30:00Z',
-          'status': 'idle',
-        },
-        'd8715392-287f-49b7-9ae3-f21ec5bf55f3': {
-          'id': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          'recordCount': 3,
-          'lastUpdated': '2026-06-01T09:15:00Z',
-          'status': 'idle',
-        },
-        '9c64c522-bbc2-48fe-96fb-3b2a8626f59e': {
-          'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          'recordCount': 100,
-          'lastUpdated': '2026-06-02T17:00:00Z',
-          'status': 'idle',
-        },
-      };
-      _isLoadingAdminMetadata = false;
-      notifyListeners();
-      return;
-    }
-
-    if (!isFirebaseInitialized) {
-      _isLoadingAdminMetadata = false;
-      notifyListeners();
-      return;
-    }
-
-    try {
-      _adminMetadataSubscription = FirebaseFirestore.instance
-          .collection('dataset_metadata')
-          .snapshots()
-          .listen(
-            (snapshot) {
-              final Map<String, Map<String, dynamic>> newMap = {};
-              for (final doc in snapshot.docs) {
-                newMap[doc.id] = doc.data();
-              }
-              _datasetMetadataMap = newMap;
-              _isLoadingAdminMetadata = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingAdminMetadata = false;
-              notifyListeners();
-              debugPrint('Firestore admin metadata listener error: $err');
-            },
-          );
-    } catch (e) {
-      _isLoadingAdminMetadata = false;
-      notifyListeners();
-      debugPrint('Failed to initialize admin metadata listener: $e');
-    }
+    telemetryNotifier.initAdminMetadataListener();
   }
 
-  /// Initialize real-time listeners for system health and scraper runs
-  void initTelemetryListeners() {
-    _apiHealthSubscription?.cancel();
-    _scraperRunsSubscription?.cancel();
+  void initAntennaListener() => antennasNotifier.initAntennaListener();
+  void cancelAntennaListener() => antennasNotifier.cancelAntennaListener();
 
-    if (isTesting) {
-      _apiHealth = {
-        'url': 'https://data.gov.il',
-        'isReachable': true,
-        'statusCode': 200,
-        'latencyMs': 142,
-        'lastChecked': DateTime.now()
-            .subtract(const Duration(minutes: 2))
-            .toIso8601String(),
-      };
-      _scraperRuns = [
-        {
-          'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 1))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 1, seconds: 5))
-              .toIso8601String(),
-          'durationMs': 4800,
-          'status': 'success',
-          'recordsProcessed': 9840,
-          'firestoreReadsEstimate': 9841,
-          'firestoreWritesEstimate': 9841,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 2))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 2, seconds: 1))
-              .toIso8601String(),
-          'durationMs': 1200,
-          'status': 'success',
-          'recordsProcessed': 3,
-          'firestoreReadsEstimate': 4,
-          'firestoreWritesEstimate': 4,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 1, minutes: 30))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 1, minutes: 29))
-              .toIso8601String(),
-          'durationMs': 3200,
-          'status': 'success',
-          'recordsProcessed': 100,
-          'firestoreReadsEstimate': 0,
-          'firestoreWritesEstimate': 100,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': 'datasets_metadata',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 3))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 3, seconds: 12))
-              .toIso8601String(),
-          'durationMs': 12500,
-          'status': 'success',
-          'recordsProcessed': 1250,
-          'firestoreReadsEstimate': 0,
-          'firestoreWritesEstimate': 1250,
-          'errorMessage': '',
-          'errorStack': '',
-        },
-        {
-          'datasetId': '8935c8e5-ec77-421f-af86-d970583195f8',
-          'startTime': DateTime.now()
-              .subtract(const Duration(hours: 4))
-              .toIso8601String(),
-          'endTime': DateTime.now()
-              .subtract(const Duration(hours: 4, seconds: 4))
-              .toIso8601String(),
-          'durationMs': 3800,
-          'status': 'error',
-          'recordsProcessed': 0,
-          'firestoreReadsEstimate': 0,
-          'firestoreWritesEstimate': 0,
-          'errorMessage': 'manualSyncAntennas: 502 Bad Gateway',
-          'errorStack':
-              'Error: 502 Bad Gateway\n    at scrapeAndSyncAntennas (/src/scrapers/antennas.ts:269:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)',
-        },
-      ];
-      _isLoadingTelemetry = false;
-      notifyListeners();
-      return;
-    }
+  void initDirectoryListener() => telemetryNotifier.initDirectoryListener();
 
-    if (!isFirebaseInitialized) {
-      _isLoadingTelemetry = false;
-      notifyListeners();
-      return;
-    }
+  void cancelPermitMetadataListener() =>
+      permitsNotifier.cancelPermitMetadataListener();
 
-    if (!isAdmin) {
-      _isLoadingTelemetry = false;
-      notifyListeners();
-      return;
-    }
+  void initLiquidationListener() =>
+      liquidationNotifier.initLiquidationListener();
+  void cancelLiquidationListener() =>
+      liquidationNotifier.cancelLiquidationListener();
 
-    try {
-      _apiHealthSubscription = FirebaseFirestore.instance
-          .collection('system_health')
-          .doc('data_gov_il')
-          .snapshots()
-          .listen(
-            (snapshot) {
-              if (snapshot.exists && snapshot.data() != null) {
-                _apiHealth = snapshot.data()!;
-              } else {
-                _apiHealth = {};
-              }
-              _isLoadingTelemetry = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingTelemetry = false;
-              notifyListeners();
-              AppLogger.error('Firestore system_health listener error', err);
-            },
-          );
+  void initDoctorsListener() => doctorsNotifier.initDoctorsListener();
+  void cancelDoctorsListener() => doctorsNotifier.cancelDoctorsListener();
 
-      _scraperRunsSubscription = FirebaseFirestore.instance
-          .collection('scraper_runs')
-          .orderBy('startTime', descending: true)
-          .limit(20)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              _scraperRuns = snapshot.docs.map((doc) => doc.data()).toList();
-              notifyListeners();
-            },
-            onError: (Object err) {
-              AppLogger.error('Firestore scraper_runs listener error', err);
-            },
-          );
-    } catch (e) {
-      _isLoadingTelemetry = false;
-      notifyListeners();
-      AppLogger.error('Failed to initialize telemetry listeners', e);
-    }
-  }
+  void initBankAtmsListener() => bankAtmsNotifier.initBankAtmsListener();
+  void cancelBankAtmsListener() => bankAtmsNotifier.cancelBankAtmsListener();
 
-  /// Triggers a manual pings/health check of data.gov.il via Cloud Function.
-  Future<void> triggerApiHealthCheck() async {
-    AppLogger.info('Triggering manual API health check');
-    if (isTesting) {
-      _apiHealth = {
-        'url': 'https://data.gov.il',
-        'isReachable': true,
-        'statusCode': 200,
-        'latencyMs': 89,
-        'lastChecked': DateTime.now().toIso8601String(),
-      };
-      notifyListeners();
-      return;
-    }
+  void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
+  void cancelAdminMetadataListener() =>
+      telemetryNotifier.cancelAdminMetadataListener();
 
-    if (!isFirebaseInitialized) return;
+  // Delegated Methods for AuthNotifier
+  void setMockProfile(UserProfile? profile) =>
+      authNotifier.setMockProfile(profile);
+  bool isFavorite(String datasetId) => authNotifier.isFavorite(datasetId);
+  Future<void> toggleFavorite(String datasetId) =>
+      authNotifier.toggleFavorite(datasetId);
+  Future<void> addRecent(String datasetId) => authNotifier.addRecent(datasetId);
+  Future<void> updateUserProfile(UserProfile profile) =>
+      authNotifier.updateUserProfile(profile);
+  Future<void> signInWithGoogle() => authNotifier.signInWithGoogle();
+  Future<void> signOut() => authNotifier.signOut();
+  void setGuestMode(bool enabled) => authNotifier.setGuestMode(enabled);
 
-    try {
-      final url = Uri.parse('$functionsBaseUrl/manualApiHealthCheck');
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
-      AppLogger.info(
-        'Manual API health check triggered. Status: ${response.statusCode}',
-      );
-    } catch (e) {
-      AppLogger.error('Failed to trigger API health check', e);
-    }
-  }
-
+  // Delegated Methods for TelemetryNotifier
+  int getRequestCount(String id) => telemetryNotifier.getRequestCount(id);
+  Future<void> triggerApiHealthCheck() =>
+      telemetryNotifier.triggerApiHealthCheck();
   Future<bool> requestDatasetActivation(
     String datasetId,
     String datasetTitle,
-  ) async {
-    AppLogger.info(
-      'Requesting dataset activation for datasetId: $datasetId ($datasetTitle)',
-    );
-    if (isTesting) {
-      _datasetRequestCounts[datasetId] =
-          (_datasetRequestCounts[datasetId] ?? 0) + 1;
-      notifyListeners();
-      return true;
-    }
-
-    if (!isFirebaseInitialized) {
-      AppLogger.warning(
-        'Firebase is not initialized. Skipping dataset activation request.',
-      );
-      return false;
-    }
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      String? uid = user?.uid;
-      if (uid == null) {
-        AppLogger.info(
-          'No authenticated user. Attempting anonymous sign-in for request registration',
-        );
-        final authResult = await FirebaseAuth.instance.signInAnonymously();
-        uid = authResult.user?.uid;
-      }
-
-      if (uid == null) {
-        AppLogger.warning(
-          'Anonymous sign-in failed. Cannot record activation vote.',
-        );
-        return false;
-      }
-
-      final voteRef = FirebaseFirestore.instance
-          .collection('dataset_requests')
-          .doc(datasetId)
-          .collection('votes')
-          .doc(uid);
-
-      final voteSnap = await voteRef.get();
-      if (voteSnap.exists) {
-        AppLogger.info(
-          'User $uid has already registered a vote for dataset: $datasetId',
-        );
-        return false;
-      }
-
-      // Write transaction
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final requestRef = FirebaseFirestore.instance
-            .collection('dataset_requests')
-            .doc(datasetId);
-
-        final requestSnap = await transaction.get(requestRef);
-
-        transaction.set(voteRef, {'votedAt': FieldValue.serverTimestamp()});
-
-        if (requestSnap.exists) {
-          final currentCount =
-              (requestSnap.data()?['requestCount'] as num? ?? 0).toInt();
-          AppLogger.info(
-            'Incrementing requestCount for dataset $datasetId to ${currentCount + 1}',
-          );
-          transaction.update(requestRef, {
-            'requestCount': currentCount + 1,
-            'lastRequestedAt': FieldValue.serverTimestamp(),
-          });
-        } else {
-          AppLogger.info('Initializing requestCount for dataset $datasetId');
-          transaction.set(requestRef, {
-            'datasetId': datasetId,
-            'datasetTitle': datasetTitle,
-            'requestCount': 1,
-            'lastRequestedAt': FieldValue.serverTimestamp(),
-          });
-        }
-      });
-
-      AppLogger.info(
-        'Successfully registered activation request for dataset: $datasetId',
-      );
-      return true;
-    } catch (e) {
-      AppLogger.error('Error casting vote for dataset: $datasetId', e);
-      return false;
-    }
-  }
-
-  String get functionsBaseUrl {
-    const String projectId = 'demo-plainsightil';
-    const String region = 'us-central1';
-
-    if (isTesting) {
-      return 'http://127.0.0.1:$functionsPort/$projectId/$region';
-    }
-
-    final bool isAndroid =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
-    return 'http://$host:$functionsPort/$projectId/$region';
-  }
-
-  Future<Map<String, dynamic>> triggerManualSync(String datasetId) async {
-    AppLogger.info('Triggering manual sync for dataset: $datasetId');
-
-    // Immediately set local status to syncing to eliminate visual latency
-    final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
-    _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'syncing'};
-    notifyListeners();
-
-    if (isTesting) {
-      await Future<void>.delayed(const Duration(seconds: 1));
-      // Simulate success and update local state to idle with updated count
-      _datasetMetadataMap[datasetId] = {
-        ...localMeta,
-        'status': 'idle',
-        'recordCount': 10000,
-        'lastUpdated': DateTime.now().toUtc().toIso8601String(),
-      };
-      notifyListeners();
-      return {
-        'success': true,
-        'message': 'Sync completed successfully',
-        'count': 10000,
-      };
-    }
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      String? token;
-      if (user != null) {
-        token = await user.getIdToken();
-      }
-
-      String functionName;
-      if (datasetId == '8935c8e5-ec77-421f-af86-d970583195f8') {
-        functionName = 'manualSyncAntennas';
-      } else if (datasetId == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
-        functionName = 'manualSyncPermitApps';
-      } else if (datasetId == 'd8715392-287f-49b7-9ae3-f21ec5bf55f3') {
-        functionName = 'manualSyncCompaniesLiquidation';
-      } else if (datasetId == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
-        functionName = 'manualSyncDoctorsLicenses';
-      } else {
-        throw Exception('Unknown dataset ID: $datasetId');
-      }
-
-      final url = Uri.parse('$functionsBaseUrl/$functionName');
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data =
-            jsonDecode(response.body) as Map<String, dynamic>;
-        return {
-          'success': true,
-          'message': data['message'] ?? 'Sync completed successfully',
-          'count': data['count'] ?? 0,
-        };
-      } else {
-        final Map<String, dynamic> data =
-            jsonDecode(response.body) as Map<String, dynamic>;
-        final String errorMessage =
-            (data['error'] ?? data['message'] ?? 'Failed to trigger sync')
-                .toString();
-
-        // Reset local status to error
-        _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
-        notifyListeners();
-
-        return {'success': false, 'message': errorMessage};
-      }
-    } catch (e) {
-      AppLogger.error('Error triggering manual sync', e);
-      _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
-      notifyListeners();
-      return {'success': false, 'message': e.toString()};
-    }
-  }
+  ) => telemetryNotifier.requestDatasetActivation(datasetId, datasetTitle);
+  Future<Map<String, dynamic>> triggerManualSync(String datasetId) =>
+      telemetryNotifier.triggerManualSync(datasetId);
 
   Future<void> updateDatasetScheduler(
     String datasetId, {
@@ -1445,6 +268,7 @@ class AppStateNotifier extends ChangeNotifier {
     }
   }
 
+  // Global layout and localization helper methods
   TextDirection get textDirection =>
       _locale == 'he' ? TextDirection.rtl : TextDirection.ltr;
 
@@ -1473,17 +297,22 @@ class AppStateNotifier extends ChangeNotifier {
 
   @override
   void dispose() {
-    _permitSubscription?.cancel();
-    _permitMetadataSubscription?.cancel();
-    _antennaSubscription?.cancel();
-    _directorySubscription?.cancel();
-    _requestsSubscription?.cancel();
-    _liquidationSubscription?.cancel();
-    _doctorsSubscription?.cancel();
-    _adminMetadataSubscription?.cancel();
-    _profileSubscription?.cancel();
-    _apiHealthSubscription?.cancel();
-    _scraperRunsSubscription?.cancel();
+    _isDisposed = true;
+    authNotifier.removeListener(_onSubNotifierChanged);
+    antennasNotifier.removeListener(_onSubNotifierChanged);
+    permitsNotifier.removeListener(_onSubNotifierChanged);
+    liquidationNotifier.removeListener(_onSubNotifierChanged);
+    doctorsNotifier.removeListener(_onSubNotifierChanged);
+    bankAtmsNotifier.removeListener(_onSubNotifierChanged);
+    telemetryNotifier.removeListener(_onSubNotifierChanged);
+
+    authNotifier.dispose();
+    antennasNotifier.dispose();
+    permitsNotifier.dispose();
+    liquidationNotifier.dispose();
+    doctorsNotifier.dispose();
+    bankAtmsNotifier.dispose();
+    telemetryNotifier.dispose();
     super.dispose();
   }
 
@@ -1504,6 +333,7 @@ class AppStateNotifier extends ChangeNotifier {
       'towers_active_label': 'Active Towers',
       'towers_permit_label': 'Construction Permits',
       'towers_search_placeholder': 'Search by Locality or Site ID',
+      'antenna_id_prefix': 'ID: ',
       'permit_ref_prefix': 'Ref: #',
       'permit_submitted': 'Submitted: ',
       'permit_locality': 'Locality: ',
@@ -1562,6 +392,10 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'Licensed / Active',
       'doctor_unlicensed': 'Muted / Inactive',
       'doctors_publisher': 'Ministry of Health - Medical Professions Registry',
+      'atm_title': 'Bank ATMs',
+      'atm_desc': 'ATM locations across Israel from the Bank of Israel.',
+      'atm_search_placeholder': 'Search by city or bank...',
+      'atm_publisher': 'Bank of Israel',
       'trustee_publisher': 'Ministry of Justice - Corporations Authority',
       'filter_all': 'All',
       'filter_active': 'Supported',
@@ -1666,6 +500,7 @@ class AppStateNotifier extends ChangeNotifier {
       'towers_active_label': 'אנטנות פעילות',
       'towers_permit_label': 'היתרי הקמה',
       'towers_search_placeholder': 'חפש לפי יישוב או מספר אתר',
+      'antenna_id_prefix': 'מזהה: ',
       'permit_ref_prefix': 'סימוכין: ',
       'permit_submitted': 'תאריך הגשה: ',
       'permit_locality': 'יישוב: ',
@@ -1723,6 +558,10 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'מורשה / פעיל',
       'doctor_unlicensed': 'לא מורשה',
       'doctors_publisher': 'משרד הבריאות - האגף לרישוי מקצועות רפואיים',
+      'atm_title': 'כספומטים',
+      'atm_desc': 'מיקומי כספומטים בנקאיים ברחבי ישראל.',
+      'atm_search_placeholder': 'חיפוש לפי עיר או בנק...',
+      'atm_publisher': 'בנק ישראל',
       'trustee_publisher': 'משרד המשפטים - רשות התאגידים',
       'filter_all': 'הכל',
       'filter_active': 'נתמכים',
@@ -1814,39 +653,8 @@ class AppStateNotifier extends ChangeNotifier {
     },
   };
 
-  /// Translate a key using the current locale
+  /// Translate a key using the current locale.
   String translate(String key) {
     return _localizedStrings[_locale]?[key] ?? key;
-  }
-}
-
-/// A Mock User Profile Repository used in testing and offline environments.
-class _MockUserProfileRepository implements UserProfileRepository {
-  final _controller = StreamController<UserProfile?>.broadcast();
-  UserProfile? _currentProfile;
-
-  _MockUserProfileRepository() {
-    _currentProfile = UserProfile(
-      uid: 'mock_uid',
-      firstName: 'Assaf',
-      lastName: 'Benzaken',
-      email: 'assaf@plainsight.il',
-      role: 'user',
-      createdAt: DateTime(2026, 6, 1),
-      updatedAt: DateTime(2026, 6, 1),
-    );
-    _controller.add(_currentProfile);
-  }
-
-  @override
-  Stream<UserProfile?> getUserProfile(String uid) async* {
-    yield _currentProfile;
-    yield* _controller.stream;
-  }
-
-  @override
-  Future<void> updateUserProfile(UserProfile profile) async {
-    _currentProfile = profile;
-    _controller.add(profile);
   }
 }

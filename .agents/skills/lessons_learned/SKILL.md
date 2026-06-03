@@ -35,11 +35,13 @@ If a pitfall or hurdle can be prevented by refining the codebase documentation o
 - **Coding Standards**: Update `.ai_context/coding_standards.md` if the styling guidelines, testing thresholds, or naming conventions need clarification.
 - **Quality Gates**: Update `.ai_context/quality_gates.md` if any gate requirements need enhancement.
 - **Contributing Guidelines**: Update `CONTRIBUTING.md` if onboarding or CLI workflows require updates.
+- **Context & Documentation Maintenance**: Audit and update [docs/lessons_learned.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/lessons_learned.md) to record cumulative lessons learned, structural issues resolved, or process improvements from the current development cycle.
 
 ### 4. Clean Up and Refactor Code
 - Review the modified files and git diff for this issue branch.
 - Look for minor issues that do not block QA but can be improved:
   - Missing comments or docstrings on newly introduced classes/methods. Explicitly verify that the code complies with the in-code documentation standards defined in [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards) and add any missing doc comments (three-slash `///` in Dart or JSDoc in TS).
+  - **Quality Gates and Coverage Gaps**: Review test files and coverage reports. Identify any untested edge cases or code branches, write supplementary tests to close any gaps, and ensure coverage meets the strict quality gates (90%+ for Domain/Data, 100% for state notifier flows).
   - Lint or static analysis warnings.
   - Hardcoded styling strings/colors that should use predefined tokens.
 - Apply minor refactoring and code cleanup directly using code modification tools to ensure the codebase remains in an immaculate state.

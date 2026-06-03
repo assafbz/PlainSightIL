@@ -59,6 +59,14 @@ while read -r file; do
   fi
 done <<< "$CHANGED_FILES"
 
+# ----------------- TEST EXISTENCE CHECK -----------------
+if [ "$RUN_CLIENT" = true ] || [ "$RUN_BACKEND" = true ]; then
+  echo "🔍 Verifying test existence for modified files..."
+  if ! node "$PROJECT_ROOT/scripts/check-test-existence.js"; then
+    exit 1
+  fi
+fi
+
 # ----------------- CLIENT (FLUTTER) CHECKS -----------------
 if [ "$RUN_CLIENT" = true ]; then
   echo "📱 Detected changes in 'client/'. Executing quality checks..."
@@ -76,9 +84,15 @@ if [ "$RUN_CLIENT" = true ]; then
     exit 1
   fi
   
-  echo "   [3/3] Running Flutter unit & widget tests..."
-  if ! flutter test; then
+  echo "   [3/3] Running Flutter unit & widget tests with coverage..."
+  if ! flutter test --coverage; then
     echo "🛑 ERROR: Flutter unit tests failed."
+    exit 1
+  fi
+  
+  echo "   [4/4] Verifying client coverage thresholds..."
+  if ! node "$PROJECT_ROOT/scripts/check-coverage-thresholds.js" --client; then
+    echo "🛑 ERROR: Client coverage threshold validation failed."
     exit 1
   fi
   
@@ -108,13 +122,19 @@ if [ "$RUN_BACKEND" = true ]; then
     exit 1
   fi
   
-  echo "   [3/5] Running backend unit tests..."
-  if ! npm run test; then
+  echo "   [3/5] Running backend unit tests with coverage..."
+  if ! npm run test:coverage; then
     echo "🛑 ERROR: Backend unit tests failed."
     exit 1
   fi
 
-  echo "   [4/5] Testing TypeScript compilation..."
+  echo "   [4/5] Verifying backend coverage thresholds..."
+  if ! node "$PROJECT_ROOT/scripts/check-coverage-thresholds.js" --backend; then
+    echo "🛑 ERROR: Backend coverage threshold validation failed."
+    exit 1
+  fi
+
+  echo "   [5/5] Testing TypeScript compilation..."
   if ! npm run build; then
     echo "🛑 ERROR: TypeScript compilation failed."
     exit 1

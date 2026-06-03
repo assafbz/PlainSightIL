@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -11,7 +11,8 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov"
   },
   "engines": {
     "node": "22"
@@ -28,6 +29,7 @@
     "@eslint/js": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^8.60.1",
     "@typescript-eslint/parser": "^8.60.1",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^10.4.1",
     "prettier": "^3.8.3",
     "rimraf": "^6.1.3",

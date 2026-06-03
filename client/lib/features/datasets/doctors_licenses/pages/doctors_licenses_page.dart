@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import '../data/models/doctor_license_model.dart';
 import '../widgets/doctor_detail_drawer.dart';
 
@@ -18,6 +19,7 @@ class DoctorsLicensesScreen extends StatefulWidget {
 
 class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   String _selectedSpecialty = 'All'; // 'All' represents no specialty filtering
 
@@ -25,11 +27,14 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
   void initState() {
     super.initState();
     // Register the dataset in recent history
-    widget.appState.addRecent('9c64c522-bbc2-48fe-96fb-3b2a8626f59e');
+    widget.appState.addRecent(DatasetIds.doctorsLicenses);
+    widget.appState.initDoctorsListener();
   }
 
   @override
   void dispose() {
+    widget.appState.cancelDoctorsListener();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -201,7 +206,7 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                         listenable: widget.appState,
                         builder: (context, _) {
                           final isFav = widget.appState.isFavorite(
-                            '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+                            DatasetIds.doctorsLicenses,
                           );
                           return IconButton(
                             icon: Icon(
@@ -211,7 +216,7 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                                   : AppColors.textSecondary,
                             ),
                             onPressed: () => widget.appState.toggleFavorite(
-                              '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+                              DatasetIds.doctorsLicenses,
                             ),
                           );
                         },
@@ -325,6 +330,7 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                         }
 
                         return ListView.builder(
+                          controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
                           itemCount: list.length,
                           itemBuilder: (context, index) {

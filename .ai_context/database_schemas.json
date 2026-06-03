@@ -97,10 +97,15 @@
           "format": "date-time",
           "description": "ISO timestamp of document ingestion."
         },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of database document modification."
+        },
         "lastUpdated": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of last document modification."
+          "description": "ISO timestamp of source metadata last modification."
         }
       },
       "required": [
@@ -165,10 +170,20 @@
           "type": "string",
           "description": "Calculated geohash for proximity indexing."
         },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of document ingestion."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of database document modification."
+        },
         "lastUpdated": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp when the scraper updated this record."
+          "description": "ISO timestamp of source metadata last modification."
         }
       },
       "required": [
@@ -363,6 +378,16 @@
           "type": "string",
           "format": "date-time",
           "description": "ISO timestamp of document ingestion."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of database document modification."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of source metadata last modification."
         }
       },
       "required": [
@@ -375,6 +400,78 @@
         "liquidationOrderDate",
         "districtCourt",
         "cityOfActivity",
+        "createdAt",
+        "updatedAt",
+        "lastUpdated"
+      ]
+    },
+    "doctors_licenses": {
+      "description": "List of doctors holding medical practice licenses in Israel.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the doctor record (matches doc ID)."
+        },
+        "_id": {
+          "type": "integer",
+          "description": "Numeric primary key from the government datastore."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the doctor in Hebrew."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the doctor in Hebrew."
+        },
+        "licenseNumber": {
+          "type": "integer",
+          "description": "Official medical license number."
+        },
+        "licenseRegistrationDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the license was registered."
+        },
+        "specialtyCertificateNumber": {
+          "type": ["integer", "null"],
+          "description": "Official medical specialty certificate number, or null."
+        },
+        "specialtyRegistrationDate": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "ISO timestamp of specialty registration, or null."
+        },
+        "specialtyName": {
+          "type": ["string", "null"],
+          "description": "Name of the medical specialty in Hebrew, or null."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of document ingestion."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of database document modification."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of source metadata last modification."
+        }
+      },
+      "required": [
+        "id",
+        "_id",
+        "firstName",
+        "lastName",
+        "licenseNumber",
+        "licenseRegistrationDate",
+        "createdAt",
+        "updatedAt",
         "lastUpdated"
       ]
     }

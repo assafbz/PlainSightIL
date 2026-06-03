@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
+import '../../../../core/constants/dataset_ids.dart';
 
 /// A premium, responsive Admin Dashboard page to view and manage supported datasets.
 /// Follows the Slate Dark mode style guide with glassmorphism overlays and logical mirroring.
@@ -35,6 +36,7 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   void dispose() {
+    widget.appState.cancelAdminMetadataListener();
     _searchController.dispose();
     super.dispose();
   }
@@ -115,39 +117,47 @@ class _AdminPageState extends State<AdminPage> {
       );
     }
 
-    // Hardcoded dataset metadata declarations that are active on the client
+    // Central dataset metadata declarations that are active on the client
     final List<Map<String, String>> datasetsSpec = [
       {
-        'id': '8935c8e5-ec77-421f-af86-d970583195f8',
+        'id': DatasetIds.cellularAntennas,
         'titleEn': 'Cellular Antennas',
         'titleHe': 'אנטנות סלולריות פעילות',
-        'resourceId': '8935c8e5-ec77-421f-af86-d970583195f8',
+        'resourceId': DatasetIds.cellularAntennas,
         'agencyEn': 'Ministry of Environmental Protection',
         'agencyHe': 'המשרד להגנת הסביבה',
       },
       {
-        'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
+        'id': DatasetIds.cellularPermits,
         'titleEn': 'Cellular Permit Applications',
         'titleHe': 'בקשות להיתרי הקמה של אנטנות',
-        'resourceId': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
+        'resourceId': DatasetIds.cellularPermits,
         'agencyEn': 'Ministry of Environmental Protection',
         'agencyHe': 'המשרד להגנת הסביבה',
       },
       {
-        'id': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+        'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies in Liquidation',
         'titleHe': 'מאגר הכונס הרשמי',
-        'resourceId': 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
+        'resourceId': DatasetIds.companiesLiquidation,
         'agencyEn': 'Ministry of Justice - Corporations Authority',
         'agencyHe': 'משרד המשפטים - רשות התאגידים',
       },
       {
-        'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+        'id': DatasetIds.doctorsLicenses,
         'titleEn': 'Doctors Licenses',
         'titleHe': 'רישיונות רופאים',
-        'resourceId': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+        'resourceId': DatasetIds.doctorsLicenses,
         'agencyEn': 'Ministry of Health',
         'agencyHe': 'משרד הבריאות',
+      },
+      {
+        'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'titleEn': 'Bank ATMs',
+        'titleHe': 'כספומטים',
+        'resourceId': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'agencyEn': 'Bank of Israel',
+        'agencyHe': 'בנק ישראל',
       },
     ];
 
@@ -1010,24 +1020,29 @@ class _AdminPageState extends State<AdminPage> {
 
     final List<Map<String, String>> specs = [
       {
-        'id': '8935c8e5-ec77-421f-af86-d970583195f8',
+        'id': DatasetIds.cellularAntennas,
         'titleEn': 'Cellular Antennas',
         'titleHe': 'אנטנות סלולריות פעילות',
       },
       {
-        'id': 'ff398c7e-c522-4ee8-a53a-312b188a573d',
+        'id': DatasetIds.cellularPermits,
         'titleEn': 'Cellular Permits',
         'titleHe': 'בקשות להיתרי הקמה',
       },
       {
-        'id': 'companies_liquidation',
+        'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies Liquidation',
         'titleHe': 'מאגר הכונס הרשמי',
       },
       {
-        'id': '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
+        'id': DatasetIds.doctorsLicenses,
         'titleEn': 'Doctors Licenses',
         'titleHe': 'רישיונות רופאים',
+      },
+      {
+        'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'titleEn': 'Bank ATMs',
+        'titleHe': 'כספומטים',
       },
       {
         'id': 'datasets_metadata',
@@ -1193,22 +1208,48 @@ class _AdminPageState extends State<AdminPage> {
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await widget.appState.triggerApiHealthCheck();
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(widget.appState.translate('check_now')),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: AppColors.onPrimary,
-                  backgroundColor: AppColors.primary.withAlpha(30),
-                  shadowColor: Colors.transparent,
+              child: OutlinedButton.icon(
+                onPressed: widget.appState.isCheckingApiHealth
+                    ? null
+                    : () async {
+                        await widget.appState.triggerApiHealthCheck();
+                      },
+                icon: widget.appState.isCheckingApiHealth
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  widget.appState.isCheckingApiHealth
+                      ? widget.appState.translate('checking')
+                      : widget.appState.translate('check_now'),
+                  style: AppTypography.labelXs(
+                    context,
+                    color: widget.appState.isCheckingApiHealth
+                        ? AppColors.textTertiary
+                        : AppColors.primary,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  backgroundColor: widget.appState.isCheckingApiHealth
+                      ? AppColors.surfaceLow
+                      : AppColors.primary.withAlpha(15),
+                  side: BorderSide(
+                    color: widget.appState.isCheckingApiHealth
+                        ? AppColors.glassBorder
+                        : AppColors.primary.withAlpha(80),
+                    width: 1.5,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
-                    side: BorderSide(
-                      color: AppColors.primary.withAlpha(60),
-                      width: 1.5,
-                    ),
                   ),
                 ),
               ),

@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ void main() {
     late AppStateNotifier appState;
 
     setUp(() {
+      AppStateNotifier.isTesting = false;
       appState = AppStateNotifier();
     });
 
@@ -130,6 +132,9 @@ void main() {
 
     test('initAntennaListener initializes antennas in testing mode', () {
       AppStateNotifier.isTesting = true;
+      print(
+        'DEBUG: AppStateNotifier.isTesting = ${AppStateNotifier.isTesting}, antennaRecords = ${appState.antennaRecords}',
+      );
       expect(appState.antennaRecords.isEmpty, true);
       expect(appState.isLoadingAntennas, true);
 
@@ -214,6 +219,94 @@ void main() {
       expect(appState.userProfile?.firstName, 'NewFirstName');
       expect(appState.userProfile?.lastName, 'NewLastName');
       expect(listenerCalled, isTrue);
+    });
+
+    test('delegated getters and methods in testing mode', () async {
+      AppStateNotifier.isTesting = true;
+      final appState = AppStateNotifier();
+
+      expect(appState.currentUser, isNull);
+      expect(appState.isAuthenticated, isTrue);
+      expect(appState.isGuestMode, isFalse);
+      expect(appState.isAdmin, isTrue);
+      expect(appState.favorites, isEmpty);
+      expect(appState.recents, isEmpty);
+      expect(appState.mockUser, isNotNull);
+
+      expect(appState.isLoadingAntennas, isTrue);
+      expect(appState.isLoadingPermits, isTrue);
+      expect(appState.permitSyncStatus, 'idle');
+      expect(appState.isLoadingLiquidation, isTrue);
+      expect(appState.isLoadingDoctors, isTrue);
+
+      appState.initPermitMetadataListener();
+      expect(appState.isLoadingAntennas, isFalse);
+      expect(appState.isLoadingPermits, isFalse);
+
+      appState.initAdminMetadataListener();
+      appState.initDirectoryListener();
+      appState.initLiquidationListener();
+      appState.initDoctorsListener();
+      appState.initTelemetryListeners();
+
+      expect(appState.isLoadingAdminMetadata, isFalse);
+      expect(appState.isLoadingTelemetry, isFalse);
+      expect(appState.isLoadingDirectory, isFalse);
+
+      expect(appState.antennaRecords.isNotEmpty, isTrue);
+      expect(appState.permitRecords.isNotEmpty, isTrue);
+      expect(appState.liquidationRecords.isNotEmpty, isTrue);
+      expect(appState.doctorRecords.isNotEmpty, isTrue);
+      expect(appState.datasetMetadataMap.isNotEmpty, isTrue);
+      expect(appState.apiHealth.isNotEmpty, isTrue);
+      expect(appState.scraperRuns.isNotEmpty, isTrue);
+      expect(appState.directoryRecords.isNotEmpty, isTrue);
+
+      expect(appState.isFavorite('test-dataset'), isFalse);
+      await appState.toggleFavorite('test-dataset');
+      expect(appState.isFavorite('test-dataset'), isTrue);
+      await appState.toggleFavorite('test-dataset');
+      expect(appState.isFavorite('test-dataset'), isFalse);
+
+      // Force context run of addPostFrameCallback inside a widgets binding test environment
+      await appState.addRecent('test-dataset');
+      expect(appState.recents.contains('test-dataset'), isTrue);
+
+      appState.setGuestMode(true);
+      expect(appState.isGuestMode, isTrue);
+
+      await appState.signInWithGoogle();
+      expect(appState.isAuthenticated, isTrue);
+
+      AppStateNotifier.isTesting = false;
+      await appState.signOut();
+      expect(appState.isAuthenticated, isFalse);
+      expect(appState.isGuestMode, isFalse);
+
+      AppStateNotifier.isTesting = true;
+
+      expect(appState.getRequestCount('government-budget-dataset-id'), 18);
+
+      expect(appState.isCheckingApiHealth, isFalse);
+      final checkFuture = appState.triggerApiHealthCheck();
+      expect(appState.isCheckingApiHealth, isTrue);
+      await checkFuture;
+      expect(appState.isCheckingApiHealth, isFalse);
+      expect(appState.apiHealth['isReachable'], isTrue);
+
+      final voteSuccess = await appState.requestDatasetActivation(
+        'some-dataset',
+        'Some Title',
+      );
+      expect(voteSuccess, isTrue);
+
+      final syncResult = await appState.triggerManualSync(
+        '8935c8e5-ec77-421f-af86-d970583195f8',
+      );
+      expect(syncResult['success'], isTrue);
+
+      appState.setMockProfile(null);
+      appState.dispose();
     });
   });
 }
