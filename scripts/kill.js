@@ -6,6 +6,7 @@ console.log(`🔍 Locating and terminating PlainSightIL processes (offset: ${off
 const ports = [
   process.env.FIRESTORE_PORT ? parseInt(process.env.FIRESTORE_PORT, 10) : (8081 + offset),
   process.env.AUTH_PORT ? parseInt(process.env.AUTH_PORT, 10) : (9099 + offset),
+  process.env.PUBSUB_PORT ? parseInt(process.env.PUBSUB_PORT, 10) : (8085 + offset),
   process.env.FUNCTIONS_PORT ? parseInt(process.env.FUNCTIONS_PORT, 10) : (5002 + offset),
   process.env.EMULATOR_UI_PORT ? parseInt(process.env.EMULATOR_UI_PORT, 10) : (4001 + offset),
   process.env.CLIENT_PORT ? parseInt(process.env.CLIENT_PORT, 10) : (8080 + offset)

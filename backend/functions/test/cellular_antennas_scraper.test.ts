@@ -276,7 +276,7 @@ describe("Scraper and Sync Ingestion", () => {
     const initialCreatedAt = "2026-05-01T12:00:00.000Z";
 
     const rawRecord = {
-      ID: "6793",
+      מזהה: "6793",
       X_ITM: 255812,
       Y_ITM: 732929,
       חברה: "פלאפון",
@@ -325,7 +325,7 @@ describe("Scraper and Sync Ingestion", () => {
     const initialLastUpdated = "2026-05-01T12:00:00.000Z";
 
     const rawRecord = {
-      ID: "6793",
+      מזהה: "6793",
       X_ITM: 255812,
       Y_ITM: 732929,
       חברה: "פלאפון",
@@ -381,7 +381,7 @@ describe("Scraper and Sync Ingestion", () => {
     const initialLastUpdated = "2026-05-01T12:00:00.000Z";
 
     const rawRecord = {
-      ID: "6793",
+      מזהה: "6793",
       X_ITM: 255812,
       Y_ITM: 732929,
       חברה: "פלאפון",

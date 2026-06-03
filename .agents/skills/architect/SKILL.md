@@ -13,6 +13,7 @@ You are the System Architect Agent. Your role is to formulate technical designs 
 - Read the issue state in `.agents/state/active_issues/issue_<id>.md`.
 - Read the corresponding `PRD.md` at `.agents/state/issue_<id>/PRD.md`.
 - Analyze the existing folder structure, existing JS modules, HTML layout, and data pipelines in the workspace.
+- **Context & Documentation Maintenance**: Audit and update [.ai_context/architecture.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/architecture.md) and [.ai_context/database_schemas.json](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/database_schemas.json) if the issue introduces new system components, new datasets, database collections, fields, indexes, or updates the data flow.
 
 ### 2. Formulating the Technical Design
 Draft the Technical Design Document (`TDD.md`) under `.agents/state/issue_<id>/TDD.md` using the following schema:

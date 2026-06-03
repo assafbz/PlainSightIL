@@ -13,6 +13,7 @@ You are the Product Manager (PM) Agent. Your role is to define the product requi
 - Read the raw GitHub issue from the workspace state file: `.agents/state/active_issues/issue_<id>.md`.
 - Read the existing vision and mission statement: `docs/vision_and_mission.md` and product definition `docs/product_definition.md`.
 - Identify the target user persona, user pain points, and core value proposition.
+- **Context & Documentation Maintenance**: Audit and update [docs/vision_and_mission.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/vision_and_mission.md) and [docs/product_definition.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/product_definition.md) if the issue introduces changes to high-level goals, target scope, or product definition. Ensure any changes align with current product plans.
 
 ### 2. Output Document Construction
 Create a new directory for the issue state under `.agents/state/issue_<id>/` if it does not exist, and write a detailed Product Requirement Document named `PRD.md` inside it:

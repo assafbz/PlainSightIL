@@ -153,6 +153,7 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
 ### 1. Test Planning
 - Read `PRD.md` to identify functional requirements (e.g. `FR-01`).
 - Read the codebase diff or modified files.
+- **Context & Documentation Maintenance**: Audit and update [docs/e2e_test_specification.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/e2e_test_specification.md) if the issue introduces new visual components, user workflows, testing scenarios, tools, configurations, or changes in the E2E verification matrix.
 - Formulate a test matrix covering:
   - Happy paths.
   - Edge cases (empty states, missing API data, zero values, long strings).
