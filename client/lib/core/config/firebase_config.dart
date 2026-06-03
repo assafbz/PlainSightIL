@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 const FirebaseOptions localFirebaseOptions = FirebaseOptions(
   apiKey: String.fromEnvironment(
     'FIREBASE_API_KEY',
-    defaultValue: 'mock-api-key-for-local-emulator',
+    defaultValue: 'AIzaSyMockApiKeyForLocalEmulator_33char',
   ),
   authDomain: 'demo-plainsightil.firebaseapp.com',
   appId: 'demo-app-id',

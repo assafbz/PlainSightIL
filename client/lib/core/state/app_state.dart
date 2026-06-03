@@ -62,6 +62,7 @@ class AppStateNotifier extends ChangeNotifier {
   List<String> get recents => authNotifier.recents;
   UserProfile? get userProfile => authNotifier.userProfile;
   Map<String, String>? get mockUser => authNotifier.mockUser;
+  bool get isFirebaseInitialized => authNotifier.isFirebaseInitialized;
 
   // Delegated Getters for AntennasNotifier
   List<Map<String, dynamic>> get antennaRecords =>
