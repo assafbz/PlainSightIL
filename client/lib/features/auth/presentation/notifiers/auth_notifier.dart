@@ -133,10 +133,10 @@ class AuthNotifier extends ChangeNotifier {
   /// Sets the mock user profile (available only in testing mode).
   void setMockProfile(UserProfile? profile) {
     if (!_isTesting) return;
-    if (_profileRepository is _MockUserProfileRepository) {
-      final mockRepo = _profileRepository as _MockUserProfileRepository;
-      mockRepo._currentProfile = profile;
-      mockRepo._controller.add(profile);
+    final repo = _profileRepository;
+    if (repo is _MockUserProfileRepository) {
+      repo._currentProfile = profile;
+      repo._controller.add(profile);
       _userProfile = profile;
       notifyListeners();
     }

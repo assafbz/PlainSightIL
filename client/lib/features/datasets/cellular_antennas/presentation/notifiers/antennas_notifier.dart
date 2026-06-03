@@ -54,15 +54,13 @@ class AntennasNotifier extends ChangeNotifier {
       _isLoadingAntennas = true;
       _antennaSubscription = testFirestoreStream!.listen(
         (snapshot) {
-          _antennaRecords = snapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
+          _antennaRecords = snapshot.docs.map((doc) => doc.data()).toList();
           _isLoadingAntennas = false;
-          notifyListeners();
+          scheduleMicrotask(() => notifyListeners());
         },
         onError: (Object err) {
           _isLoadingAntennas = false;
-          notifyListeners();
+          scheduleMicrotask(() => notifyListeners());
           AppLogger.error('Firestore antenna collection listener error', err);
         },
       );
@@ -104,19 +102,22 @@ class AntennasNotifier extends ChangeNotifier {
         },
       ];
       _isLoadingAntennas = false;
-      notifyListeners();
+      scheduleMicrotask(() => notifyListeners());
       return;
     }
 
     if (!isFirebaseInitialized) {
       _isLoadingAntennas = false;
-      notifyListeners();
+      scheduleMicrotask(() => notifyListeners());
       return;
     }
 
     AppLogger.info(
       'Initializing cellular antennas listener in AntennasNotifier',
     );
+    _isLoadingAntennas = true;
+    scheduleMicrotask(() => notifyListeners());
+
     try {
       _antennaSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('8935c8e5-ec77-421f-af86-d970583195f8')
@@ -139,15 +140,35 @@ class AntennasNotifier extends ChangeNotifier {
     } catch (e) {
       _isLoadingAntennas = false;
       notifyListeners();
-      AppLogger.error(
-        'Failed to bind Firestore antennas in AntennasNotifier',
-        e,
-      );
+      AppLogger.error('Failed to initialize antennas listener', e);
+    }
+  }
+
+  /// Cancels any active stream subscription and resets state flags.
+  void cancelAntennaListener() {
+    _antennaSubscription?.cancel();
+    _antennaSubscription = null;
+    _isLoadingAntennas = true;
+    _antennaRecords = [];
+    notifyListeners();
+  }
+
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      scheduleMicrotask(() {
+        if (!_isDisposed) {
+          super.notifyListeners();
+        }
+      });
     }
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     _antennaSubscription?.cancel();
     super.dispose();
   }

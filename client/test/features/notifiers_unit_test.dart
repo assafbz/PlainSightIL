@@ -1,3 +1,4 @@
+// ignore_for_file: subtype_of_sealed_class, inference_failure_on_function_return_type, unused_import, depend_on_referenced_packages, prefer_initializing_formals, unnecessary_non_null_assertion, unused_local_variable, unawaited_futures, close_sinks
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -115,8 +116,14 @@ class FakeUserProfileRepository implements UserProfileRepository {
 
 // Fake HTTP Client
 class FakeHttpClient implements http.Client {
-  final Function(Uri, {Map<String, String>? headers})? onGet;
-  final Function(Uri, {Object? body, Map<String, String>? headers})? onPost;
+  final FutureOr<http.Response> Function(Uri, {Map<String, String>? headers})?
+  onGet;
+  final FutureOr<http.Response> Function(
+    Uri, {
+    Object? body,
+    Map<String, String>? headers,
+  })?
+  onPost;
 
   FakeHttpClient({this.onGet, this.onPost});
 

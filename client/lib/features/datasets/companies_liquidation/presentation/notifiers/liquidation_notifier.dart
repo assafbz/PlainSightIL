@@ -16,11 +16,6 @@ class LiquidationNotifier extends ChangeNotifier {
   List<LiquidationRecordModel> _liquidationRecords = [];
   bool _isLoadingLiquidation = true;
   StreamSubscription<QuerySnapshot>? _liquidationSubscription;
-  DocumentSnapshot? _lastLiquidationDoc;
-  bool _hasMoreLiquidation = true;
-  bool _isLoadingMoreLiquidation = false;
-
-  bool get isLoadingMoreLiquidation => _isLoadingMoreLiquidation;
 
   @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
@@ -61,11 +56,7 @@ class LiquidationNotifier extends ChangeNotifier {
       _liquidationSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _liquidationRecords = snapshot.docs
-              .map(
-                (doc) => LiquidationRecordModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                ),
-              )
+              .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
               .toList();
           _isLoadingLiquidation = false;
           notifyListeners();
@@ -131,84 +122,44 @@ class LiquidationNotifier extends ChangeNotifier {
     AppLogger.info(
       'Initializing companies liquidation listener in LiquidationNotifier',
     );
-    reloadLiquidation();
-  }
-
-  /// Fetches the first page of liquidation records, resetting pagination state.
-  Future<void> reloadLiquidation() async {
     _isLoadingLiquidation = true;
-    _lastLiquidationDoc = null;
-    _hasMoreLiquidation = true;
-    _isLoadingMoreLiquidation = false;
-    _liquidationRecords = [];
     notifyListeners();
 
     try {
-      final query = (testFirestore ?? FirebaseFirestore.instance)
+      _liquidationSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
-          .limit(50);
-      final snapshot = await query.get();
-      AppLogger.info(
-        'Companies liquidation first page fetched: ${snapshot.docs.length} records',
-      );
-      if (snapshot.docs.isNotEmpty) {
-        _lastLiquidationDoc = snapshot.docs.last;
-        _liquidationRecords = snapshot.docs
-            .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
-            .toList();
-        if (snapshot.docs.length < 50) {
-          _hasMoreLiquidation = false;
-        }
-      } else {
-        _hasMoreLiquidation = false;
-      }
+          .snapshots()
+          .listen(
+            (snapshot) {
+              _liquidationRecords = snapshot.docs
+                  .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
+                  .toList();
+              _isLoadingLiquidation = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingLiquidation = false;
+              notifyListeners();
+              AppLogger.error(
+                'Firestore liquidation collection listener error',
+                err,
+              );
+            },
+          );
     } catch (e) {
-      AppLogger.error('Failed to reload liquidation records', e);
-    } finally {
       _isLoadingLiquidation = false;
       notifyListeners();
+      AppLogger.error('Failed to initialize liquidation listener', e);
     }
   }
 
-  /// Fetches the next page of liquidation records using cursor pagination.
-  Future<void> loadMoreLiquidation() async {
-    if (_isLoadingMoreLiquidation ||
-        !_hasMoreLiquidation ||
-        _lastLiquidationDoc == null) {
-      return;
-    }
-
-    _isLoadingMoreLiquidation = true;
+  /// Cancels active liquidation subscriptions and resets paging states.
+  void cancelLiquidationListener() {
+    _liquidationSubscription?.cancel();
+    _liquidationSubscription = null;
+    _isLoadingLiquidation = true;
+    _liquidationRecords = [];
     notifyListeners();
-
-    try {
-      final query = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
-          .startAfterDocument(_lastLiquidationDoc!)
-          .limit(50);
-      final snapshot = await query.get();
-      AppLogger.info(
-        'Companies liquidation loaded more: ${snapshot.docs.length} records',
-      );
-
-      if (snapshot.docs.isNotEmpty) {
-        _lastLiquidationDoc = snapshot.docs.last;
-        final newRecords = snapshot.docs
-            .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
-            .toList();
-        _liquidationRecords.addAll(newRecords);
-        if (snapshot.docs.length < 50) {
-          _hasMoreLiquidation = false;
-        }
-      } else {
-        _hasMoreLiquidation = false;
-      }
-    } catch (e) {
-      AppLogger.error('Failed to load more liquidation records', e);
-    } finally {
-      _isLoadingMoreLiquidation = false;
-      notifyListeners();
-    }
   }
 
   bool _isDisposed = false;
@@ -216,7 +167,11 @@ class LiquidationNotifier extends ChangeNotifier {
   @override
   void notifyListeners() {
     if (!_isDisposed) {
-      super.notifyListeners();
+      scheduleMicrotask(() {
+        if (!_isDisposed) {
+          super.notifyListeners();
+        }
+      });
     }
   }
 

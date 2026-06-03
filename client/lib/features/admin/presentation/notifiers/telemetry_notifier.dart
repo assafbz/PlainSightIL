@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,7 +16,7 @@ class TelemetryNotifier extends ChangeNotifier {
   /// Local indicator if we are running in unit/widget mock testing mode.
   bool get _isTesting => AppStateNotifier.isTesting;
 
-  final int _functionsPort;
+  final int functionsPort;
 
   Map<String, Map<String, dynamic>> _datasetMetadataMap = {};
   bool _isLoadingAdminMetadata = true;
@@ -97,7 +96,7 @@ class TelemetryNotifier extends ChangeNotifier {
   /// Construct and initialize the TelemetryNotifier.
   TelemetryNotifier({
     bool isTesting = false,
-    int functionsPort = 5002,
+    this.functionsPort = 5002,
     this.testMetadataStream,
     this.testHealthStream,
     this.testScraperRunsStream,
@@ -106,7 +105,7 @@ class TelemetryNotifier extends ChangeNotifier {
     this.httpClient,
     this.testFirestore,
     this.testAuth,
-  }) : _functionsPort = functionsPort;
+  });
 
   /// Initialize real-time streams on dataset metadata.
   void initAdminMetadataListener() {
@@ -118,7 +117,7 @@ class TelemetryNotifier extends ChangeNotifier {
         (snapshot) {
           final Map<String, Map<String, dynamic>> newMap = {};
           for (final doc in snapshot.docs) {
-            newMap[doc.id] = doc.data() as Map<String, dynamic>;
+            newMap[doc.id] = doc.data();
           }
           _datasetMetadataMap = newMap;
           _isLoadingAdminMetadata = false;
@@ -231,9 +230,7 @@ class TelemetryNotifier extends ChangeNotifier {
       if (testScraperRunsStream != null) {
         _scraperRunsSubscription = testScraperRunsStream!.listen(
           (snapshot) {
-            _scraperRuns = snapshot.docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
-                .toList();
+            _scraperRuns = snapshot.docs.map((doc) => doc.data()).toList();
             notifyListeners();
           },
           onError: (Object err) {
@@ -368,11 +365,7 @@ class TelemetryNotifier extends ChangeNotifier {
         _directorySubscription = testDirectoryStream!.listen(
           (snapshot) {
             _directoryRecords = snapshot.docs
-                .map(
-                  (doc) => DatasetMetadataModel.fromMap(
-                    doc.data() as Map<String, dynamic>,
-                  ),
-                )
+                .map((doc) => DatasetMetadataModel.fromMap(doc.data()))
                 .toList();
             _isLoadingDirectory = false;
             notifyListeners();
@@ -389,11 +382,8 @@ class TelemetryNotifier extends ChangeNotifier {
           (snapshot) {
             final Map<String, int> counts = {};
             for (final doc in snapshot.docs) {
-              counts[doc.id] =
-                  ((doc.data() as Map<String, dynamic>)['requestCount']
-                              as num? ??
-                          0)
-                      .toInt();
+              counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0)
+                  .toInt();
             }
             _datasetRequestCounts = counts;
             notifyListeners();
@@ -530,7 +520,7 @@ class TelemetryNotifier extends ChangeNotifier {
     notifyListeners();
 
     if (_isTesting) {
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
       _apiHealth = {
         'url': 'https://data.gov.il',
         'isReachable': true,
@@ -730,11 +720,41 @@ class TelemetryNotifier extends ChangeNotifier {
     final bool isAndroid =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
-    return 'http://$host:$_functionsPort/$projectId/$region';
+    return 'http://$host:$functionsPort/$projectId/$region';
+  }
+
+  /// Cancels active telemetry and admin metadata subscriptions.
+  void cancelAdminMetadataListener() {
+    _adminMetadataSubscription?.cancel();
+    _adminMetadataSubscription = null;
+    _apiHealthSubscription?.cancel();
+    _apiHealthSubscription = null;
+    _scraperRunsSubscription?.cancel();
+    _scraperRunsSubscription = null;
+    _isLoadingAdminMetadata = true;
+    _isLoadingTelemetry = true;
+    _datasetMetadataMap = {};
+    _apiHealth = {};
+    _scraperRuns = [];
+    notifyListeners();
+  }
+
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      scheduleMicrotask(() {
+        if (!_isDisposed) {
+          super.notifyListeners();
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     _adminMetadataSubscription?.cancel();
     _apiHealthSubscription?.cancel();
     _scraperRunsSubscription?.cancel();

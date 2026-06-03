@@ -25,10 +25,12 @@ class _BankAtmsScreenState extends State<BankAtmsScreen> {
     super.initState();
     // Register the dataset in recent history
     widget.appState.addRecent('21fde05f-62e3-401b-81cf-5c385862026d');
+    widget.appState.initBankAtmsListener();
   }
 
   @override
   void dispose() {
+    widget.appState.cancelBankAtmsListener();
     _searchController.dispose();
     super.dispose();
   }

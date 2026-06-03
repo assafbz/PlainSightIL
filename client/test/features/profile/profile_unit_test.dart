@@ -1,3 +1,4 @@
+// ignore_for_file: subtype_of_sealed_class, inference_failure_on_function_return_type, prefer_initializing_formals, unnecessary_non_null_assertion, close_sinks, depend_on_referenced_packages
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

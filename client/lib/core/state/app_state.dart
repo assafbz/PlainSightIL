@@ -70,28 +70,17 @@ class AppStateNotifier extends ChangeNotifier {
   // Delegated Getters for PermitsNotifier
   List<Map<String, dynamic>> get permitRecords => permitsNotifier.permitRecords;
   bool get isLoadingPermits => permitsNotifier.isLoadingPermits;
-  bool get isLoadingMorePermits => permitsNotifier.isLoadingMorePermits;
   String get permitSyncStatus => permitsNotifier.permitSyncStatus;
-  Future<void> reloadPermits() => permitsNotifier.reloadPermits();
-  Future<void> loadMorePermits() => permitsNotifier.loadMorePermits();
 
   // Delegated Getters for LiquidationNotifier
   List<LiquidationRecordModel> get liquidationRecords =>
       liquidationNotifier.liquidationRecords;
   bool get isLoadingLiquidation => liquidationNotifier.isLoadingLiquidation;
-  bool get isLoadingMoreLiquidation =>
-      liquidationNotifier.isLoadingMoreLiquidation;
-  Future<void> reloadLiquidation() => liquidationNotifier.reloadLiquidation();
-  Future<void> loadMoreLiquidation() =>
-      liquidationNotifier.loadMoreLiquidation();
 
   // Delegated Getters for DoctorsNotifier
   List<DoctorLicenseRecordModel> get doctorRecords =>
       doctorsNotifier.doctorRecords;
   bool get isLoadingDoctors => doctorsNotifier.isLoadingDoctors;
-  bool get isLoadingMoreDoctors => doctorsNotifier.isLoadingMoreDoctors;
-  Future<void> reloadDoctors() => doctorsNotifier.reloadDoctors();
-  Future<void> loadMoreDoctors() => doctorsNotifier.loadMoreDoctors();
 
   // Delegated Getters for BankAtmsNotifier
   List<BankAtmRecordModel> get atmRecords => bankAtmsNotifier.atmRecords;
@@ -170,12 +159,27 @@ class AppStateNotifier extends ChangeNotifier {
   }
 
   void initAntennaListener() => antennasNotifier.initAntennaListener();
+  void cancelAntennaListener() => antennasNotifier.cancelAntennaListener();
+
   void initDirectoryListener() => telemetryNotifier.initDirectoryListener();
+
+  void cancelPermitMetadataListener() =>
+      permitsNotifier.cancelPermitMetadataListener();
+
   void initLiquidationListener() =>
       liquidationNotifier.initLiquidationListener();
+  void cancelLiquidationListener() =>
+      liquidationNotifier.cancelLiquidationListener();
+
   void initDoctorsListener() => doctorsNotifier.initDoctorsListener();
+  void cancelDoctorsListener() => doctorsNotifier.cancelDoctorsListener();
+
   void initBankAtmsListener() => bankAtmsNotifier.initBankAtmsListener();
+  void cancelBankAtmsListener() => bankAtmsNotifier.cancelBankAtmsListener();
+
   void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
+  void cancelAdminMetadataListener() =>
+      telemetryNotifier.cancelAdminMetadataListener();
 
   // Delegated Methods for AuthNotifier
   void setMockProfile(UserProfile? profile) =>

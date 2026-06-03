@@ -35,6 +35,7 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   void dispose() {
+    widget.appState.cancelAdminMetadataListener();
     _searchController.dispose();
     super.dispose();
   }
