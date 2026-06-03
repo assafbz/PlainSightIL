@@ -67,17 +67,28 @@ class AppStateNotifier extends ChangeNotifier {
   // Delegated Getters for PermitsNotifier
   List<Map<String, dynamic>> get permitRecords => permitsNotifier.permitRecords;
   bool get isLoadingPermits => permitsNotifier.isLoadingPermits;
+  bool get isLoadingMorePermits => permitsNotifier.isLoadingMorePermits;
   String get permitSyncStatus => permitsNotifier.permitSyncStatus;
+  Future<void> reloadPermits() => permitsNotifier.reloadPermits();
+  Future<void> loadMorePermits() => permitsNotifier.loadMorePermits();
 
   // Delegated Getters for LiquidationNotifier
   List<LiquidationRecordModel> get liquidationRecords =>
       liquidationNotifier.liquidationRecords;
   bool get isLoadingLiquidation => liquidationNotifier.isLoadingLiquidation;
+  bool get isLoadingMoreLiquidation =>
+      liquidationNotifier.isLoadingMoreLiquidation;
+  Future<void> reloadLiquidation() => liquidationNotifier.reloadLiquidation();
+  Future<void> loadMoreLiquidation() =>
+      liquidationNotifier.loadMoreLiquidation();
 
   // Delegated Getters for DoctorsNotifier
   List<DoctorLicenseRecordModel> get doctorRecords =>
       doctorsNotifier.doctorRecords;
   bool get isLoadingDoctors => doctorsNotifier.isLoadingDoctors;
+  bool get isLoadingMoreDoctors => doctorsNotifier.isLoadingMoreDoctors;
+  Future<void> reloadDoctors() => doctorsNotifier.reloadDoctors();
+  Future<void> loadMoreDoctors() => doctorsNotifier.loadMoreDoctors();
 
   // Delegated Getters for TelemetryNotifier
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>

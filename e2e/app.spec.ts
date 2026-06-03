@@ -136,6 +136,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     // Move mouse to center and scroll down using wheel to load third card semantics in Flutter Web
     await page.mouse.move(400, 300);
     await page.mouse.wheel(0, 600);
+    await page.keyboard.press('PageDown');
     await page.waitForTimeout(1000);
 
     // Locate "מאגר הכונס הרשמי" card and click "Open Visualizer"
@@ -188,6 +189,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     // Move mouse to center and scroll down using wheel to load card semantics
     await page.mouse.move(400, 300);
     await page.mouse.wheel(0, 600);
+    await page.keyboard.press('PageDown');
     await page.waitForTimeout(1000);
 
     // Open the liquidation visualizer again while offline

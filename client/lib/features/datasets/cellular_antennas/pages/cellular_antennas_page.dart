@@ -48,6 +48,20 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
       _radarController.repeat();
     }
     widget.appState.addRecent(DatasetIds.cellularAntennas);
+
+    _itemPositionsListener.itemPositions.addListener(_onPositionsChanged);
+  }
+
+  void _onPositionsChanged() {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+    final maxIndex = positions
+        .map((p) => p.index)
+        .reduce((a, b) => a > b ? a : b);
+    final filtered = _getFilteredRecords();
+    if (filtered.isNotEmpty && maxIndex >= filtered.length - 5) {
+      widget.appState.loadMorePermits();
+    }
   }
 
   @override
@@ -670,8 +684,24 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
       itemPositionsListener: _itemPositionsListener,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-      itemCount: filtered.length,
+      itemCount:
+          filtered.length + (widget.appState.isLoadingMorePermits ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == filtered.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.0,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            ),
+          );
+        }
         final item = filtered[index];
         return _selectedFilterIndex == 0
             ? _buildActiveAntennaCard(context, item)

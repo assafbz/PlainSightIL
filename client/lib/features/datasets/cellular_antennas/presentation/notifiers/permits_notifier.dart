@@ -19,6 +19,13 @@ class PermitsNotifier extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _permitSubscription;
   StreamSubscription<DocumentSnapshot>? _permitMetadataSubscription;
 
+  DocumentSnapshot? _lastPermitDoc;
+  bool _hasMorePermits = true;
+  bool _isLoadingMorePermits = false;
+  String _previousPermitSyncStatus = '';
+
+  bool get isLoadingMorePermits => _isLoadingMorePermits;
+
   @visibleForTesting
   @visibleForTesting
   Stream<DocumentSnapshot<Map<String, dynamic>>>? testMetadataStream;
@@ -65,13 +72,18 @@ class PermitsNotifier extends ChangeNotifier {
           if (metaSnapshot.exists && metaSnapshot.data() != null) {
             final data = metaSnapshot.data()!;
             final newActive = data['activeCollection'] as String? ?? '';
-            _permitSyncStatus = data['status'] as String? ?? 'idle';
+            final newStatus = data['status'] as String? ?? 'idle';
+            _permitSyncStatus = newStatus;
 
             if (newActive.isNotEmpty && newActive != _activePermitCollection) {
               _bindActivePermitCollection(newActive);
+            } else if (_previousPermitSyncStatus == 'syncing' &&
+                newStatus == 'idle') {
+              reloadPermits();
             } else {
               notifyListeners();
             }
+            _previousPermitSyncStatus = newStatus;
           } else {
             _isLoadingPermits = false;
             notifyListeners();
@@ -163,14 +175,19 @@ class PermitsNotifier extends ChangeNotifier {
                   if (metaSnapshot.exists && metaSnapshot.data() != null) {
                     final data = metaSnapshot.data()!;
                     final newActive = data['activeCollection'] as String? ?? '';
-                    _permitSyncStatus = data['status'] as String? ?? 'idle';
+                    final newStatus = data['status'] as String? ?? 'idle';
+                    _permitSyncStatus = newStatus;
 
                     if (newActive.isNotEmpty &&
                         newActive != _activePermitCollection) {
                       _bindActivePermitCollection(newActive);
+                    } else if (_previousPermitSyncStatus == 'syncing' &&
+                        newStatus == 'idle') {
+                      reloadPermits();
                     } else {
                       notifyListeners();
                     }
+                    _previousPermitSyncStatus = newStatus;
                   } else {
                     _isLoadingPermits = false;
                     notifyListeners();
@@ -225,26 +242,7 @@ class PermitsNotifier extends ChangeNotifier {
       return;
     }
     try {
-      _permitSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(newCollection)
-          .limit(100)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
-              _isLoadingPermits = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingPermits = false;
-              _permitSyncStatus = 'error';
-              notifyListeners();
-              AppLogger.error(
-                'Firestore permit collection listener error for $newCollection',
-                err,
-              );
-            },
-          );
+      reloadPermits();
     } catch (e) {
       _isLoadingPermits = false;
       _permitSyncStatus = 'error';
@@ -256,8 +254,92 @@ class PermitsNotifier extends ChangeNotifier {
     }
   }
 
+  /// Fetches the first page of permit records, resetting pagination state.
+  Future<void> reloadPermits() async {
+    if (_activePermitCollection.isEmpty) return;
+    _isLoadingPermits = true;
+    _lastPermitDoc = null;
+    _hasMorePermits = true;
+    _isLoadingMorePermits = false;
+    _permitRecords = [];
+    notifyListeners();
+
+    try {
+      final query = (testFirestore ?? FirebaseFirestore.instance)
+          .collection(_activePermitCollection)
+          .limit(50);
+      final snapshot = await query.get();
+      AppLogger.info(
+        'Permits first page fetched: ${snapshot.docs.length} records',
+      );
+      if (snapshot.docs.isNotEmpty) {
+        _lastPermitDoc = snapshot.docs.last;
+        _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
+        if (snapshot.docs.length < 50) {
+          _hasMorePermits = false;
+        }
+      } else {
+        _hasMorePermits = false;
+      }
+    } catch (e) {
+      _permitSyncStatus = 'error';
+      AppLogger.error('Failed to reload permit records', e);
+    } finally {
+      _isLoadingPermits = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetches the next page of permit records using cursor pagination.
+  Future<void> loadMorePermits() async {
+    if (_isLoadingMorePermits ||
+        !_hasMorePermits ||
+        _lastPermitDoc == null ||
+        _activePermitCollection.isEmpty) {
+      return;
+    }
+
+    _isLoadingMorePermits = true;
+    notifyListeners();
+
+    try {
+      final query = (testFirestore ?? FirebaseFirestore.instance)
+          .collection(_activePermitCollection)
+          .startAfterDocument(_lastPermitDoc!)
+          .limit(50);
+      final snapshot = await query.get();
+      AppLogger.info('Permits loaded more: ${snapshot.docs.length} records');
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastPermitDoc = snapshot.docs.last;
+        final newRecords = snapshot.docs.map((doc) => doc.data()).toList();
+        _permitRecords.addAll(newRecords);
+        if (snapshot.docs.length < 50) {
+          _hasMorePermits = false;
+        }
+      } else {
+        _hasMorePermits = false;
+      }
+    } catch (e) {
+      AppLogger.error('Failed to load more permit records', e);
+    } finally {
+      _isLoadingMorePermits = false;
+      notifyListeners();
+    }
+  }
+
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
+    _isDisposed = true;
     _permitSubscription?.cancel();
     _permitMetadataSubscription?.cancel();
     super.dispose();
