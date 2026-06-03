@@ -26,8 +26,8 @@ class FakeDocumentSnapshot implements DocumentSnapshot<Map<String, dynamic>> {
 class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
   final Map<String, dynamic>? _data;
   final bool _exists;
-  final Function(Map<String, dynamic>)? onUpdate;
-  final Function(Map<String, dynamic>)? onSet;
+  final void Function(Map<String, dynamic>)? onUpdate;
+  final void Function(Map<String, dynamic>)? onSet;
   final Stream<DocumentSnapshot<Map<String, dynamic>>>? _stream;
 
   FakeDocumentReference(

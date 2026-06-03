@@ -73,7 +73,7 @@ class AppLogger {
     // Forward warnings and errors to Firebase Crashlytics when available
     if (level == LogLevel.warning || level == LogLevel.error) {
       try {
-        if (Firebase.apps.isNotEmpty) {
+        if (!kIsWeb && Firebase.apps.isNotEmpty) {
           final crashlytics = FirebaseCrashlytics.instance;
           if (level == LogLevel.error) {
             crashlytics.recordError(

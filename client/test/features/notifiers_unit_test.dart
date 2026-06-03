@@ -115,8 +115,14 @@ class FakeUserProfileRepository implements UserProfileRepository {
 
 // Fake HTTP Client
 class FakeHttpClient implements http.Client {
-  final Function(Uri, {Map<String, String>? headers})? onGet;
-  final Function(Uri, {Object? body, Map<String, String>? headers})? onPost;
+  final FutureOr<http.Response> Function(Uri, {Map<String, String>? headers})?
+  onGet;
+  final FutureOr<http.Response> Function(
+    Uri, {
+    Object? body,
+    Map<String, String>? headers,
+  })?
+  onPost;
 
   FakeHttpClient({this.onGet, this.onPost});
 
