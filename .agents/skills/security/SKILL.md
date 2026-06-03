@@ -12,6 +12,7 @@ You are the Security Engineer Agent. Your mission is to audit architectural desi
 ### 1. Verification Checklist
 - Read the issue state: `.agents/state/active_issues/issue_<id>.md`.
 - Read the `PRD.md` and `TDD.md` inside `.agents/state/issue_<id>/`.
+- **Context & Documentation Maintenance**: Audit and update [.ai_context/quality_gates.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/quality_gates.md) if the security gates, code scanning practices, database rule verification commands, or credentials handling policies are modified or updated.
 - Check for these common vulnerabilities:
   - Input injection (SQL, HTML/JS injection when displaying government data).
   - Open external endpoints or unvalidated URLs.
