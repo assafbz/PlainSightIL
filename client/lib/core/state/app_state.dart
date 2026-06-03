@@ -1382,6 +1382,69 @@ class AppStateNotifier extends ChangeNotifier {
     }
   }
 
+  Future<void> updateDatasetScheduler(
+    String datasetId, {
+    required bool enabled,
+    required int updateIntervalHours,
+  }) async {
+    AppLogger.info(
+      'Updating scheduler for dataset: $datasetId (enabled: $enabled, interval: $updateIntervalHours)',
+    );
+
+    if (isTesting) {
+      final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
+      final scheduler = Map<String, dynamic>.from(localMeta['scheduler'] as Map? ?? {});
+      scheduler['enabled'] = enabled;
+      scheduler['updateIntervalHours'] = updateIntervalHours;
+
+      // Compute a fake nextRun locally for testing
+      final nextRunDate = DateTime.now().add(Duration(hours: updateIntervalHours));
+      scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
+
+      _datasetMetadataMap[datasetId] = {
+        ...localMeta,
+        'scheduler': scheduler,
+      };
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) return;
+
+    try {
+      final metadataRef = FirebaseFirestore.instance
+          .collection('dataset_metadata')
+          .doc(datasetId);
+
+      // Read current nextRun, or calculate a new one if it's currently missing or the interval changes
+      final doc = await metadataRef.get();
+      String nextRun = '';
+      if (doc.exists) {
+        final data = doc.data();
+        final existingScheduler = data?['scheduler'] as Map<String, dynamic>?;
+        nextRun = existingScheduler?['nextRun'] as String? ?? '';
+      }
+
+      // If nextRun is empty or scheduler was disabled and now enabled, calculate nextRun starting from now
+      if (nextRun.isEmpty || enabled) {
+        nextRun = DateTime.now().add(Duration(hours: updateIntervalHours)).toUtc().toIso8601String();
+      }
+
+      await metadataRef.set({
+        'scheduler': {
+          'enabled': enabled,
+          'updateIntervalHours': updateIntervalHours,
+          'nextRun': nextRun,
+        }
+      }, SetOptions(merge: true));
+
+      AppLogger.info('Successfully updated Firestore scheduler for $datasetId');
+    } catch (e) {
+      AppLogger.error('Failed to update dataset scheduler', e);
+      rethrow;
+    }
+  }
+
   TextDirection get textDirection =>
       _locale == 'he' ? TextDirection.rtl : TextDirection.ltr;
 
@@ -1581,6 +1644,12 @@ class AppStateNotifier extends ChangeNotifier {
       'no_telemetry': 'No telemetry logs found',
       'latency_sec': 's',
       'runs_title': 'Ingestion Pipelines',
+      'scheduler_title': 'Scraper Automation Schedule',
+      'scheduler_enabled': 'Enable Automated Sync',
+      'scheduler_interval': 'Update Interval (Hours)',
+      'scheduler_next_run': 'Next Scheduled Run: ',
+      'scheduler_save_success': 'Schedule settings updated successfully',
+      'scheduler_save_error': 'Failed to update schedule settings',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -1736,6 +1805,12 @@ class AppStateNotifier extends ChangeNotifier {
       'no_telemetry': 'לא נמצאו נתוני טלמטריה',
       'latency_sec': ' שנ׳',
       'runs_title': 'תהליכי סנכרון',
+      'scheduler_title': 'תזמון סנכרון אוטומטי',
+      'scheduler_enabled': 'אפשר סנכרון אוטומטי',
+      'scheduler_interval': 'תדירות עדכון (שעות)',
+      'scheduler_next_run': 'ריצה הבאה מתוזמנת: ',
+      'scheduler_save_success': 'הגדרות התזמון עודכנו בהצלחה',
+      'scheduler_save_error': 'עדכון הגדרות התזמון נכשל',
     },
   };
 

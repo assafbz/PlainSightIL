@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import * as functions from "firebase-functions/v1";
 import { logger } from "firebase-functions";
 import axios from "axios";
+import { PubSub } from "@google-cloud/pubsub";
 
 import { scrapeAndSyncAntennas } from "./scrapers/8935c8e5-ec77-421f-af86-d970583195f8";
 import { scrapeAndSyncPermitApplications } from "./scrapers/ff398c7e-c522-4ee8-a53a-312b188a573d";
@@ -10,6 +11,25 @@ import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/d8715392-287f-49b7-9ae3-f21ec5bf55f3";
 import { scrapeAndSyncDoctorsLicenses } from "./scrapers/9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
+
+const scraperRegistry: Record<
+  string,
+  (firestoreDb: admin.firestore.Firestore) => Promise<{ count: number }>
+> = {
+  "8935c8e5-ec77-421f-af86-d970583195f8": scrapeAndSyncAntennas,
+  "ff398c7e-c522-4ee8-a53a-312b188a573d": scrapeAndSyncPermitApplications,
+  "d8715392-287f-49b7-9ae3-f21ec5bf55f3": scrapeAndSyncCompaniesLiquidation,
+  "9c64c522-bbc2-48fe-96fb-3b2a8626f59e": scrapeAndSyncDoctorsLicenses,
+  datasets_metadata: scrapeAndSyncDatasetMetadata,
+};
+
+const defaultIntervals: Record<string, number> = {
+  "8935c8e5-ec77-421f-af86-d970583195f8": 24, // Cellular Antennas (daily)
+  "ff398c7e-c522-4ee8-a53a-312b188a573d": 168, // Cellular Permit Apps (weekly)
+  "d8715392-287f-49b7-9ae3-f21ec5bf55f3": 168, // Companies Liquidation (weekly)
+  "9c64c522-bbc2-48fe-96fb-3b2a8626f59e": 168, // Doctors Licenses (weekly)
+  datasets_metadata: 168, // Dataset Metadata (weekly)
+};
 
 admin.initializeApp();
 
@@ -105,27 +125,154 @@ export const manualApiHealthCheck = functions.https.onRequest(async (req, res) =
   }
 });
 
-// Scheduled Cloud Function for Active Antennas - runs daily at midnight (Israel timezone)
-export const scheduledAntennaScraper = functions.pubsub
-  .schedule("0 0 * * *")
-  .timeZone("Asia/Jerusalem")
+/**
+ * Helper to update the scheduler settings for a dataset upon completion or failure.
+ * Calculates nextRun = now + updateIntervalHours (defaults to 24 or dataset default if not specified)
+ * and updates Firestore dataset_metadata document.
+ */
+export async function updateSchedulerOnComplete(
+  firestoreDb: admin.firestore.Firestore,
+  datasetId: string,
+  status: "idle" | "error",
+): Promise<void> {
+  const metadataRef = firestoreDb.collection("dataset_metadata").doc(datasetId);
+  const now = new Date();
+
+  try {
+    const doc = await metadataRef.get();
+    let updateIntervalHours = defaultIntervals[datasetId] || 24;
+    let enabled = true;
+
+    if (doc.exists) {
+      const data = doc.data();
+      if (data?.scheduler?.updateIntervalHours !== undefined) {
+        updateIntervalHours = Number(data.scheduler.updateIntervalHours) || 24;
+      }
+      if (data?.scheduler?.enabled !== undefined) {
+        enabled = data.scheduler.enabled === true;
+      }
+    }
+
+    const nextRun = new Date(now.getTime() + updateIntervalHours * 60 * 60 * 1000).toISOString();
+
+    await metadataRef.set(
+      {
+        status,
+        lastUpdated: now.toISOString(),
+        scheduler: {
+          enabled,
+          updateIntervalHours,
+          nextRun,
+        },
+      },
+      { merge: true },
+    );
+    logger.info(`Updated scheduler for dataset ${datasetId}: status=${status}, enabled=${enabled}, nextRun=${nextRun}`);
+  } catch (error) {
+    logger.error(`Failed to update scheduler metadata for ${datasetId}`, error);
+  }
+}
+
+/**
+ * Scheduled Cloud Function running every 15 minutes to check which scrapers are due to run.
+ */
+export const scheduledScraperTicker = functions.pubsub
+  .schedule("*/15 * * * *")
   .onRun(async () => {
-    logger.info("scheduledAntennaScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("8935c8e5-ec77-421f-af86-d970583195f8");
+    logger.info("scheduledScraperTicker trigger invoked");
+    const now = new Date().toISOString();
+
     try {
-      const result = await scrapeAndSyncAntennas(db);
-      logger.info("scheduledAntennaScraper completed successfully", {
+      const snapshot = await db.collection("dataset_metadata")
+        .where("scheduler.enabled", "==", true)
+        .get();
+
+      const pubsub = new PubSub();
+      const topic = pubsub.topic("run-scraper-topic");
+
+      try {
+        await topic.create();
+      } catch (e: any) {
+        if (e.code !== 6) {
+          logger.warn(`Error creating topic: ${e.message}`);
+        }
+      }
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const datasetId = doc.id;
+        const nextRun = data.scheduler?.nextRun;
+
+        if (nextRun && nextRun <= now && data.status !== "syncing") {
+          logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
+
+          // Update status to syncing in Firestore immediately
+          await doc.ref.set({ status: "syncing" }, { merge: true });
+
+          // Publish event to Pub/Sub topic
+          const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
+          await topic.publishMessage({ data: dataBuffer });
+        }
+      }
+    } catch (error) {
+      logger.error("scheduledScraperTicker execution failed", error);
+    }
+  });
+
+/**
+ * Pub/Sub topic-triggered Cloud Function that executes the actual scraping.
+ */
+export const runScraperPubSub = functions.pubsub
+  .topic("run-scraper-topic")
+  .onPublish(async (message) => {
+    let datasetId = "";
+    try {
+      const data = message.json;
+      datasetId = data?.datasetId;
+    } catch (err) {
+      logger.error("Failed to parse Pub/Sub message json", err);
+      return;
+    }
+
+    if (!datasetId) {
+      logger.error("No datasetId found in Pub/Sub message");
+      return;
+    }
+
+    logger.info(`runScraperPubSub invoked for dataset: ${datasetId}`);
+
+    const scraper = scraperRegistry[datasetId];
+    if (!scraper) {
+      logger.error(`No scraper registered for datasetId: ${datasetId}`);
+      await db.collection("dataset_metadata").doc(datasetId).set(
+        { status: "error" },
+        { merge: true }
+      );
+      return;
+    }
+
+    const tracker = ScraperTelemetryTracker.start(datasetId);
+    try {
+      // Ensure status is set to syncing in database
+      await db.collection("dataset_metadata").doc(datasetId).set(
+        { status: "syncing" },
+        { merge: true }
+      );
+
+      const result = await scraper(db);
+      logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
         count: result.count,
       });
       await tracker.complete(db, result.count);
+      await updateSchedulerOnComplete(db, datasetId, "idle");
     } catch (error) {
       const err = error as Error;
-      logger.error("scheduledAntennaScraper execution failed", {
+      logger.error(`runScraperPubSub failed for dataset: ${datasetId}`, {
         error: err.message,
         stack: err.stack,
       });
+      await updateSchedulerOnComplete(db, datasetId, "error");
       await tracker.fail(db, err);
-      throw error;
     }
   });
 
@@ -213,17 +360,17 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   if (!auth) return;
 
   const datasetId = "8935c8e5-ec77-421f-af86-d970583195f8";
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await metadataRef.set({ status: "syncing" }, { merge: true });
+    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncAntennas(db);
     logger.info("manualSyncAntennas sync completed successfully", {
       count: result.count,
     });
     await tracker.complete(db, result.count);
+    await updateSchedulerOnComplete(db, datasetId, "idle");
     res.status(200).json({
       message: "Sync completed successfully",
       count: result.count,
@@ -234,7 +381,7 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
       error: err.message,
       stack: err.stack,
     });
-    await metadataRef.set({ status: "error" }, { merge: true });
+    await updateSchedulerOnComplete(db, datasetId, "error");
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Sync failed",
@@ -242,30 +389,6 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
     });
   }
 });
-
-// Scheduled Cloud Function for Permit Applications - runs weekly on Sunday at midnight (Israel timezone)
-export const scheduledPermitAppsScraper = functions.pubsub
-  .schedule("0 0 * * 0")
-  .timeZone("Asia/Jerusalem")
-  .onRun(async () => {
-    logger.info("scheduledPermitAppsScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("ff398c7e-c522-4ee8-a53a-312b188a573d");
-    try {
-      const result = await scrapeAndSyncPermitApplications(db);
-      logger.info("scheduledPermitAppsScraper completed successfully", {
-        count: result.count,
-      });
-      await tracker.complete(db, result.count);
-    } catch (error) {
-      const err = error as Error;
-      logger.error("scheduledPermitAppsScraper execution failed", {
-        error: err.message,
-        stack: err.stack,
-      });
-      await tracker.fail(db, err);
-      throw error;
-    }
-  });
 
 // HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
 export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
@@ -275,17 +398,17 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
   if (!auth) return;
 
   const datasetId = "ff398c7e-c522-4ee8-a53a-312b188a573d";
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await metadataRef.set({ status: "syncing" }, { merge: true });
+    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncPermitApplications(db);
     logger.info("manualSyncPermitApps sync completed successfully", {
       count: result.count,
     });
     await tracker.complete(db, result.count);
+    await updateSchedulerOnComplete(db, datasetId, "idle");
     res.status(200).json({
       message: "Sync completed successfully",
       count: result.count,
@@ -296,7 +419,7 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
       error: err.message,
       stack: err.stack,
     });
-    await metadataRef.set({ status: "error" }, { merge: true });
+    await updateSchedulerOnComplete(db, datasetId, "error");
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Sync failed",
@@ -305,30 +428,6 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
   }
 });
 
-// Scheduled Cloud Function for Dataset Metadata - runs weekly on Sunday at 1:00 AM (Israel timezone)
-export const scheduledMetadataScraper = functions.pubsub
-  .schedule("0 1 * * 0")
-  .timeZone("Asia/Jerusalem")
-  .onRun(async () => {
-    logger.info("scheduledMetadataScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("datasets_metadata");
-    try {
-      const result = await scrapeAndSyncDatasetMetadata(db);
-      logger.info("scheduledMetadataScraper completed successfully", {
-        count: result.count,
-      });
-      await tracker.complete(db, result.count);
-    } catch (error) {
-      const err = error as Error;
-      logger.error("scheduledMetadataScraper execution failed", {
-        error: err.message,
-        stack: err.stack,
-      });
-      await tracker.fail(db, err);
-      throw error;
-    }
-  });
-
 // HTTPS Triggered Cloud Function for Dataset Metadata - manual sync
 export const manualSyncMetadata = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncMetadata HTTPS trigger invoked");
@@ -336,13 +435,15 @@ export const manualSyncMetadata = functions.https.onRequest(async (req, res) => 
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const tracker = ScraperTelemetryTracker.start("datasets_metadata");
+  const datasetId = "datasets_metadata";
+  const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     const result = await scrapeAndSyncDatasetMetadata(db);
     logger.info("manualSyncMetadata sync completed successfully", {
       count: result.count,
     });
     await tracker.complete(db, result.count);
+    await updateSchedulerOnComplete(db, datasetId, "idle");
     res.status(200).json({
       message: "Metadata sync completed successfully",
       count: result.count,
@@ -361,30 +462,6 @@ export const manualSyncMetadata = functions.https.onRequest(async (req, res) => 
   }
 });
 
-// Scheduled Cloud Function for Companies in Liquidation - runs weekly on Sunday at 2:00 AM (Israel timezone)
-export const scheduledCompaniesLiquidationScraper = functions.pubsub
-  .schedule("0 2 * * 0")
-  .timeZone("Asia/Jerusalem")
-  .onRun(async () => {
-    logger.info("scheduledCompaniesLiquidationScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("d8715392-287f-49b7-9ae3-f21ec5bf55f3");
-    try {
-      const result = await scrapeAndSyncCompaniesLiquidation(db);
-      logger.info("scheduledCompaniesLiquidationScraper completed successfully", {
-        count: result.count,
-      });
-      await tracker.complete(db, result.count);
-    } catch (error) {
-      const err = error as Error;
-      logger.error("scheduledCompaniesLiquidationScraper execution failed", {
-        error: err.message,
-        stack: err.stack,
-      });
-      await tracker.fail(db, err);
-      throw error;
-    }
-  });
-
 // HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
@@ -393,17 +470,17 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
   if (!auth) return;
 
   const datasetId = "d8715392-287f-49b7-9ae3-f21ec5bf55f3";
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await metadataRef.set({ status: "syncing" }, { merge: true });
+    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncCompaniesLiquidation(db);
     logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
       count: result.count,
     });
     await tracker.complete(db, result.count);
+    await updateSchedulerOnComplete(db, datasetId, "idle");
     res.status(200).json({
       message: "Companies in liquidation sync completed successfully",
       count: result.count,
@@ -414,7 +491,7 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
       error: err.message,
       stack: err.stack,
     });
-    await metadataRef.set({ status: "error" }, { merge: true });
+    await updateSchedulerOnComplete(db, datasetId, "error");
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Companies in liquidation sync failed",
@@ -422,30 +499,6 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
     });
   }
 });
-
-// Scheduled Cloud Function for Doctors Licenses - runs weekly on Sunday at 3:00 AM (Israel timezone)
-export const scheduledDoctorsLicensesScraper = functions.pubsub
-  .schedule("0 3 * * 0")
-  .timeZone("Asia/Jerusalem")
-  .onRun(async () => {
-    logger.info("scheduledDoctorsLicensesScraper trigger invoked");
-    const tracker = ScraperTelemetryTracker.start("9c64c522-bbc2-48fe-96fb-3b2a8626f59e");
-    try {
-      const result = await scrapeAndSyncDoctorsLicenses(db);
-      logger.info("scheduledDoctorsLicensesScraper completed successfully", {
-        count: result.count,
-      });
-      await tracker.complete(db, result.count);
-    } catch (error) {
-      const err = error as Error;
-      logger.error("scheduledDoctorsLicensesScraper execution failed", {
-        error: err.message,
-        stack: err.stack,
-      });
-      await tracker.fail(db, err);
-      throw error;
-    }
-  });
 
 // HTTPS Triggered Cloud Function for Doctors Licenses - manual sync
 export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, res) => {
@@ -455,17 +508,17 @@ export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, r
   if (!auth) return;
 
   const datasetId = "9c64c522-bbc2-48fe-96fb-3b2a8626f59e";
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await metadataRef.set({ status: "syncing" }, { merge: true });
+    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncDoctorsLicenses(db);
     logger.info("manualSyncDoctorsLicenses sync completed successfully", {
       count: result.count,
     });
     await tracker.complete(db, result.count);
+    await updateSchedulerOnComplete(db, datasetId, "idle");
     res.status(200).json({
       message: "Doctors licenses sync completed successfully",
       count: result.count,
@@ -476,7 +529,7 @@ export const manualSyncDoctorsLicenses = functions.https.onRequest(async (req, r
       error: err.message,
       stack: err.stack,
     });
-    await metadataRef.set({ status: "error" }, { merge: true });
+    await updateSchedulerOnComplete(db, datasetId, "error");
     await tracker.fail(db, err);
     res.status(500).json({
       message: "Doctors licenses sync failed",

@@ -15,14 +15,18 @@ const ports = {
   client: (parseInt(process.env.CLIENT_PORT, 10) || 8080) + offset,
   firestore: (parseInt(process.env.FIRESTORE_PORT, 10) || 8081) + offset,
   auth: (parseInt(process.env.AUTH_PORT, 10) || 9099) + offset,
+  pubsub: (parseInt(process.env.PUBSUB_PORT, 10) || 8085) + offset,
   functions: (parseInt(process.env.FUNCTIONS_PORT, 10) || 5002) + offset,
   ui: (parseInt(process.env.EMULATOR_UI_PORT, 10) || 4001) + offset,
 };
 
+// Set PUBSUB_EMULATOR_HOST for GCP Pub/Sub client library to use local emulator
+process.env.PUBSUB_EMULATOR_HOST = `127.0.0.1:${ports.pubsub}`;
+
 // 0. Pre-flight check: Terminate lingering processes on the selected ports to prevent locks
 console.log(`🧹 Running pre-flight port clean-up (offset: ${offset})...`);
 try {
-  execSync(`CLIENT_PORT=${ports.client} FIRESTORE_PORT=${ports.firestore} AUTH_PORT=${ports.auth} FUNCTIONS_PORT=${ports.functions} EMULATOR_UI_PORT=${ports.ui} node scripts/kill.js`, {
+  execSync(`CLIENT_PORT=${ports.client} FIRESTORE_PORT=${ports.firestore} AUTH_PORT=${ports.auth} PUBSUB_PORT=${ports.pubsub} FUNCTIONS_PORT=${ports.functions} EMULATOR_UI_PORT=${ports.ui} node scripts/kill.js`, {
     stdio: 'inherit',
     cwd: rootDir
   });
@@ -39,6 +43,7 @@ try {
   baseConfig.emulators = {
     firestore: { port: ports.firestore, host: '127.0.0.1' },
     auth: { port: ports.auth, host: '127.0.0.1' },
+    pubsub: { port: ports.pubsub, host: '127.0.0.1' },
     functions: { port: ports.functions, host: '127.0.0.1' },
     ui: { enabled: true, port: ports.ui, host: '127.0.0.1' }
   };

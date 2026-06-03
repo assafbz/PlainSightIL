@@ -19,6 +19,7 @@ class _AdminPageState extends State<AdminPage> {
   String _statusFilter = 'all'; // 'all', 'idle', 'syncing', 'error'
   int _activeSubTab = 0; // 0 for Datasets, 1 for Telemetry
   final Set<String> _expandedRuns = {}; // Tracks expanded log IDs
+  final Set<String> _expandedSchedulers = {}; // Tracks expanded scheduler card IDs
 
   @override
   void initState() {
@@ -171,6 +172,7 @@ class _AdminPageState extends State<AdminPage> {
             'status': status,
             'recordCount': recordCount.toInt(),
             'lastUpdated': lastUpdated,
+            'liveData': liveData,
           };
         }).toList();
 
@@ -425,6 +427,14 @@ class _AdminPageState extends State<AdminPage> {
 
   /// Render individual glassmorphic dataset card widget
   Widget _buildDatasetCard(BuildContext context, Map<String, dynamic> dataset) {
+    final String datasetId = dataset['id'] as String;
+    final liveData = dataset['liveData'] as Map<String, dynamic>? ?? {};
+    final scheduler = liveData['scheduler'] as Map<String, dynamic>? ?? {};
+    final bool schedulerEnabled = scheduler['enabled'] as bool? ?? false;
+    final int schedulerInterval = (scheduler['updateIntervalHours'] as num? ?? 24).toInt();
+    final String schedulerNextRun = scheduler['nextRun'] as String? ?? '';
+    final bool isSchedulerExpanded = _expandedSchedulers.contains(datasetId);
+
     final String status = dataset['status'] as String;
     final int recordCount = dataset['recordCount'] as int;
     final String lastUpdated = dataset['lastUpdated'] as String;
@@ -558,6 +568,14 @@ class _AdminPageState extends State<AdminPage> {
               ),
               const Divider(color: Color(0x14FFFFFF), height: 20),
 
+              // Scheduler Section
+              _buildSchedulerHeader(context, datasetId, schedulerEnabled),
+              if (isSchedulerExpanded) ...[
+                const SizedBox(height: 12),
+                _buildSchedulerPanel(context, datasetId, schedulerEnabled, schedulerInterval, schedulerNextRun),
+              ],
+              const Divider(color: Color(0x14FFFFFF), height: 20),
+
               // Actions row (Trigger Manual Sync) (FR-01)
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -568,6 +586,216 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildSchedulerHeader(BuildContext context, String datasetId, bool enabled) {
+    final isHeb = widget.appState.locale == 'he';
+    final isExpanded = _expandedSchedulers.contains(datasetId);
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          if (isExpanded) {
+            _expandedSchedulers.remove(datasetId);
+          } else {
+            _expandedSchedulers.add(datasetId);
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.alarm,
+                  size: 18,
+                  color: enabled ? AppColors.success : AppColors.textTertiary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.appState.translate('scheduler_title'),
+                  style: AppTypography.bodySm(context, color: AppColors.textPrimary)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (enabled ? AppColors.success : AppColors.surfaceHigh).withAlpha(30),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: (enabled ? AppColors.success : AppColors.glassBorder).withAlpha(50),
+                    ),
+                  ),
+                  child: Text(
+                    enabled
+                        ? (isHeb ? 'פעיל' : 'Active')
+                        : (isHeb ? 'כבוי' : 'Inactive'),
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: enabled ? AppColors.success : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSchedulerPanel(
+    BuildContext context,
+    String datasetId,
+    bool enabled,
+    int interval,
+    String nextRun,
+  ) {
+    final isHeb = widget.appState.locale == 'he';
+    final intervals = [
+      {'val': 1, 'labelEn': '1 Hour', 'labelHe': 'שעה אחת'},
+      {'val': 6, 'labelEn': '6 Hours', 'labelHe': '6 שעות'},
+      {'val': 12, 'labelEn': '12 Hours', 'labelHe': '12 שעות'},
+      {'val': 24, 'labelEn': '24 Hours (Daily)', 'labelHe': '24 שעות (יומי)'},
+      {'val': 48, 'labelEn': '48 Hours', 'labelHe': '48 שעות'},
+      {'val': 168, 'labelEn': '168 Hours (Weekly)', 'labelHe': '168 שעות (שבועי)'},
+    ];
+
+    if (!intervals.any((item) => item['val'] == interval)) {
+      intervals.add({
+        'val': interval,
+        'labelEn': '$interval Hours',
+        'labelHe': '$interval שעות',
+      });
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLow.withAlpha(50),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.appState.translate('scheduler_enabled'),
+                style: AppTypography.bodySm(context, color: AppColors.textSecondary),
+              ),
+              Switch(
+                value: enabled,
+                activeColor: AppColors.primary,
+                activeTrackColor: AppColors.primary.withAlpha(100),
+                inactiveThumbColor: AppColors.textTertiary,
+                inactiveTrackColor: AppColors.surfaceHigh,
+                onChanged: (bool value) => _handleSaveScheduler(datasetId, value, interval),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.appState.translate('scheduler_interval'),
+                style: AppTypography.bodySm(
+                  context,
+                  color: enabled ? AppColors.textSecondary : AppColors.textTertiary,
+                ),
+              ),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: interval,
+                  dropdownColor: AppColors.surfaceHigh,
+                  style: AppTypography.bodySm(context, color: AppColors.textPrimary)
+                      .copyWith(fontWeight: FontWeight.bold),
+                  icon: Icon(Icons.arrow_drop_down, color: enabled ? AppColors.primary : AppColors.textTertiary),
+                  onChanged: enabled
+                      ? (int? newValue) {
+                          if (newValue != null) {
+                            _handleSaveScheduler(datasetId, enabled, newValue);
+                          }
+                        }
+                      : null,
+                  items: intervals.map((item) {
+                    final label = isHeb ? item['labelHe']! : item['labelEn']!;
+                    return DropdownMenuItem<int>(
+                      value: item['val'] as int,
+                      child: Text(
+                        label.toString(),
+                        style: TextStyle(
+                          color: enabled ? AppColors.textPrimary : AppColors.textTertiary,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          if (enabled && nextRun.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(color: Color(0x14FFFFFF), height: 1),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.update_outlined, color: AppColors.textTertiary, size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  widget.appState.translate('scheduler_next_run'),
+                  style: AppTypography.labelXs(context, color: AppColors.textTertiary),
+                ),
+                Text(
+                  _formatTimestamp(nextRun),
+                  style: AppTypography.labelXs(context, color: AppColors.primary)
+                      .copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleSaveScheduler(String datasetId, bool enabled, int interval) async {
+    try {
+      await widget.appState.updateDatasetScheduler(datasetId, enabled: enabled, updateIntervalHours: interval);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.appState.translate('scheduler_save_success')),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.appState.translate('scheduler_save_error')),
+            backgroundColor: AppColors.danger,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   /// Custom animated rotating spinner widget for active syncing states
