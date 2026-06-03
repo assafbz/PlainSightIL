@@ -19,20 +19,32 @@ class DoctorsLicensesScreen extends StatefulWidget {
 
 class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   String _selectedSpecialty = 'All'; // 'All' represents no specialty filtering
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     // Register the dataset in recent history
     widget.appState.addRecent(DatasetIds.doctorsLicenses);
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (maxScroll - currentScroll <= 200.0) {
+      widget.appState.loadMoreDoctors();
+    }
   }
 
   /// Extracts unique specialty names present in the records to build filter chips.
@@ -326,9 +338,31 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                         }
 
                         return ListView.builder(
+                          controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
-                          itemCount: list.length,
+                          itemCount:
+                              list.length +
+                              (widget.appState.isLoadingMoreDoctors ? 1 : 0),
                           itemBuilder: (context, index) {
+                            if (index == list.length) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 24.0,
+                                ),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.0,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
                             final item = list[index];
                             final hasSpecialty =
                                 item.specialtyName != null &&

@@ -1637,6 +1637,15 @@ class FakeCollectionReference
       }
       return this;
     }
+    if (invocation.memberName == #startAfterDocument) {
+      return this;
+    }
+    if (invocation.memberName == #get) {
+      if (stream != null) {
+        return stream!.first;
+      }
+      return Future.value(FakeQuerySnapshot([]));
+    }
     return super.noSuchMethod(invocation);
   }
 }
