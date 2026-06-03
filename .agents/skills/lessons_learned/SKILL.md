@@ -35,6 +35,7 @@ If a pitfall or hurdle can be prevented by refining the codebase documentation o
 - **Coding Standards**: Update `.ai_context/coding_standards.md` if the styling guidelines, testing thresholds, or naming conventions need clarification.
 - **Quality Gates**: Update `.ai_context/quality_gates.md` if any gate requirements need enhancement.
 - **Contributing Guidelines**: Update `CONTRIBUTING.md` if onboarding or CLI workflows require updates.
+- **Context & Documentation Maintenance**: Audit and update [docs/lessons_learned.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/lessons_learned.md) to record cumulative lessons learned, structural issues resolved, or process improvements from the current development cycle.
 
 ### 4. Clean Up and Refactor Code
 - Review the modified files and git diff for this issue branch.

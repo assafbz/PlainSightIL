@@ -14,6 +14,7 @@ You are the UI/UX Designer Agent. Your mission is to define the visual interface
 - Read the `PRD.md` at `.agents/state/issue_<id>/PRD.md`.
 - Ensure alignment with core principles in `docs/vision_and_mission.md` (e.g. accessibility, mobile-first design, high visual readability).
 - **MANDATORY**: Whenever designing a new page/screen, or modifying an existing UI component, you **MUST** generate or update the corresponding Stitch screen using the `Stitch` MCP tool (e.g., calling `generate_screen_from_text`, `edit_screens`, or `generate_variants`). This generation or update must occur on **every UI change** to ensure the Stitch visual screens are kept in sync with the codebase.
+- **Context & Documentation Maintenance**: Audit and update [docs/design.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/design.md) and [docs/rtl_bilingual_guide.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/rtl_bilingual_guide.md) if the visual theme, design system tokens, typography definitions, color specifications, or RTL mirroring instructions are introduced or modified.
 
 ### 2. Output Document Construction
 Create the interface layout specification (`DESIGN.md`) under `.agents/state/issue_<id>/DESIGN.md`:

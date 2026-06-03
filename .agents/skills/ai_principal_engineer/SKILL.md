@@ -32,6 +32,11 @@ Manual error resolution slows down autonomous systems. Build automated loops for
 - **Validation Gates**: Every state transition must run an automated pipeline (e.g., tests, static analysis, type checking) before handoff.
 - **Diagnostic Capture**: Capture terminal and tool execution errors cleanly and present them back to the developer agent as structured code blocks.
 
+### D. Continuous Documentation & Context Synchronization
+Maintaining fresh project context and documentation is critical for multi-agent correctness. 
+- **Active Updates**: Agents must proactively audit and update relevant ground-truth files under `.ai_context/` and `docs/` during their active phase.
+- **Reference Documentation**: Avoid letting documents drift. Ensure database schemas, E2E specs, and design guides are modified whenever feature boundaries or data models change.
+
 ---
 
 ## 2. Context Engineering Guide
@@ -45,6 +50,7 @@ When engineering context for agents in this workspace, follow these guidelines:
 | **Execution State** | `.agents/state/active_issues/issue_<id>.md` | YAML Frontmatter tracking current phase, assignee, status, and HITL gate requirements. |
 | **File Referencing** | Markdown links | Always link files using the absolute path (`file:///absolute/path/to/file`). Avoid surrounding links with backticks. |
 | **Code Scoping** | Target line ranges | When reading files, use tools that return specified line ranges rather than loading the whole file. |
+| **Role-Doc Mapping** | Various | Mandate that each agent updates their assigned files (e.g. PM: [product_definition.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/product_definition.md), UI/UX: [design.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/design.md), Architect: [.ai_context/database_schemas.json](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/database_schemas.json) & [.ai_context/architecture.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/architecture.md), Security/TL: [.ai_context/quality_gates.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/quality_gates.md)/[.ai_context/coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md), Dev: [docs/monorepo_setup_guide.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/monorepo_setup_guide.md), QA: [docs/e2e_test_specification.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/e2e_test_specification.md), Lessons Learned: [docs/lessons_learned.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/lessons_learned.md)). |
 
 ---
 

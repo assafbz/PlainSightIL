@@ -13,6 +13,7 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
 - Read the issue state: `.agents/state/active_issues/issue_<id>.md`.
 - Read the `BLUEPRINT.md` at `.agents/state/issue_<id>/BLUEPRINT.md`.
 - Examine the existing codebase elements.
+- **Context & Documentation Maintenance**: Audit and update [docs/monorepo_setup_guide.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/monorepo_setup_guide.md) if the issue introduces new environment variables, node/pub dependencies, build scripts, development tools, or system setup steps.
 
 ### 2. Executing Code Changes
 - Open draft PR or work directly on a local branch (e.g. `agents/issue_<id>`).
