@@ -56,11 +56,7 @@ class BankAtmsNotifier extends ChangeNotifier {
       _atmsSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _atmRecords = snapshot.docs
-              .map(
-                (doc) => BankAtmRecordModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                ),
-              )
+              .map((doc) => BankAtmRecordModel.fromMap(doc.data()))
               .toList();
           _isLoadingAtms = false;
           notifyListeners();
@@ -169,7 +165,6 @@ class BankAtmsNotifier extends ChangeNotifier {
     try {
       _atmsSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('21fde05f-62e3-401b-81cf-5c385862026d')
-          .limit(100)
           .snapshots()
           .listen(
             (snapshot) {
@@ -198,8 +193,31 @@ class BankAtmsNotifier extends ChangeNotifier {
     }
   }
 
+  /// Cancels active Bank ATMs subscriptions and resets state flags.
+  void cancelBankAtmsListener() {
+    _atmsSubscription?.cancel();
+    _atmsSubscription = null;
+    _isLoadingAtms = true;
+    _atmRecords = [];
+    notifyListeners();
+  }
+
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      scheduleMicrotask(() {
+        if (!_isDisposed) {
+          super.notifyListeners();
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _isDisposed = true;
     _atmsSubscription?.cancel();
     super.dispose();
   }

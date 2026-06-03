@@ -16,11 +16,6 @@ class DoctorsNotifier extends ChangeNotifier {
   List<DoctorLicenseRecordModel> _doctorRecords = [];
   bool _isLoadingDoctors = true;
   StreamSubscription<QuerySnapshot>? _doctorsSubscription;
-  DocumentSnapshot? _lastDoctorDoc;
-  bool _hasMoreDoctors = true;
-  bool _isLoadingMoreDoctors = false;
-
-  bool get isLoadingMoreDoctors => _isLoadingMoreDoctors;
 
   @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
@@ -61,11 +56,7 @@ class DoctorsNotifier extends ChangeNotifier {
       _doctorsSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _doctorRecords = snapshot.docs
-              .map(
-                (doc) => DoctorLicenseRecordModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                ),
-              )
+              .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data()))
               .toList();
           _isLoadingDoctors = false;
           notifyListeners();
@@ -123,80 +114,44 @@ class DoctorsNotifier extends ChangeNotifier {
     }
 
     AppLogger.info('Initializing doctors licenses listener in DoctorsNotifier');
-    reloadDoctors();
-  }
-
-  /// Fetches the first page of doctor records, resetting pagination state.
-  Future<void> reloadDoctors() async {
     _isLoadingDoctors = true;
-    _lastDoctorDoc = null;
-    _hasMoreDoctors = true;
-    _isLoadingMoreDoctors = false;
-    _doctorRecords = [];
     notifyListeners();
 
     try {
-      final query = (testFirestore ?? FirebaseFirestore.instance)
+      _doctorsSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('9c64c522-bbc2-48fe-96fb-3b2a8626f59e')
-          .limit(50);
-      final snapshot = await query.get();
-      AppLogger.info(
-        'Doctors first page fetched: ${snapshot.docs.length} records',
-      );
-      if (snapshot.docs.isNotEmpty) {
-        _lastDoctorDoc = snapshot.docs.last;
-        _doctorRecords = snapshot.docs
-            .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data()))
-            .toList();
-        if (snapshot.docs.length < 50) {
-          _hasMoreDoctors = false;
-        }
-      } else {
-        _hasMoreDoctors = false;
-      }
+          .snapshots()
+          .listen(
+            (snapshot) {
+              _doctorRecords = snapshot.docs
+                  .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data()))
+                  .toList();
+              _isLoadingDoctors = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingDoctors = false;
+              notifyListeners();
+              AppLogger.error(
+                'Firestore doctors collection listener error',
+                err,
+              );
+            },
+          );
     } catch (e) {
-      AppLogger.error('Failed to reload doctor records', e);
-    } finally {
       _isLoadingDoctors = false;
       notifyListeners();
+      AppLogger.error('Failed to initialize doctors listener', e);
     }
   }
 
-  /// Fetches the next page of doctor records using cursor pagination.
-  Future<void> loadMoreDoctors() async {
-    if (_isLoadingMoreDoctors || !_hasMoreDoctors || _lastDoctorDoc == null) {
-      return;
-    }
-
-    _isLoadingMoreDoctors = true;
+  /// Cancels active doctors subscriptions and resets paging states.
+  void cancelDoctorsListener() {
+    _doctorsSubscription?.cancel();
+    _doctorsSubscription = null;
+    _isLoadingDoctors = true;
+    _doctorRecords = [];
     notifyListeners();
-
-    try {
-      final query = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('9c64c522-bbc2-48fe-96fb-3b2a8626f59e')
-          .startAfterDocument(_lastDoctorDoc!)
-          .limit(50);
-      final snapshot = await query.get();
-      AppLogger.info('Doctors loaded more: ${snapshot.docs.length} records');
-
-      if (snapshot.docs.isNotEmpty) {
-        _lastDoctorDoc = snapshot.docs.last;
-        final newRecords = snapshot.docs
-            .map((doc) => DoctorLicenseRecordModel.fromMap(doc.data()))
-            .toList();
-        _doctorRecords.addAll(newRecords);
-        if (snapshot.docs.length < 50) {
-          _hasMoreDoctors = false;
-        }
-      } else {
-        _hasMoreDoctors = false;
-      }
-    } catch (e) {
-      AppLogger.error('Failed to load more doctor records', e);
-    } finally {
-      _isLoadingMoreDoctors = false;
-      notifyListeners();
-    }
   }
 
   bool _isDisposed = false;
@@ -204,7 +159,11 @@ class DoctorsNotifier extends ChangeNotifier {
   @override
   void notifyListeners() {
     if (!_isDisposed) {
-      super.notifyListeners();
+      scheduleMicrotask(() {
+        if (!_isDisposed) {
+          super.notifyListeners();
+        }
+      });
     }
   }
 

@@ -25,24 +25,16 @@ class _CompaniesLiquidationScreenState
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     widget.appState.addRecent(DatasetIds.companiesLiquidation);
+    widget.appState.initLiquidationListener();
   }
 
   @override
   void dispose() {
+    widget.appState.cancelLiquidationListener();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.position.pixels;
-    if (maxScroll - currentScroll <= 200.0) {
-      widget.appState.loadMoreLiquidation();
-    }
   }
 
   Color _getStatusColor(String status) {
@@ -333,31 +325,8 @@ class _CompaniesLiquidationScreenState
                         return ListView.builder(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
-                          itemCount:
-                              list.length +
-                              (widget.appState.isLoadingMoreLiquidation
-                                  ? 1
-                                  : 0),
+                          itemCount: list.length,
                           itemBuilder: (context, index) {
-                            if (index == list.length) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 24.0,
-                                ),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.0,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
                             final item = list[index];
                             final statusString = isRtl
                                 ? item.caseStatus['he']!

@@ -19,13 +19,6 @@ class PermitsNotifier extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _permitSubscription;
   StreamSubscription<DocumentSnapshot>? _permitMetadataSubscription;
 
-  DocumentSnapshot? _lastPermitDoc;
-  bool _hasMorePermits = true;
-  bool _isLoadingMorePermits = false;
-  String _previousPermitSyncStatus = '';
-
-  bool get isLoadingMorePermits => _isLoadingMorePermits;
-
   @visibleForTesting
   @visibleForTesting
   Stream<DocumentSnapshot<Map<String, dynamic>>>? testMetadataStream;
@@ -77,13 +70,9 @@ class PermitsNotifier extends ChangeNotifier {
 
             if (newActive.isNotEmpty && newActive != _activePermitCollection) {
               _bindActivePermitCollection(newActive);
-            } else if (_previousPermitSyncStatus == 'syncing' &&
-                newStatus == 'idle') {
-              reloadPermits();
             } else {
               notifyListeners();
             }
-            _previousPermitSyncStatus = newStatus;
           } else {
             _isLoadingPermits = false;
             notifyListeners();
@@ -181,13 +170,9 @@ class PermitsNotifier extends ChangeNotifier {
                     if (newActive.isNotEmpty &&
                         newActive != _activePermitCollection) {
                       _bindActivePermitCollection(newActive);
-                    } else if (_previousPermitSyncStatus == 'syncing' &&
-                        newStatus == 'idle') {
-                      reloadPermits();
                     } else {
                       notifyListeners();
                     }
-                    _previousPermitSyncStatus = newStatus;
                   } else {
                     _isLoadingPermits = false;
                     notifyListeners();
@@ -223,9 +208,7 @@ class PermitsNotifier extends ChangeNotifier {
     if (testPermitsStream != null) {
       _permitSubscription = testPermitsStream!.listen(
         (snapshot) {
-          _permitRecords = snapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
+          _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
           _isLoadingPermits = false;
           notifyListeners();
         },
@@ -242,7 +225,25 @@ class PermitsNotifier extends ChangeNotifier {
       return;
     }
     try {
-      reloadPermits();
+      _permitSubscription = (testFirestore ?? FirebaseFirestore.instance)
+          .collection(newCollection)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
+              _isLoadingPermits = false;
+              notifyListeners();
+            },
+            onError: (Object err) {
+              _isLoadingPermits = false;
+              _permitSyncStatus = 'error';
+              notifyListeners();
+              AppLogger.error(
+                'Firestore permit collection listener error for $newCollection',
+                err,
+              );
+            },
+          );
     } catch (e) {
       _isLoadingPermits = false;
       _permitSyncStatus = 'error';
@@ -254,78 +255,17 @@ class PermitsNotifier extends ChangeNotifier {
     }
   }
 
-  /// Fetches the first page of permit records, resetting pagination state.
-  Future<void> reloadPermits() async {
-    if (_activePermitCollection.isEmpty) return;
+  /// Cancels active permit subscriptions and resets paging states.
+  void cancelPermitMetadataListener() {
+    _permitSubscription?.cancel();
+    _permitSubscription = null;
+    _permitMetadataSubscription?.cancel();
+    _permitMetadataSubscription = null;
     _isLoadingPermits = true;
-    _lastPermitDoc = null;
-    _hasMorePermits = true;
-    _isLoadingMorePermits = false;
     _permitRecords = [];
+    _activePermitCollection = '';
+    _permitSyncStatus = 'idle';
     notifyListeners();
-
-    try {
-      final query = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(_activePermitCollection)
-          .limit(50);
-      final snapshot = await query.get();
-      AppLogger.info(
-        'Permits first page fetched: ${snapshot.docs.length} records',
-      );
-      if (snapshot.docs.isNotEmpty) {
-        _lastPermitDoc = snapshot.docs.last;
-        _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
-        if (snapshot.docs.length < 50) {
-          _hasMorePermits = false;
-        }
-      } else {
-        _hasMorePermits = false;
-      }
-    } catch (e) {
-      _permitSyncStatus = 'error';
-      AppLogger.error('Failed to reload permit records', e);
-    } finally {
-      _isLoadingPermits = false;
-      notifyListeners();
-    }
-  }
-
-  /// Fetches the next page of permit records using cursor pagination.
-  Future<void> loadMorePermits() async {
-    if (_isLoadingMorePermits ||
-        !_hasMorePermits ||
-        _lastPermitDoc == null ||
-        _activePermitCollection.isEmpty) {
-      return;
-    }
-
-    _isLoadingMorePermits = true;
-    notifyListeners();
-
-    try {
-      final query = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(_activePermitCollection)
-          .startAfterDocument(_lastPermitDoc!)
-          .limit(50);
-      final snapshot = await query.get();
-      AppLogger.info('Permits loaded more: ${snapshot.docs.length} records');
-
-      if (snapshot.docs.isNotEmpty) {
-        _lastPermitDoc = snapshot.docs.last;
-        final newRecords = snapshot.docs.map((doc) => doc.data()).toList();
-        _permitRecords.addAll(newRecords);
-        if (snapshot.docs.length < 50) {
-          _hasMorePermits = false;
-        }
-      } else {
-        _hasMorePermits = false;
-      }
-    } catch (e) {
-      AppLogger.error('Failed to load more permit records', e);
-    } finally {
-      _isLoadingMorePermits = false;
-      notifyListeners();
-    }
   }
 
   bool _isDisposed = false;
@@ -333,7 +273,11 @@ class PermitsNotifier extends ChangeNotifier {
   @override
   void notifyListeners() {
     if (!_isDisposed) {
-      super.notifyListeners();
+      scheduleMicrotask(() {
+        if (!_isDisposed) {
+          super.notifyListeners();
+        }
+      });
     }
   }
 

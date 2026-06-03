@@ -95,6 +95,11 @@ void main() async {
     );
     // Connect to local Firestore emulator
     FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
+    // Enable Firestore offline persistence and unlimited caching
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
     // Connect to local Auth emulator
     await FirebaseAuth.instance.useAuthEmulator(host, authPort);
   } catch (e, stack) {
@@ -116,7 +121,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _appState.initPermitMetadataListener();
+    _appState.initDirectoryListener();
   }
 
   @override
