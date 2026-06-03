@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
@@ -61,6 +62,7 @@ class AppStateNotifier extends ChangeNotifier {
   List<String> get recents => authNotifier.recents;
   UserProfile? get userProfile => authNotifier.userProfile;
   Map<String, String>? get mockUser => authNotifier.mockUser;
+  bool get isFirebaseInitialized => authNotifier.isFirebaseInitialized;
 
   // Delegated Getters for AntennasNotifier
   List<Map<String, dynamic>> get antennaRecords =>
@@ -215,19 +217,21 @@ class AppStateNotifier extends ChangeNotifier {
     );
 
     if (isTesting) {
-      final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
-      final scheduler = Map<String, dynamic>.from(localMeta['scheduler'] as Map? ?? {});
+      final Map<String, dynamic> localMeta =
+          datasetMetadataMap[datasetId] ?? {};
+      final scheduler = Map<String, dynamic>.from(
+        localMeta['scheduler'] as Map? ?? {},
+      );
       scheduler['enabled'] = enabled;
       scheduler['updateIntervalHours'] = updateIntervalHours;
 
       // Compute a fake nextRun locally for testing
-      final nextRunDate = DateTime.now().add(Duration(hours: updateIntervalHours));
+      final nextRunDate = DateTime.now().add(
+        Duration(hours: updateIntervalHours),
+      );
       scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
 
-      _datasetMetadataMap[datasetId] = {
-        ...localMeta,
-        'scheduler': scheduler,
-      };
+      datasetMetadataMap[datasetId] = {...localMeta, 'scheduler': scheduler};
       notifyListeners();
       return;
     }
@@ -250,7 +254,10 @@ class AppStateNotifier extends ChangeNotifier {
 
       // If nextRun is empty or scheduler was disabled and now enabled, calculate nextRun starting from now
       if (nextRun.isEmpty || enabled) {
-        nextRun = DateTime.now().add(Duration(hours: updateIntervalHours)).toUtc().toIso8601String();
+        nextRun = DateTime.now()
+            .add(Duration(hours: updateIntervalHours))
+            .toUtc()
+            .toIso8601String();
       }
 
       await metadataRef.set({
@@ -258,7 +265,7 @@ class AppStateNotifier extends ChangeNotifier {
           'enabled': enabled,
           'updateIntervalHours': updateIntervalHours,
           'nextRun': nextRun,
-        }
+        },
       }, SetOptions(merge: true));
 
       AppLogger.info('Successfully updated Firestore scheduler for $datasetId');
