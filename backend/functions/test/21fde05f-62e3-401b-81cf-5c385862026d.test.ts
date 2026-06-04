@@ -183,6 +183,17 @@ describe("Bank ATMs Record Parser", () => {
       expect(parsed.cashWithdrawal).toBe(false);
     }
   });
+
+  it("should return null if coordinates are not numbers", () => {
+    const record = {
+      _id: 1,
+      Bank_Code: 14,
+      Bank_Name: 'בנק אוצר החייל בע"מ',
+      X_Coordinate: "not a number",
+      Y_Coordinate: 34.952591,
+    };
+    expect(parseAtmRecord(record as any)).toBeNull();
+  });
 });
 
 describe("Bank ATMs Ingest Sync Process", () => {
@@ -303,7 +314,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
     );
   });
 
-  it("should skip writing when the record is structurally identical to existing data", async () => {
+  it("should handle existing records and skip writing if identical", async () => {
     const apiResponse = {
       data: {
         result: {
@@ -380,7 +391,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
     expect(mockBatch.set).not.toHaveBeenCalled();
   });
 
-  it("should write record when it differs from existing data", async () => {
+  it("should handle existing records and write if they are different", async () => {
     const apiResponse = {
       data: {
         result: {
@@ -455,5 +466,13 @@ describe("Bank ATMs Ingest Sync Process", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle sync failure and update metadata status to error", async () => {
+    vi.mocked(axios.get).mockRejectedValueOnce(new Error("Network Error"));
+
+    await expect(scrapeAndSyncBankAtms(mockDb)).rejects.toThrow("Network Error");
+    expect(mockDoc).toHaveBeenCalledWith("21fde05f-62e3-401b-81cf-5c385862026d");
+    expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
   });
 });

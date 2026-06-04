@@ -142,7 +142,7 @@ class MockData {
       id: DatasetIds.companiesLiquidation,
       datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
       name: 'pr2018',
-      title: 'מאגר הכונס הרשמי',
+      title: 'חברות בפירוק',
       notes:
           'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
       publisher: 'רשות התאגידים',

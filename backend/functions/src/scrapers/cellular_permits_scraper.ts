@@ -162,7 +162,6 @@ export async function scrapeAndSyncPermitApplications(
       const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
       const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
-
       const response = await axios.get(url, { timeout: 15000 });
       const records: HebrewPermitRecord[] = response.data?.result?.records ?? [];
 
