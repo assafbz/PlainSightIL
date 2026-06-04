@@ -279,7 +279,7 @@ Setting the `engines.node` block in the functions `package.json` to comparison r
 The Firebase CLI parser does not support semver range operators for local Node engine checks and expects exact engine string keys like `"20"`, `"22"`, or `"24"`.
 
 ### Corrective Action & Best Practice
-Keep the engines configuration set to the target deploy version (e.g. `"22"`), and suppress mismatch warnings locally by setting the `--no-deprecation` Node flag:
+Keep the engines configuration set to the target deploy version (e.g. `"22"`), and suppress mismatch warnings locally by setting the `--no-deprecation` Node flag. Always ensure the Node engines version matches one of the exact supported runtimes (e.g., 20, 22, or 24) rather than a semver range:
 ```javascript
 const child = spawn('npx', ['firebase-tools', ...], {
   env: {
