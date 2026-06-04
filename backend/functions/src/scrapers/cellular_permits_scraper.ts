@@ -138,6 +138,7 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
 export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.CELLULAR_PERMITS,
+  options?: { forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = DATASET_IDS.CELLULAR_PERMITS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -147,9 +148,10 @@ export async function scrapeAndSyncPermitApplications(
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = isEmulator ? 10 : 1000;
+    const limit = isEmulator && !forceFullSync ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -161,7 +163,7 @@ export async function scrapeAndSyncPermitApplications(
       const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching data from: ${url}`);
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { timeout: 15000 });
       const records: HebrewPermitRecord[] = response.data?.result?.records ?? [];
 
       if (records.length === 0) {
@@ -225,7 +227,7 @@ export async function scrapeAndSyncPermitApplications(
         }
       }
 
-      if (isEmulator) {
+      if (isEmulator && !forceFullSync) {
         hasMore = false;
         break;
       }

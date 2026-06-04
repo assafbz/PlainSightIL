@@ -128,3 +128,66 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
   final double px = delta.dx * scale;
   final double py = -delta.dy * scale; // Flip Y for screen space
   ```
+
+---
+
+## 6. Pitfall: Scraper Emulator Throttling vs Manual Synchronizations
+
+### Symptoms
+During local emulation development, manual synchronization triggers (via the Admin UI) only retrieved a small subset (e.g., 10 records) of the dataset instead of pulling the full data.
+
+### Root Cause
+Scrapers checked the global `process.env.FUNCTIONS_EMULATOR === 'true'` flag and unconditionally capped their records to keep startup seeding lightweight, failing to distinguish between automated background startup triggers and active manual sync requests.
+
+### Corrective Action & Best Practice
+1. Refactor all scraper modules to accept an optional configuration options object:
+   ```typescript
+   export async function scrapeAndSyncDataset(
+     db: admin.firestore.Firestore,
+     options?: { limit?: number; forceFullSync?: boolean }
+   )
+   ```
+2. Leverage the HTTP request method inside cloud functions: trigger a quick seeded GET request on startup, but pass `forceFullSync: true` on POST requests initiated by the Admin panel.
+
+---
+
+## 7. Pitfall: Massive Wasted Firestore Writes on Unchanged Scraper Records
+
+### Symptoms
+Every scraper execution unconditionally wrote all records (e.g., 3,019 ATMs) to Cloud Firestore, resulting in high resource consumption, high write costs, and constant timestamp churn.
+
+### Root Cause
+The scrapers used batch write commands directly on all incoming records without checking if the records had actually changed since the last execution.
+
+### Corrective Action & Best Practice
+1. Fetch existing documents in chunks (using `db.getAll(...docRefs)`) prior to saving.
+2. Implement a recursive equality utility (`areRecordsEqual`) that ignores transient metadata attributes (like `createdAt` or `updatedAt`) to check for changes.
+3. Skip the document write if the records are identical, preserving `lastUpdated` timestamps and preventing duplicate writes.
+
+---
+
+## 8. Pitfall: Node Globals and Quotes in Flat ESLint Configurations
+
+### Symptoms
+Static checks and linter gates failed with `process is not defined`, `Buffer is not defined`, or quotes errors on Hebrew strings containing double quotes (e.g., `בע"מ`).
+
+### Root Cause
+Flat ESLint configs (`eslint.config.js`) do not implicitly inherit Node.js global variables, and strict quote linting rules block single quotes unless escape parameters are defined.
+
+### Corrective Action & Best Practice
+1. Explicitly define environment globals in `eslint.config.js`:
+   ```javascript
+   languageOptions: {
+     globals: {
+       process: "readonly",
+       Buffer: "readonly",
+     }
+   }
+   ```
+2. Configure the `quotes` rule with the `avoidEscape` option so strings containing internal double quotes can be cleanly wrapped in single quotes without triggering lint failures:
+   ```javascript
+   rules: {
+     "quotes": ["error", "double", { "avoidEscape": true }]
+   }
+   ```
+
