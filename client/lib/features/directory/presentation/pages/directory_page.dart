@@ -7,6 +7,7 @@ import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_an
 import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
 import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
 import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
+import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
@@ -136,6 +137,13 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => BankAtmsScreen(appState: widget.appState),
+        ),
+      );
+    } else if (dataset.id == DatasetIds.patentClassifications) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) =>
+              PatentClassificationsScreen(appState: widget.appState),
         ),
       );
     }

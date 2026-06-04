@@ -11,6 +11,7 @@ import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
 import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
 import { scrapeAndSyncBankAtms } from "./scrapers/21fde05f-62e3-401b-81cf-5c385862026d";
+import { scrapeAndSyncPatentClassifications } from "./scrapers/patent_classifications_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 
@@ -22,6 +23,7 @@ const scraperRegistry: Record<
   [DATASET_IDS.CELLULAR_PERMITS]: scrapeAndSyncPermitApplications,
   [DATASET_IDS.COMPANIES_LIQUIDATION]: scrapeAndSyncCompaniesLiquidation,
   [DATASET_IDS.DOCTORS_LICENSES]: scrapeAndSyncDoctorsLicenses,
+  [DATASET_IDS.PATENT_CLASSIFICATIONS]: scrapeAndSyncPatentClassifications,
   "21fde05f-62e3-401b-81cf-5c385862026d": scrapeAndSyncBankAtms,
   datasets_metadata: scrapeAndSyncDatasetMetadata,
 };
@@ -31,6 +33,7 @@ const defaultIntervals: Record<string, number> = {
   [DATASET_IDS.CELLULAR_PERMITS]: 168, // Cellular Permit Apps (weekly)
   [DATASET_IDS.COMPANIES_LIQUIDATION]: 168, // Companies Liquidation (weekly)
   [DATASET_IDS.DOCTORS_LICENSES]: 168, // Doctors Licenses (weekly)
+  [DATASET_IDS.PATENT_CLASSIFICATIONS]: 24, // Patent Classifications (daily)
   "21fde05f-62e3-401b-81cf-5c385862026d": 168, // Bank ATMs (weekly)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
@@ -689,6 +692,49 @@ export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => 
     });
   }
 });
+
+// HTTPS Triggered Cloud Function for Patent Classifications - manual sync
+export const manualSyncPatentClassifications = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .https.onRequest(async (req, res) => {
+    logger.info("manualSyncPatentClassifications HTTPS trigger invoked");
+    if (handleCors(req, res)) return;
+    const auth = await validateAdminRequest(req, res);
+    if (!auth) return;
+
+    const datasetId = DATASET_IDS.PATENT_CLASSIFICATIONS;
+    const tracker = ScraperTelemetryTracker.start(datasetId);
+    try {
+      // Set status to syncing in Firestore immediately
+      await db
+        .collection("dataset_metadata")
+        .doc(datasetId)
+        .set({ status: "syncing" }, { merge: true });
+
+      const result = await scrapeAndSyncPatentClassifications(db);
+      logger.info("manualSyncPatentClassifications sync completed successfully", {
+        count: result.count,
+      });
+      await tracker.complete(db, result.count);
+      await updateSchedulerOnComplete(db, datasetId, "idle");
+      res.status(200).json({
+        message: "Patent classifications sync completed successfully",
+        count: result.count,
+      });
+    } catch (error) {
+      const err = error as Error;
+      logger.error("manualSyncPatentClassifications sync failed", {
+        error: err.message,
+        stack: err.stack,
+      });
+      await updateSchedulerOnComplete(db, datasetId, "error");
+      await tracker.fail(db, err);
+      res.status(500).json({
+        message: "Patent classifications sync failed",
+        error: err.message || String(error),
+      });
+    }
+  });
 
 /**
  * Cloud Function trigger running on user registration.

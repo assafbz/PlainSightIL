@@ -10,6 +10,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainsight/core/errors/exceptions.dart';
+import 'package:plainsight/core/theme/design_system.dart';
+import 'package:plainsight/core/constants/mock_data.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
@@ -17,6 +19,7 @@ import 'package:plainsight/features/datasets/cellular_antennas/presentation/noti
 import 'package:plainsight/features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
+import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
 import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
@@ -1477,6 +1480,43 @@ void main() {
 
         notifierLiq.dispose();
         notifierDoc.dispose();
+      },
+    );
+
+    test(
+      'PatentClassificationsNotifier handles testing mode and Firestore queries',
+      () async {
+        // Test in testing mode
+        AppStateNotifier.isTesting = true;
+        final notifier = PatentClassificationsNotifier();
+        notifier.initPatentClassificationsListener();
+        expect(notifier.isLoadingPatents, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(notifier.isLoadingPatents, isFalse);
+        expect(notifier.patentRecords.isNotEmpty, isTrue);
+        expect(notifier.patentRecords.length, MockData.patents.length);
+
+        notifier.setPrimaryFilter('Primary');
+        notifier.setSearchQuery('327015');
+        notifier.resetFilters();
+        notifier.cancelPatentClassificationsListener();
+        expect(notifier.patentRecords.isEmpty, isTrue);
+
+        // Test in non-testing mode with Firestore
+        AppStateNotifier.isTesting = false;
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference();
+        });
+        final notifierFirestore = PatentClassificationsNotifier(
+          testFirestore: mockFirestore,
+        );
+        notifierFirestore.initPatentClassificationsListener();
+        expect(notifierFirestore.isLoadingPatents, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        notifierFirestore.dispose();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
       },
     );
 

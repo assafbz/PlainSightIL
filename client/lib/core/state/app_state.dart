@@ -6,6 +6,7 @@ import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
+import '../../features/datasets/patent_classifications/data/models/patent_classification_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 import '../../features/auth/presentation/notifiers/auth_notifier.dart';
 import '../../features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
@@ -13,6 +14,7 @@ import '../../features/datasets/cellular_antennas/presentation/notifiers/permits
 import '../../features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
 import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
+import '../../features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
@@ -41,6 +43,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final LiquidationNotifier liquidationNotifier;
   late final DoctorsNotifier doctorsNotifier;
   late final BankAtmsNotifier bankAtmsNotifier;
+  late final PatentClassificationsNotifier patentClassificationsNotifier;
   late final TelemetryNotifier telemetryNotifier;
 
   // Configuration Getters
@@ -87,6 +90,14 @@ class AppStateNotifier extends ChangeNotifier {
   List<BankAtmRecordModel> get atmRecords => bankAtmsNotifier.atmRecords;
   bool get isLoadingAtms => bankAtmsNotifier.isLoadingAtms;
 
+  // Delegated Getters for PatentClassificationsNotifier
+  List<PatentClassificationRecordModel> get patentRecords =>
+      patentClassificationsNotifier.patentRecords;
+  bool get isLoadingPatents => patentClassificationsNotifier.isLoadingPatents;
+  bool get isLoadingMorePatents =>
+      patentClassificationsNotifier.isLoadingMorePatents;
+  bool get hasMorePatents => patentClassificationsNotifier.hasMorePatents;
+
   // Delegated Getters for TelemetryNotifier
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>
       telemetryNotifier.datasetMetadataMap;
@@ -110,6 +121,9 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier = LiquidationNotifier(isTesting: isTesting);
     doctorsNotifier = DoctorsNotifier(isTesting: isTesting);
     bankAtmsNotifier = BankAtmsNotifier(isTesting: isTesting);
+    patentClassificationsNotifier = PatentClassificationsNotifier(
+      isTesting: isTesting,
+    );
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
       functionsPort: functionsPort,
@@ -122,6 +136,7 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier.addListener(_onSubNotifierChanged);
     doctorsNotifier.addListener(_onSubNotifierChanged);
     bankAtmsNotifier.addListener(_onSubNotifierChanged);
+    patentClassificationsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
     _initPackageInfo();
@@ -153,6 +168,7 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier.initLiquidationListener();
     doctorsNotifier.initDoctorsListener();
     bankAtmsNotifier.initBankAtmsListener();
+    patentClassificationsNotifier.initPatentClassificationsListener();
   }
 
   void initAdminMetadataListener() {
@@ -177,6 +193,18 @@ class AppStateNotifier extends ChangeNotifier {
 
   void initBankAtmsListener() => bankAtmsNotifier.initBankAtmsListener();
   void cancelBankAtmsListener() => bankAtmsNotifier.cancelBankAtmsListener();
+
+  void initPatentClassificationsListener() =>
+      patentClassificationsNotifier.initPatentClassificationsListener();
+  void cancelPatentClassificationsListener() =>
+      patentClassificationsNotifier.cancelPatentClassificationsListener();
+  void setPatentSearchQuery(String query) =>
+      patentClassificationsNotifier.setSearchQuery(query);
+  void setPatentPrimaryFilter(String filter) =>
+      patentClassificationsNotifier.setPrimaryFilter(filter);
+  void resetPatentFilters() => patentClassificationsNotifier.resetFilters();
+  Future<void> fetchNextPatentPage() =>
+      patentClassificationsNotifier.fetchNextPage();
 
   void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
   void cancelAdminMetadataListener() =>
@@ -252,6 +280,7 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier.removeListener(_onSubNotifierChanged);
     doctorsNotifier.removeListener(_onSubNotifierChanged);
     bankAtmsNotifier.removeListener(_onSubNotifierChanged);
+    patentClassificationsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
 
     authNotifier.dispose();
@@ -260,6 +289,7 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier.dispose();
     doctorsNotifier.dispose();
     bankAtmsNotifier.dispose();
+    patentClassificationsNotifier.dispose();
     telemetryNotifier.dispose();
     super.dispose();
   }
@@ -340,6 +370,22 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'Licensed / Active',
       'doctor_unlicensed': 'Muted / Inactive',
       'doctors_publisher': 'Ministry of Health - Medical Professions Registry',
+      'patent_classifications_title': 'Patent Classifications',
+      'patent_classifications_desc':
+          'CPC Classifications for Patent Applications in Israel.',
+      'patent_classifications_count': '~741,000+ records',
+      'patent_classifications_search_placeholder':
+          'Search by Application Number or Classification',
+      'patent_classifications_publisher': 'Israel Patent Office',
+      'patent_app_num_label': 'Application: #',
+      'patent_class_label': 'CPC Classification: ',
+      'patent_is_primary': 'Primary Classification',
+      'patent_is_secondary': 'Secondary Classification',
+      'patent_title_he': 'Title (Hebrew): ',
+      'patent_title_en': 'Title (English): ',
+      'patent_primary_chip_all': 'All',
+      'patent_primary_chip_primary': 'Primary Only',
+      'patent_primary_chip_secondary': 'Secondary Only',
       'atm_title': 'Bank ATMs',
       'atm_desc': 'ATM locations across Israel from the Bank of Israel.',
       'atm_search_placeholder': 'Search by city or bank...',
@@ -506,6 +552,20 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_licensed': 'מורשה / פעיל',
       'doctor_unlicensed': 'לא מורשה',
       'doctors_publisher': 'משרד הבריאות - האגף לרישוי מקצועות רפואיים',
+      'patent_classifications_title': 'סיווגי CPC לפטנטים',
+      'patent_classifications_desc': 'סיווגי CPC לבקשות פטנט של רשם הפטנטים.',
+      'patent_classifications_count': '~741,000+ רשומות',
+      'patent_classifications_search_placeholder': 'חפש לפי מספר בקשה או סיווג',
+      'patent_classifications_publisher': 'רשות הפטנטים',
+      'patent_app_num_label': 'מספר בקשה: ',
+      'patent_class_label': 'סיווג CPC: ',
+      'patent_is_primary': 'סיווג ראשי',
+      'patent_is_secondary': 'סיווג משני',
+      'patent_title_he': 'שם האמצאה בעברית: ',
+      'patent_title_en': 'שם האמצאה באנגלית: ',
+      'patent_primary_chip_all': 'הכל',
+      'patent_primary_chip_primary': 'ראשי בלבד',
+      'patent_primary_chip_secondary': 'משני בלבד',
       'atm_title': 'כספומטים',
       'atm_desc': 'מיקומי כספומטים בנקאיים ברחבי ישראל.',
       'atm_search_placeholder': 'חיפוש לפי עיר או בנק...',
