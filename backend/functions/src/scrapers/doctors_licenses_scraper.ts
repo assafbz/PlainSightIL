@@ -154,7 +154,7 @@ export async function scrapeAndSyncDoctorsLicenses(
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     let offset = 0;
-    const limit = isEmulator ? 10 : 1000;
+    const limit = isEmulator ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
