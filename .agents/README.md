@@ -90,3 +90,5 @@ To ensure consistency and quality across autonomous developer cycles:
 5.  **Log Transitions**: Upon completing your phase:
     *   Modify the active issue file frontmatter (change `current_phase` to the next phase, update `assigned_agent` to the next role, and toggle `hitl_approval_required` if the next phase requires a HITL gate).
     *   Add a line to the Audit Log section detailing your work.
+6.  **Mandatory GitHub Issue Mapping**: Every task starts with a GitHub issue. If no issue number is mentioned in the request, the agent must create the issue on GitHub using integration tools first, and use its number.
+7.  **Passing GitHub Checks before Closure**: The SDLC is strictly non-skippable. The SDLC concludes by creating a Pull Request, waiting for and verifying that all GitHub Checks/Actions on the PR pass successfully, merging the PR, and closing the corresponding GitHub issue.

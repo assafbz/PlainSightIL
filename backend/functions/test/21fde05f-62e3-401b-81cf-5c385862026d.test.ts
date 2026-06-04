@@ -183,6 +183,17 @@ describe("Bank ATMs Record Parser", () => {
       expect(parsed.cashWithdrawal).toBe(false);
     }
   });
+
+  it("should return null if coordinates are not numbers", () => {
+    const record = {
+      _id: 1,
+      Bank_Code: 14,
+      Bank_Name: 'בנק אוצר החייל בע"מ',
+      X_Coordinate: "not a number",
+      Y_Coordinate: 34.952591,
+    };
+    expect(parseAtmRecord(record as any)).toBeNull();
+  });
 });
 
 describe("Bank ATMs Ingest Sync Process", () => {
@@ -301,5 +312,134 @@ describe("Bank ATMs Ingest Sync Process", () => {
       }),
       { merge: true },
     );
+  });
+
+  it("should handle existing records and skip writing if identical", async () => {
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 1,
+              Bank_Code: 14,
+              Bank_Name: 'בנק אוצר החייל בע"מ',
+              X_Coordinate: 31.0,
+              Y_Coordinate: 34.8,
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    mockGetAll.mockImplementationOnce((...refs) => {
+      return Promise.resolve(
+        refs.map((ref) => ({
+          exists: true,
+          id: ref.id,
+          data: () => ({
+            id: "1",
+            _id: 1,
+            bankCode: 14,
+            bankName: { he: 'בנק אוצר החייל בע"מ', en: "Bank Otsar HaHayal" },
+            branchCode: 0,
+            subBranchCode: 0,
+            atmNumber: 0,
+            address: "",
+            addressExtra: "",
+            city: "",
+            commission: false,
+            cashWithdrawal: false,
+            cashDeposit: false,
+            chequeDeposit: false,
+            envelopeDeposit: false,
+            forexTransaction: false,
+            additionalTransactions: false,
+            atmLocation: { he: "", en: "" },
+            handicapAccess: false,
+            coordinates: { latitude: 31.0, longitude: 34.8 },
+            geohash: "sv8wrb2ky",
+            lastUpdated: "old-date",
+            createdAt: "old-created-date",
+          }),
+        })),
+      );
+    });
+
+    const result = await scrapeAndSyncBankAtms(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should handle existing records and write if they are different", async () => {
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 1,
+              Bank_Code: 14,
+              Bank_Name: 'בנק אוצר החייל בע"מ',
+              X_Coordinate: 31.0,
+              Y_Coordinate: 34.8,
+              City: "אילת",
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    mockGetAll.mockImplementationOnce((...refs) => {
+      return Promise.resolve(
+        refs.map((ref) => ({
+          exists: true,
+          id: ref.id,
+          data: () => ({
+            id: "1",
+            _id: 1,
+            bankCode: 14,
+            bankName: { he: 'בנק אוצר החייל בע"מ', en: "Bank Otsar HaHayal" },
+            branchCode: 0,
+            subBranchCode: 0,
+            atmNumber: 0,
+            address: "",
+            addressExtra: "",
+            city: "תל אביב",
+            commission: false,
+            cashWithdrawal: false,
+            cashDeposit: false,
+            chequeDeposit: false,
+            envelopeDeposit: false,
+            forexTransaction: false,
+            additionalTransactions: false,
+            atmLocation: { he: "", en: "" },
+            handicapAccess: false,
+            coordinates: { latitude: 31.0, longitude: 34.8 },
+            geohash: "sv8wrb2ky",
+            lastUpdated: "old-date",
+            createdAt: "old-created-date",
+          }),
+        })),
+      );
+    });
+
+    const result = await scrapeAndSyncBankAtms(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle sync failure and update metadata status to error", async () => {
+    vi.mocked(axios.get).mockRejectedValueOnce(new Error("Network Error"));
+
+    await expect(scrapeAndSyncBankAtms(mockDb)).rejects.toThrow("Network Error");
+    expect(mockDoc).toHaveBeenCalledWith("21fde05f-62e3-401b-81cf-5c385862026d");
+    expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
   });
 });

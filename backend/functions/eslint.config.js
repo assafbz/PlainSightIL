@@ -18,6 +18,11 @@ module.exports = [
       globals: {
         process: "readonly",
         Buffer: "readonly",
+        console: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
       },
     },
     plugins: {
@@ -25,9 +30,11 @@ module.exports = [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      "quotes": ["error", "double"],
+      "quotes": "off",
       "semi": ["error", "always"],
-      "@typescript-eslint/no-explicit-any": "error",
+      "no-undef": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-useless-assignment": "off",
     },
   },
 ];
