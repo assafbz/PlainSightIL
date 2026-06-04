@@ -1547,6 +1547,57 @@ void main() {
         await authStreamController.close();
       },
     );
+
+    test(
+      'TelemetryNotifier.updateDatasetScheduler in production mode works successfully',
+      () async {
+        final mockFirestoreOptions = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference();
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreOptions,
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        // 1. Success case where document exists
+        await notifier.updateDatasetScheduler(
+          'existing-doc',
+          enabled: true,
+          updateIntervalHours: 6,
+        );
+
+        // 2. Success case where document does not exist
+        await notifier.updateDatasetScheduler(
+          'some-id',
+          enabled: false,
+          updateIntervalHours: 12,
+        );
+
+        // 3. Exception path
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Update scheduler exception');
+        });
+        final notifierFail = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+
+        expect(
+          () => notifierFail.updateDatasetScheduler(
+            'some-id',
+            enabled: true,
+            updateIntervalHours: 6,
+          ),
+          throwsException,
+        );
+
+        notifier.dispose();
+        notifierFail.dispose();
+      },
+    );
   });
 }
 
@@ -1677,9 +1728,18 @@ class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
       return snapshotStream ?? const Stream.empty();
     }
     if (invocation.memberName == #get) {
+      final exists = _id == 'existing-doc';
+      final data = exists
+          ? {
+              'scheduler': {'nextRun': '2026-06-04T12:00:00Z'},
+            }
+          : {'requestCount': 5};
       return Future.value(
-        FakeDocumentSnapshot(_id, false, {'requestCount': 5}),
+        FakeDocumentSnapshot(_id, exists, data),
       );
+    }
+    if (invocation.memberName == #set) {
+      return Future.value(null);
     }
     return super.noSuchMethod(invocation);
   }
