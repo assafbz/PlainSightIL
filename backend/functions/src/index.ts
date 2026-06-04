@@ -49,6 +49,10 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
+// Define the service account to run the functions since the default compute service account was deleted.
+// By default we use the App Engine default service account which typically exists.
+const SERVICE_ACCOUNT = "plainsightil@appspot.gserviceaccount.com";
+
 /**
  * Helper to configure CORS headers and automatically resolve preflight OPTIONS requests.
  * Restricts origin to localhost development ports or production domains to prevent CSRF and cross-origin exploits.
@@ -139,28 +143,33 @@ async function checkAndLogApiReachability(
 /**
  * Scheduled Cloud Function checking the health of the government open data API every 15 minutes.
  */
-export const scheduledApiHealthCheck = functions.pubsub.schedule("*/15 * * * *").onRun(async () => {
-  logger.info("scheduledApiHealthCheck trigger invoked");
-  await checkAndLogApiReachability(db);
-});
+export const scheduledApiHealthCheck = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .pubsub.schedule("*/15 * * * *")
+  .onRun(async () => {
+    logger.info("scheduledApiHealthCheck trigger invoked");
+    await checkAndLogApiReachability(db);
+  });
 
 /**
  * HTTPS Cloud Function for manually triggering an API reachability check.
  */
-export const manualApiHealthCheck = functions.https.onRequest(async (req, res) => {
-  logger.info("manualApiHealthCheck HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  try {
-    const result = await checkAndLogApiReachability(db);
-    res.status(200).json(result);
-  } catch (error) {
-    const err = error as Error;
-    res.status(500).json({
-      message: "API check execution failed",
-      error: err.message || String(error),
-    });
-  }
-});
+export const manualApiHealthCheck = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(async (req, res) => {
+    logger.info("manualApiHealthCheck HTTPS trigger invoked");
+    if (handleCors(req, res)) return;
+    try {
+      const result = await checkAndLogApiReachability(db);
+      res.status(200).json(result);
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        message: "API check execution failed",
+        error: err.message || String(error),
+      });
+    }
+  });
 
 /**
  * Helper to update the scheduler settings for a dataset upon completion or failure.
@@ -215,53 +224,57 @@ export async function updateSchedulerOnComplete(
 /**
  * Scheduled Cloud Function running every 15 minutes to check which scrapers are due to run.
  */
-export const scheduledScraperTicker = functions.pubsub.schedule("*/15 * * * *").onRun(async () => {
-  logger.info("scheduledScraperTicker trigger invoked");
-  const now = new Date().toISOString();
-  try {
-    const snapshot = await db
-      .collection("dataset_metadata")
-      .where("scheduler.enabled", "==", true)
-      .get();
-
-    const pubsub = new PubSub();
-    const topic = pubsub.topic("run-scraper-topic");
-
+export const scheduledScraperTicker = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .pubsub.schedule("*/15 * * * *")
+  .onRun(async () => {
+    logger.info("scheduledScraperTicker trigger invoked");
+    const now = new Date().toISOString();
     try {
-      await topic.create();
-    } catch (e: unknown) {
-      const err = e as { code?: number; message?: string };
-      if (err.code !== 6) {
-        logger.warn(`Error creating topic: ${err.message}`);
+      const snapshot = await db
+        .collection("dataset_metadata")
+        .where("scheduler.enabled", "==", true)
+        .get();
+
+      const pubsub = new PubSub();
+      const topic = pubsub.topic("run-scraper-topic");
+
+      try {
+        await topic.create();
+      } catch (e: unknown) {
+        const err = e as { code?: number; message?: string };
+        if (err.code !== 6) {
+          logger.warn(`Error creating topic: ${err.message}`);
+        }
       }
-    }
 
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const datasetId = doc.id;
-      const nextRun = data.scheduler?.nextRun;
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const datasetId = doc.id;
+        const nextRun = data.scheduler?.nextRun;
 
-      if (nextRun && nextRun <= now && data.status !== "syncing") {
-        logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
+        if (nextRun && nextRun <= now && data.status !== "syncing") {
+          logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
 
-        // Update status to syncing in Firestore immediately
-        await doc.ref.set({ status: "syncing" }, { merge: true });
+          // Update status to syncing in Firestore immediately
+          await doc.ref.set({ status: "syncing" }, { merge: true });
 
-        // Publish event to Pub/Sub topic
-        const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
-        await topic.publishMessage({ data: dataBuffer });
+          // Publish event to Pub/Sub topic
+          const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
+          await topic.publishMessage({ data: dataBuffer });
+        }
       }
+    } catch (error) {
+      logger.error("scheduledScraperTicker execution failed", error);
     }
-  } catch (error) {
-    logger.error("scheduledScraperTicker execution failed", error);
-  }
-});
+  });
 
 /**
  * Pub/Sub topic-triggered Cloud Function that executes the actual scraping.
  */
-export const runScraperPubSub = functions.pubsub
-  .topic("run-scraper-topic")
+export const runScraperPubSub = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .pubsub.topic("run-scraper-topic")
   .onPublish(async (message) => {
     let datasetId: string;
     try {
@@ -488,66 +501,73 @@ function createManualSyncHandler(
 }
 
 // Export the HTTPS manual sync Cloud Functions
-export const manualSyncAntennas = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.CELLULAR_ANTENNAS, { enableSeederBypass: true }),
-);
+export const manualSyncAntennas = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(
+    createManualSyncHandler(DATASET_IDS.CELLULAR_ANTENNAS, { enableSeederBypass: true }),
+  );
 
-export const manualSyncPermitApps = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.CELLULAR_PERMITS, { enableSeederBypass: true }),
-);
+export const manualSyncPermitApps = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(
+    createManualSyncHandler(DATASET_IDS.CELLULAR_PERMITS, { enableSeederBypass: true }),
+  );
 
-export const manualSyncMetadata = functions.https.onRequest(
-  createManualSyncHandler("datasets_metadata"),
-);
+export const manualSyncMetadata = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler("datasets_metadata"));
 
-export const manualSyncCompaniesLiquidation = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.COMPANIES_LIQUIDATION),
-);
+export const manualSyncCompaniesLiquidation = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.COMPANIES_LIQUIDATION));
 
 export const manualSyncDoctorsLicenses = functions
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .https.onRequest(createManualSyncHandler(DATASET_IDS.DOCTORS_LICENSES));
 
-export const manualSyncBankAtms = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.BANK_ATMS),
-);
+export const manualSyncBankAtms = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.BANK_ATMS));
 
 export const manualSyncPatentClassifications = functions
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .https.onRequest(createManualSyncHandler(DATASET_IDS.PATENT_CLASSIFICATIONS));
 
 /**
  * Cloud Function trigger running on user registration.
  * Creates an initial user profile in the users Firestore collection.
  */
-export const onUserCreate = functions.auth.user().onCreate(async (user) => {
-  logger.info("onUserCreate triggered with user:", JSON.stringify(user));
-  const uid = user.uid;
-  const email = user.email || "";
-  const displayName = user.displayName || "";
+export const onUserCreate = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .auth.user()
+  .onCreate(async (user) => {
+    logger.info("onUserCreate triggered with user:", JSON.stringify(user));
+    const uid = user.uid;
+    const email = user.email || "";
+    const displayName = user.displayName || "";
 
-  // Gracefully parse displayName into firstName and lastName
-  const nameParts = displayName.trim().split(/\s+/);
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(" ") || "";
+    // Gracefully parse displayName into firstName and lastName
+    const nameParts = displayName.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
 
-  const userDoc = {
-    uid,
-    firstName,
-    lastName,
-    email,
-    role: "user", // defaults to standard user role
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
+    const userDoc = {
+      uid,
+      firstName,
+      lastName,
+      email,
+      role: "user", // defaults to standard user role
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
-  try {
-    await admin.firestore().collection("users").doc(uid).set(userDoc);
-    logger.info(`Initialized user profile document for UID: ${uid}`);
-  } catch (error) {
-    logger.error(`Failed to initialize user profile document for UID: ${uid}`, error);
-  }
-});
+    try {
+      await admin.firestore().collection("users").doc(uid).set(userDoc);
+      logger.info(`Initialized user profile document for UID: ${uid}`);
+    } catch (error) {
+      logger.error(`Failed to initialize user profile document for UID: ${uid}`, error);
+    }
+  });
 
 // Export internal helpers for testing purposes
 export { handleCors };

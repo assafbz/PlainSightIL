@@ -33,15 +33,29 @@ const { mockVerifyIdToken, mockDbGet, mockDbSet, mockDbLimitGet, mockFirestoreIn
 // 2. Mock firebase-functions partially
 vi.mock("firebase-functions/v1", async (importOriginal) => {
   const actual = await importOriginal<typeof import("firebase-functions/v1")>();
+  const triggerMock = vi.fn().mockImplementation((handler) => handler);
   return {
     ...actual,
     https: {
       ...actual.https,
-      onRequest: vi.fn().mockImplementation((handler) => handler),
+      onRequest: triggerMock,
     },
     runWith: vi.fn().mockReturnValue({
       https: {
-        onRequest: vi.fn().mockImplementation((handler) => handler),
+        onRequest: triggerMock,
+      },
+      pubsub: {
+        schedule: vi.fn().mockReturnValue({
+          onRun: triggerMock,
+        }),
+        topic: vi.fn().mockReturnValue({
+          onPublish: triggerMock,
+        }),
+      },
+      auth: {
+        user: vi.fn().mockReturnValue({
+          onCreate: triggerMock,
+        }),
       },
     }),
   };
