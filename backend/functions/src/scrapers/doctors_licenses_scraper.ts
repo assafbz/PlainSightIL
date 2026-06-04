@@ -144,6 +144,7 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
 export async function scrapeAndSyncDoctorsLicenses(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.DOCTORS_LICENSES,
+  options?: { forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = DATASET_IDS.DOCTORS_LICENSES;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -153,8 +154,9 @@ export async function scrapeAndSyncDoctorsLicenses(
     logger.info(`Starting doctors licenses sync. Target collection: ${targetCollection}`);
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
-    const limit = isEmulator ? 100 : 1000;
+    const limit = isEmulator && !forceFullSync ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -227,7 +229,7 @@ export async function scrapeAndSyncDoctorsLicenses(
         }
       }
 
-      if (isEmulator) {
+      if (isEmulator && !forceFullSync) {
         hasMore = false;
         break;
       }

@@ -128,10 +128,69 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
   final double px = delta.dx * scale;
   final double py = -delta.dy * scale; // Flip Y for screen space
   ```
+## 6. Pitfall: Scraper Emulator Throttling vs Manual Synchronizations
+
+### Symptoms
+During local emulation development, manual synchronization triggers (via the Admin UI) only retrieved a small subset (e.g., 10 records) of the dataset instead of pulling the full data.
+
+### Root Cause
+Scrapers checked the global `process.env.FUNCTIONS_EMULATOR === 'true'` flag and unconditionally capped their records to keep startup seeding lightweight, failing to distinguish between automated background startup triggers and active manual sync requests.
+
+### Corrective Action & Best Practice
+1. Refactor all scraper modules to accept an optional configuration options object:
+   ```typescript
+   export async function scrapeAndSyncDataset(
+     db: admin.firestore.Firestore,
+     options?: { limit?: number; forceFullSync?: boolean }
+   )
+   ```
+2. Leverage the HTTP request method inside cloud functions: trigger a quick seeded GET request on startup, but pass `forceFullSync: true` on POST requests initiated by the Admin panel.
 
 ---
 
-## 6. Pitfall: Dynamic Timestamps Drift in Change-Detection Tests
+## 7. Pitfall: Massive Wasted Firestore Writes on Unchanged Scraper Records
+
+### Symptoms
+Every scraper execution unconditionally wrote all records (e.g., 3,019 ATMs) to Cloud Firestore, resulting in high resource consumption, high write costs, and constant timestamp churn.
+
+### Root Cause
+The scrapers used batch write commands directly on all incoming records without checking if the records had actually changed since the last execution.
+
+### Corrective Action & Best Practice
+1. Fetch existing documents in chunks (using `db.getAll(...docRefs)`) prior to saving.
+2. Implement a recursive equality utility (`areRecordsEqual`) that ignores transient metadata attributes (like `createdAt` or `updatedAt`) to check for changes.
+3. Skip the document write if the records are identical, preserving `lastUpdated` timestamps and preventing duplicate writes.
+
+---
+
+## 8. Pitfall: Node Globals and Quotes in Flat ESLint Configurations
+
+### Symptoms
+Static checks and linter gates failed with `process is not defined`, `Buffer is not defined`, or quotes errors on Hebrew strings containing double quotes (e.g., `בע"מ`).
+
+### Root Cause
+Flat ESLint configs (`eslint.config.js`) do not implicitly inherit Node.js global variables, and strict quote linting rules block single quotes unless escape parameters are defined.
+
+### Corrective Action & Best Practice
+1. Explicitly define environment globals in `eslint.config.js`:
+   ```javascript
+   languageOptions: {
+     globals: {
+       process: "readonly",
+       Buffer: "readonly",
+     }
+   }
+   ```
+2. Configure the `quotes` rule with the `avoidEscape` option so strings containing internal double quotes can be cleanly wrapped in single quotes without triggering lint failures:
+   ```javascript
+   rules: {
+     "quotes": ["error", "double", { "avoidEscape": true }]
+   }
+   ```
+
+---
+
+## 9. Pitfall: Dynamic Timestamps Drift in Change-Detection Tests
 
 ### Symptoms
 Unit tests asserting `areRecordsEqual` write-skips failed with:
@@ -145,7 +204,7 @@ Always specify static timestamps (e.g., `"תאריך הגשת הבקשה": "2024
 
 ---
 
-## 7. Pitfall: Registry Type Incompatibilities for Scrapers
+## 10. Pitfall: Registry Type Incompatibilities for Scrapers
 
 ### Symptoms
 Modifying the cellular permits scraper function signature to accept option parameters (e.g., `options?: { forceFullSync?: boolean }`) broke functions compilation at the registration point (`scraperRegistry` in `index.ts`) because other scrapers in the registry did not accept the same parameter options.
@@ -158,7 +217,7 @@ Define the index registry signature using rest parameters or loose parameters (e
 
 ---
 
-## 8. Pitfall: Emulator Socket Hang-ups & Zombie Processes
+## 11. Pitfall: Emulator Socket Hang-ups & Zombie Processes
 
 ### Symptoms
 Local emulator functions triggered timed out after 60s with `Error: socket hang up` or `Pub/Sub Emulator fatal error: stopping all emulators`.
@@ -171,7 +230,7 @@ Enforce clean termination of all java/node background processes using `pkill` / 
 
 ---
 
-## 9. Pitfall: Deep Comparison Type Mismatches in Equality Utility
+## 12. Pitfall: Deep Comparison Type Mismatches in Equality Utility
 
 ### Symptoms
 Documents containing empty arrays or objects are incorrectly evaluated as identical to documents containing empty objects/arrays, bypassing necessary writes.
@@ -190,7 +249,7 @@ if (Array.isArray(existing) || Array.isArray(incoming)) {
 
 ---
 
-## 10. Pitfall: Inconsistent Dataset Titles & Backend Overwrites
+## 13. Pitfall: Inconsistent Dataset Titles & Backend Overwrites
 
 ### Symptoms
 The Companies Liquidation dataset was displayed with an incorrect title ("מאגר הכונס הרשמי") on the Dataset Directory and Admin Dashboard cards, while its corresponding visualizer screen displayed "חברות בפירוק".
@@ -212,7 +271,7 @@ Ensure all mock data, widget tests, and E2E element locators are structurally sy
 
 ---
 
-## 11. Pitfall: Bypassing/Skipping SDLC Gates (Process Quality Compliance)
+## 14. Pitfall: Bypassing/Skipping SDLC Gates (Process Quality Compliance)
 
 ### Symptoms
 - Changes are pushed, merged, or deployed without all intermediate SDLC gates (Discovery, Design, Tech Design, Security, Blueprinting, Implementation, QA Validation, Lessons Learned) having their state files and deliverables properly completed, leading to undocumented changes, untracked requirements, or missed integration testing.
@@ -227,7 +286,7 @@ Ensure all mock data, widget tests, and E2E element locators are structurally sy
 
 ---
 
-## 12. Pitfall: Child Process Spawning Deprecation Warnings (`[DEP0190]`) on Non-Windows Hosts
+## 15. Pitfall: Child Process Spawning Deprecation Warnings (`[DEP0190]`) on Non-Windows Hosts
 
 ### Symptoms
 When starting up local dev servers or running test scripts on macOS or Linux, logs are cluttered with the warning:
@@ -247,7 +306,7 @@ const child = spawn('npm', ['run', 'build'], {
 
 ---
 
-## 13. Pitfall: GCP Metadata Server Lookup Warnings in Local Dev (`MetadataLookupWarning`)
+## 16. Pitfall: GCP Metadata Server Lookup Warnings in Local Dev (`MetadataLookupWarning`)
 
 ### Symptoms
 During startup or emulator execution, logs show repeating stacks of GCP warnings:
@@ -269,7 +328,7 @@ const emulator = spawn('npx', ['firebase-tools', 'emulators:start'], {
 
 ---
 
-## 14. Pitfall: Strict Version Checking for Node Engines in Firebase CLI
+## 17. Pitfall: Strict Version Checking for Node Engines in Firebase CLI
 
 ### Symptoms
 Setting the `engines.node` block in the functions `package.json` to comparison range values (such as `">=22"`) results in a crash during emulator load:

@@ -323,8 +323,22 @@ describe("Bank ATMs Ingest Sync Process", () => {
               _id: 1,
               Bank_Code: 14,
               Bank_Name: 'בנק אוצר החייל בע"מ',
-              X_Coordinate: 31.0,
-              Y_Coordinate: 34.8,
+              Branch_Code: 377,
+              Sub_Branch_Code: 0,
+              Atm_Num: 3777,
+              ATM_Address: "שד' התמרים 11",
+              City: "אילת",
+              Commission: "לא",
+              Casd_Withdrawal: "כן",
+              Cash_Deposit: "כן",
+              Cheque_Deposit: "כן",
+              Envelope_Deposit: "כן",
+              Forex_Transaction: "כן",
+              Additional_Transactions: "כן",
+              ATM_Location: "בתוך הסניף",
+              Handicap_Access: "כן",
+              X_Coordinate: "29.555192",
+              Y_Coordinate: 34.952591,
             },
           ],
         },
@@ -334,7 +348,8 @@ describe("Bank ATMs Ingest Sync Process", () => {
     vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
     vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
 
-    mockGetAll.mockImplementationOnce((...refs) => {
+    // Mock existing document that has the exact same properties
+    mockGetAll = vi.fn().mockImplementation((...refs) => {
       return Promise.resolve(
         refs.map((ref) => ({
           exists: true,
@@ -344,33 +359,35 @@ describe("Bank ATMs Ingest Sync Process", () => {
             _id: 1,
             bankCode: 14,
             bankName: { he: 'בנק אוצר החייל בע"מ', en: "Bank Otsar HaHayal" },
-            branchCode: 0,
+            branchCode: 377,
             subBranchCode: 0,
-            atmNumber: 0,
-            address: "",
+            atmNumber: 3777,
+            address: "שד' התמרים 11",
             addressExtra: "",
-            city: "",
+            city: "אילת",
             commission: false,
-            cashWithdrawal: false,
-            cashDeposit: false,
-            chequeDeposit: false,
-            envelopeDeposit: false,
-            forexTransaction: false,
-            additionalTransactions: false,
-            atmLocation: { he: "", en: "" },
-            handicapAccess: false,
-            coordinates: { latitude: 31.0, longitude: 34.8 },
+            cashWithdrawal: true,
+            cashDeposit: true,
+            chequeDeposit: true,
+            envelopeDeposit: true,
+            forexTransaction: true,
+            additionalTransactions: true,
+            atmLocation: { he: "בתוך הסניף", en: "Inside Branch" },
+            handicapAccess: true,
+            coordinates: { latitude: 29.555192, longitude: 34.952591 },
             geohash: "sv8wrb2ky",
-            lastUpdated: "old-date",
-            createdAt: "old-created-date",
+            createdAt: "2026-06-01T00:00:00Z",
+            lastUpdated: "2026-06-01T00:00:00Z",
           }),
         })),
       );
     });
+    mockDb.getAll = mockGetAll;
 
     const result = await scrapeAndSyncBankAtms(mockDb);
+
     expect(result.success).toBe(true);
-    expect(result.count).toBe(1);
+    expect(result.count).toBe(1); // Processed but skipped writing
     expect(mockBatch.set).not.toHaveBeenCalled();
   });
 
@@ -383,9 +400,22 @@ describe("Bank ATMs Ingest Sync Process", () => {
               _id: 1,
               Bank_Code: 14,
               Bank_Name: 'בנק אוצר החייל בע"מ',
-              X_Coordinate: 31.0,
-              Y_Coordinate: 34.8,
+              Branch_Code: 377,
+              Sub_Branch_Code: 0,
+              Atm_Num: 3777,
+              ATM_Address: "שד' התמרים 11",
               City: "אילת",
+              Commission: "כן", // Differing value: Commission "כן" vs false
+              Casd_Withdrawal: "כן",
+              Cash_Deposit: "כן",
+              Cheque_Deposit: "כן",
+              Envelope_Deposit: "כן",
+              Forex_Transaction: "כן",
+              Additional_Transactions: "כן",
+              ATM_Location: "בתוך הסניף",
+              Handicap_Access: "כן",
+              X_Coordinate: "29.555192",
+              Y_Coordinate: 34.952591,
             },
           ],
         },
@@ -395,7 +425,8 @@ describe("Bank ATMs Ingest Sync Process", () => {
     vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
     vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
 
-    mockGetAll.mockImplementationOnce((...refs) => {
+    // Mock existing document
+    mockGetAll = vi.fn().mockImplementation((...refs) => {
       return Promise.resolve(
         refs.map((ref) => ({
           exists: true,
@@ -405,31 +436,33 @@ describe("Bank ATMs Ingest Sync Process", () => {
             _id: 1,
             bankCode: 14,
             bankName: { he: 'בנק אוצר החייל בע"מ', en: "Bank Otsar HaHayal" },
-            branchCode: 0,
+            branchCode: 377,
             subBranchCode: 0,
-            atmNumber: 0,
-            address: "",
+            atmNumber: 3777,
+            address: "שד' התמרים 11",
             addressExtra: "",
-            city: "תל אביב",
+            city: "אילת",
             commission: false,
-            cashWithdrawal: false,
-            cashDeposit: false,
-            chequeDeposit: false,
-            envelopeDeposit: false,
-            forexTransaction: false,
-            additionalTransactions: false,
-            atmLocation: { he: "", en: "" },
-            handicapAccess: false,
-            coordinates: { latitude: 31.0, longitude: 34.8 },
+            cashWithdrawal: true,
+            cashDeposit: true,
+            chequeDeposit: true,
+            envelopeDeposit: true,
+            forexTransaction: true,
+            additionalTransactions: true,
+            atmLocation: { he: "בתוך הסניף", en: "Inside Branch" },
+            handicapAccess: true,
+            coordinates: { latitude: 29.555192, longitude: 34.952591 },
             geohash: "sv8wrb2ky",
-            lastUpdated: "old-date",
-            createdAt: "old-created-date",
+            createdAt: "2026-06-01T00:00:00Z",
+            lastUpdated: "2026-06-01T00:00:00Z",
           }),
         })),
       );
     });
+    mockDb.getAll = mockGetAll;
 
     const result = await scrapeAndSyncBankAtms(mockDb);
+
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
     expect(mockBatch.set).toHaveBeenCalledTimes(1);

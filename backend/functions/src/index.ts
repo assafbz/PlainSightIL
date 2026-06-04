@@ -233,7 +233,7 @@ export const runScraperPubSub = functions.pubsub
     let datasetId: string | undefined;
     try {
       const data = message.json;
-      datasetId = data?.datasetId;
+      datasetId = (data as { datasetId?: string })?.datasetId || "";
     } catch (err) {
       logger.error("Failed to parse Pub/Sub message json", err);
       return;
@@ -494,6 +494,7 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
       .doc(datasetId)
       .set({ status: "syncing" }, { merge: true });
 
+    const forceFullSync = auth.uid !== "emulator-seeder";
     const result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, {
       forceFullSync,
     });
@@ -571,7 +572,10 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
       .doc(datasetId)
       .set({ status: "syncing" }, { merge: true });
 
-    const result = await scrapeAndSyncCompaniesLiquidation(db);
+    const forceFullSync = auth.uid !== "emulator-seeder";
+    const result = await scrapeAndSyncCompaniesLiquidation(db, datasetId, {
+      forceFullSync,
+    });
     logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
       count: result.count,
     });
@@ -614,7 +618,10 @@ export const manualSyncDoctorsLicenses = functions
         .doc(datasetId)
         .set({ status: "syncing" }, { merge: true });
 
-      const result = await scrapeAndSyncDoctorsLicenses(db);
+      const forceFullSync = auth.uid !== "emulator-seeder";
+      const result = await scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, {
+        forceFullSync,
+      });
       logger.info("manualSyncDoctorsLicenses sync completed successfully", {
         count: result.count,
       });
@@ -655,7 +662,10 @@ export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => 
       .doc(datasetId)
       .set({ status: "syncing" }, { merge: true });
 
-    const result = await scrapeAndSyncBankAtms(db);
+    const forceFullSync = auth.uid !== "emulator-seeder";
+    const result = await scrapeAndSyncBankAtms(db, datasetId, {
+      forceFullSync,
+    });
     logger.info("manualSyncBankAtms sync completed successfully", {
       count: result.count,
     });

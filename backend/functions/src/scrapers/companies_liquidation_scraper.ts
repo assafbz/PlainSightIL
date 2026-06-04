@@ -129,6 +129,7 @@ export function parseLiquidationRecord(
 export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.COMPANIES_LIQUIDATION,
+  options?: { forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -137,6 +138,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
     const limit = isEmulator ? 100 : 1000;
     let hasMore = true;
@@ -150,7 +152,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
       logger.info(`Fetching data from: ${url}`);
 
       let records: HebrewLiquidationRecord[] = [];
-      if (isEmulator) {
+      if (isEmulator && !forceFullSync) {
         records = [
           {
             "מזהה תיק פירוק חברה": 11111,
@@ -235,7 +237,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
         }
       }
 
-      if (isEmulator) {
+      if (isEmulator && !forceFullSync) {
         hasMore = false;
         break;
       }
