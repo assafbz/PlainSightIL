@@ -15,6 +15,10 @@ module.exports = [
         project: ["tsconfig.json"],
         tsconfigRootDir: __dirname,
       },
+      globals: {
+        process: "readonly",
+        Buffer: "readonly",
+      },
     },
     plugins: {
       "@typescript-eslint": tsPlugin,

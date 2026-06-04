@@ -21,6 +21,7 @@ export function parseHebrewBoolean(val: unknown): boolean {
 }
 
 // Translation mapping for Hebrew bank names to English
+// prettier-ignore
 const BANK_NAME_TRANSLATIONS: Record<string, string> = {
   "בנק אוצר החייל בע\"מ": "Bank Otsar HaHayal",
   "בנק דיסקונט לישראל בע\"מ": "Israel Discount Bank",
@@ -43,7 +44,7 @@ const ATM_LOCATION_TRANSLATIONS: Record<string, string> = {
   "במרחק של יותר מ- 500 מטר מהסניף": "Over 500m from Branch",
   "במרחק של עד 500 מטר מהסניף": "Within 500m of Branch",
   "בתוך הסניף": "Inside Branch",
-  "כן": "Yes",
+  כן: "Yes",
   "על קיר הסניף": "On Branch Wall",
 };
 
