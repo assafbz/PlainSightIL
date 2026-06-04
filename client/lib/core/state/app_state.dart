@@ -217,19 +217,21 @@ class AppStateNotifier extends ChangeNotifier {
     );
 
     if (isTesting) {
-      final Map<String, dynamic> localMeta = datasetMetadataMap[datasetId] ?? {};
-      final scheduler = Map<String, dynamic>.from(localMeta['scheduler'] as Map? ?? {});
+      final Map<String, dynamic> localMeta =
+          datasetMetadataMap[datasetId] ?? {};
+      final scheduler = Map<String, dynamic>.from(
+        localMeta['scheduler'] as Map? ?? {},
+      );
       scheduler['enabled'] = enabled;
       scheduler['updateIntervalHours'] = updateIntervalHours;
 
       // Compute a fake nextRun locally for testing
-      final nextRunDate = DateTime.now().add(Duration(hours: updateIntervalHours));
+      final nextRunDate = DateTime.now().add(
+        Duration(hours: updateIntervalHours),
+      );
       scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
 
-      datasetMetadataMap[datasetId] = {
-        ...localMeta,
-        'scheduler': scheduler,
-      };
+      datasetMetadataMap[datasetId] = {...localMeta, 'scheduler': scheduler};
       notifyListeners();
       return;
     }
@@ -252,7 +254,10 @@ class AppStateNotifier extends ChangeNotifier {
 
       // If nextRun is empty or scheduler was disabled and now enabled, calculate nextRun starting from now
       if (nextRun.isEmpty || enabled) {
-        nextRun = DateTime.now().add(Duration(hours: updateIntervalHours)).toUtc().toIso8601String();
+        nextRun = DateTime.now()
+            .add(Duration(hours: updateIntervalHours))
+            .toUtc()
+            .toIso8601String();
       }
 
       await metadataRef.set({
@@ -260,7 +265,7 @@ class AppStateNotifier extends ChangeNotifier {
           'enabled': enabled,
           'updateIntervalHours': updateIntervalHours,
           'nextRun': nextRun,
-        }
+        },
       }, SetOptions(merge: true));
 
       AppLogger.info('Successfully updated Firestore scheduler for $datasetId');
