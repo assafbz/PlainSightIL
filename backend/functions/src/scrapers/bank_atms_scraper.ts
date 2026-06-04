@@ -4,6 +4,7 @@ import { logger } from "firebase-functions";
 import axios from "axios";
 import { encodeGeohash } from "../utils/geohash";
 import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
 
 /**
  * Validates that coordinates fall within Israel's approximate bounding box (WGS84).
@@ -22,6 +23,7 @@ export function parseHebrewBoolean(val: unknown): boolean {
 }
 
 // Translation mapping for Hebrew bank names to English
+// prettier-ignore
 const BANK_NAME_TRANSLATIONS: Record<string, string> = {
   'בנק אוצר החייל בע"מ': "Bank Otsar HaHayal",
   'בנק דיסקונט לישראל בע"מ': "Israel Discount Bank",
@@ -195,6 +197,7 @@ export function parseAtmRecord(record: HebrewAtmRecord): BankAtmRecord | null {
 export async function scrapeAndSyncBankAtms(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.BANK_ATMS,
+  options?: { forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = DATASET_IDS.BANK_ATMS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -203,8 +206,10 @@ export async function scrapeAndSyncBankAtms(
     const targetCollection = DATASET_IDS.BANK_ATMS;
     logger.info(`Starting bank ATMs sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator && !forceFullSync ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -216,7 +221,7 @@ export async function scrapeAndSyncBankAtms(
       const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
       logger.info(`Fetching bank ATMs data from: ${url}`);
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { timeout: 15000 });
       const records: HebrewAtmRecord[] = response.data?.result?.records ?? [];
 
       if (records.length === 0) {
@@ -239,28 +244,47 @@ export async function scrapeAndSyncBankAtms(
 
         // Read existing entries to retain their original createdAt timestamp
         const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingCreatedAtMap = new Map<string, string>();
+        const existingMap = new Map<string, admin.firestore.DocumentData>();
         for (const snap of snapshots) {
-          if (snap.exists) {
-            const data = snap.data();
-            if (data && data.createdAt) {
-              existingCreatedAtMap.set(snap.id, data.createdAt);
-            }
+          const data = snap.data();
+          if (snap.exists && data) {
+            existingMap.set(snap.id, data);
           }
         }
 
         const batch = db.batch();
+        let hasWrites = false;
         for (const r of chunk) {
           const docRef = targetRef.doc(r.id);
-          const existingCreatedAt = existingCreatedAtMap.get(r.id);
+          const existingData = existingMap.get(r.id);
 
-          r.createdAt = existingCreatedAt || now;
-          r.lastUpdated = now;
+          r.lastUpdated = r.lastUpdated || now;
+          if (existingData) {
+            r.lastUpdated = existingData.lastUpdated;
+            const isIdentical = areRecordsEqual(existingData, r);
+            if (isIdentical) {
+              processedCount++;
+              continue;
+            }
+            r.createdAt = existingData.createdAt || now;
+            r.lastUpdated = now;
+          } else {
+            r.createdAt = now;
+            r.lastUpdated = now;
+          }
 
           batch.set(docRef, r);
+          hasWrites = true;
           processedCount++;
         }
-        await batch.commit();
+        if (hasWrites) {
+          await batch.commit();
+        }
+      }
+
+      if (isEmulator && !forceFullSync) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;

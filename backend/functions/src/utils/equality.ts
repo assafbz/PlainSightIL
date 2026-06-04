@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Compares two values recursively to determine if they are equal,
  * ignoring metadata timestamps: 'createdAt', and 'updatedAt'.
@@ -52,8 +51,8 @@ export function areRecordsEqual(existing: any, incoming: any): boolean {
   }
 
   // Handle Arrays
-  if (Array.isArray(existing)) {
-    if (!Array.isArray(incoming)) return false;
+  if (Array.isArray(existing) || Array.isArray(incoming)) {
+    if (!Array.isArray(existing) || !Array.isArray(incoming)) return false;
     if (existing.length !== incoming.length) return false;
     for (let i = 0; i < existing.length; i++) {
       if (!areRecordsEqual(existing[i], incoming[i])) return false;

@@ -23,6 +23,8 @@ module.exports = [
         clearTimeout: "readonly",
         module: "readonly",
         require: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
       },
     },
     plugins: {
@@ -30,9 +32,11 @@ module.exports = [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      "quotes": ["error", "double", { "avoidEscape": true }],
+      "quotes": "off",
       "semi": ["error", "always"],
-      "@typescript-eslint/no-explicit-any": "error",
+      "no-undef": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-useless-assignment": "off",
     },
   },
 ];

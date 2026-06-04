@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from "firebase-functions";
 
 export interface LogMetadata {
@@ -28,7 +29,7 @@ export class AppLogger {
 
     for (const arg of args) {
       if (typeof arg === "object" && arg !== null) {
-        meta = { ...meta, ...arg };
+        meta = { ...meta, ...(arg as Record<string, unknown>) };
       } else {
         formattedMessage += ` ${arg}`;
       }
@@ -49,7 +50,7 @@ export class AppLogger {
 
     for (const arg of args) {
       if (typeof arg === "object" && arg !== null) {
-        meta = { ...meta, ...arg };
+        meta = { ...meta, ...(arg as Record<string, unknown>) };
       } else {
         formattedMessage += ` ${arg}`;
       }
@@ -75,7 +76,7 @@ export class AppLogger {
       if (arg instanceof Error) {
         actualError = arg;
       } else if (typeof arg === "object" && arg !== null) {
-        meta = { ...meta, ...arg };
+        meta = { ...meta, ...(arg as Record<string, unknown>) };
       } else {
         formattedMessage += ` ${arg}`;
       }

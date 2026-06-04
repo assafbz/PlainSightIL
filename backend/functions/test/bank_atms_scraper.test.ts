@@ -184,6 +184,17 @@ describe("Bank ATMs Record Parser", () => {
       expect(parsed.cashWithdrawal).toBe(false);
     }
   });
+
+  it("should return null if coordinates are not numbers", () => {
+    const record = {
+      _id: 1,
+      Bank_Code: 14,
+      Bank_Name: 'בנק אוצר החייל בע"מ',
+      X_Coordinate: "not a number",
+      Y_Coordinate: 34.952591,
+    };
+    expect(parseAtmRecord(record as any)).toBeNull();
+  });
 });
 
 describe("Bank ATMs Ingest Sync Process", () => {
@@ -302,5 +313,167 @@ describe("Bank ATMs Ingest Sync Process", () => {
       }),
       { merge: true },
     );
+  });
+
+  it("should handle existing records and skip writing if identical", async () => {
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 1,
+              Bank_Code: 14,
+              Bank_Name: 'בנק אוצר החייל בע"מ',
+              Branch_Code: 377,
+              Sub_Branch_Code: 0,
+              Atm_Num: 3777,
+              ATM_Address: "שד' התמרים 11",
+              City: "אילת",
+              Commission: "לא",
+              Casd_Withdrawal: "כן",
+              Cash_Deposit: "כן",
+              Cheque_Deposit: "כן",
+              Envelope_Deposit: "כן",
+              Forex_Transaction: "כן",
+              Additional_Transactions: "כן",
+              ATM_Location: "בתוך הסניף",
+              Handicap_Access: "כן",
+              X_Coordinate: "29.555192",
+              Y_Coordinate: 34.952591,
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    // Mock existing document that has the exact same properties
+    mockGetAll = vi.fn().mockImplementation((...refs) => {
+      return Promise.resolve(
+        refs.map((ref) => ({
+          exists: true,
+          id: ref.id,
+          data: () => ({
+            id: "1",
+            _id: 1,
+            bankCode: 14,
+            bankName: { he: 'בנק אוצר החייל בע"מ', en: "Bank Otsar HaHayal" },
+            branchCode: 377,
+            subBranchCode: 0,
+            atmNumber: 3777,
+            address: "שד' התמרים 11",
+            addressExtra: "",
+            city: "אילת",
+            commission: false,
+            cashWithdrawal: true,
+            cashDeposit: true,
+            chequeDeposit: true,
+            envelopeDeposit: true,
+            forexTransaction: true,
+            additionalTransactions: true,
+            atmLocation: { he: "בתוך הסניף", en: "Inside Branch" },
+            handicapAccess: true,
+            coordinates: { latitude: 29.555192, longitude: 34.952591 },
+            geohash: "sv8wrb2ky",
+            createdAt: "2026-06-01T00:00:00Z",
+            lastUpdated: "2026-06-01T00:00:00Z",
+          }),
+        })),
+      );
+    });
+    mockDb.getAll = mockGetAll;
+
+    const result = await scrapeAndSyncBankAtms(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1); // Processed but skipped writing
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should handle existing records and write if they are different", async () => {
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 1,
+              Bank_Code: 14,
+              Bank_Name: 'בנק אוצר החייל בע"מ',
+              Branch_Code: 377,
+              Sub_Branch_Code: 0,
+              Atm_Num: 3777,
+              ATM_Address: "שד' התמרים 11",
+              City: "אילת",
+              Commission: "כן", // Differing value: Commission "כן" vs false
+              Casd_Withdrawal: "כן",
+              Cash_Deposit: "כן",
+              Cheque_Deposit: "כן",
+              Envelope_Deposit: "כן",
+              Forex_Transaction: "כן",
+              Additional_Transactions: "כן",
+              ATM_Location: "בתוך הסניף",
+              Handicap_Access: "כן",
+              X_Coordinate: "29.555192",
+              Y_Coordinate: 34.952591,
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    // Mock existing document
+    mockGetAll = vi.fn().mockImplementation((...refs) => {
+      return Promise.resolve(
+        refs.map((ref) => ({
+          exists: true,
+          id: ref.id,
+          data: () => ({
+            id: "1",
+            _id: 1,
+            bankCode: 14,
+            bankName: { he: 'בנק אוצר החייל בע"מ', en: "Bank Otsar HaHayal" },
+            branchCode: 377,
+            subBranchCode: 0,
+            atmNumber: 3777,
+            address: "שד' התמרים 11",
+            addressExtra: "",
+            city: "אילת",
+            commission: false,
+            cashWithdrawal: true,
+            cashDeposit: true,
+            chequeDeposit: true,
+            envelopeDeposit: true,
+            forexTransaction: true,
+            additionalTransactions: true,
+            atmLocation: { he: "בתוך הסניף", en: "Inside Branch" },
+            handicapAccess: true,
+            coordinates: { latitude: 29.555192, longitude: 34.952591 },
+            geohash: "sv8wrb2ky",
+            createdAt: "2026-06-01T00:00:00Z",
+            lastUpdated: "2026-06-01T00:00:00Z",
+          }),
+        })),
+      );
+    });
+    mockDb.getAll = mockGetAll;
+
+    const result = await scrapeAndSyncBankAtms(mockDb);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle sync failure and update metadata status to error", async () => {
+    vi.mocked(axios.get).mockRejectedValueOnce(new Error("Network Error"));
+
+    await expect(scrapeAndSyncBankAtms(mockDb)).rejects.toThrow("Network Error");
+    expect(mockDoc).toHaveBeenCalledWith("21fde05f-62e3-401b-81cf-5c385862026d");
+    expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
   });
 });

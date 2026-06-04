@@ -10,12 +10,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainsight/core/errors/exceptions.dart';
+import 'package:plainsight/core/theme/design_system.dart';
+import 'package:plainsight/core/constants/mock_data.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/permits_notifier.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
+import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
+import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 import 'package:plainsight/features/profile/domain/repositories/user_profile_repository.dart';
@@ -540,6 +545,76 @@ void main() {
     );
   });
 
+  group('BankAtmsNotifier Tests', () {
+    test('initBankAtmsListener updates bank ATM records', () async {
+      final streamController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+
+      AppStateNotifier.isTesting = false;
+      final notifier = BankAtmsNotifier(
+        isTesting: false,
+        testFirestoreStream: streamController.stream,
+      );
+
+      notifier.initBankAtmsListener();
+      expect(notifier.isLoadingAtms, isTrue);
+
+      final record = {
+        'id': '1',
+        'atmNum': 3777,
+        'bankCode': 12,
+        'bankName': {'he': 'בנק הפועלים', 'en': 'Bank Hapoalim'},
+        'branchCode': 377,
+        'address': 'שד\' התמרים 11',
+        'addressExtra': 'שדרות התמרים 11',
+        'city': 'אילת',
+        'atmLocation': {'he': 'בתוך הסניף', 'en': 'Inside Branch'},
+        'coordinates': {'latitude': 29.555, 'longitude': 34.952},
+        'geohash': 'sv0bh5bpb',
+        'hasCommission': false,
+        'hasCashWithdrawal': true,
+        'hasCashDeposit': true,
+        'hasChequeDeposit': true,
+        'hasEnvelopeDeposit': true,
+        'hasForexTransaction': true,
+        'hasAdditionalTransactions': true,
+        'hasHandicapAccess': true,
+        'lastUpdated': '2026-06-02T09:00:00Z',
+        'createdAt': '2026-06-02T09:00:00Z',
+      };
+      final fakeDoc = FakeQueryDocumentSnapshot('1', record);
+      final fakeSnapshot = FakeQuerySnapshot([fakeDoc]);
+
+      streamController.add(fakeSnapshot);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(notifier.isLoadingAtms, isFalse);
+      expect(notifier.atmRecords.length, 1);
+      expect(notifier.atmRecords.first.atmNum, 3777);
+
+      // Emit error
+      streamController.addError('Error');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(notifier.isLoadingAtms, isFalse);
+
+      await streamController.close();
+      notifier.dispose();
+      AppStateNotifier.isTesting = true;
+    });
+
+    test(
+      'initBankAtmsListener fallback when stream is null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = BankAtmsNotifier(isTesting: false);
+        notifier.initBankAtmsListener();
+        expect(notifier.isLoadingAtms, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
+  });
+
   group('TelemetryNotifier Tests', () {
     test(
       'initTelemetryListeners and initDirectoryListener update stats',
@@ -763,6 +838,8 @@ void main() {
     telemetryDirectoryController;
     late StreamController<QuerySnapshot<Map<String, dynamic>>>
     telemetryRequestsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    bankAtmsController;
 
     setUp(() {
       AppStateNotifier.isTesting = false;
@@ -788,6 +865,8 @@ void main() {
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
       telemetryRequestsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      bankAtmsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
 
       mockFirestore = FakeFirebaseFirestore((path) {
         if (path == '8935c8e5-ec77-421f-af86-d970583195f8') {
@@ -799,6 +878,14 @@ void main() {
               if (docId == 'ff398c7e-c522-4ee8-a53a-312b188a573d') {
                 return FakeDocumentReference(
                   snapshotStream: permitMetadataController.stream,
+                );
+              }
+              if (docId == 'existing-dataset-id') {
+                return FakeDocumentReference(
+                  exists: true,
+                  data: {
+                    'scheduler': {'nextRun': '2026-06-04T00:00:00Z'},
+                  },
                 );
               }
               return FakeDocumentReference();
@@ -831,6 +918,8 @@ void main() {
           return FakeCollectionReference(stream: liquidationController.stream);
         } else if (path == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
           return FakeCollectionReference(stream: doctorsController.stream);
+        } else if (path == '21fde05f-62e3-401b-81cf-5c385862026d') {
+          return FakeCollectionReference(stream: bankAtmsController.stream);
         }
         // Permit collection fallback
         return FakeCollectionReference(stream: permitsController.stream);
@@ -850,6 +939,7 @@ void main() {
       telemetryScraperRunsController.close();
       telemetryDirectoryController.close();
       telemetryRequestsController.close();
+      bankAtmsController.close();
     });
 
     test(
@@ -1394,6 +1484,43 @@ void main() {
     );
 
     test(
+      'PatentClassificationsNotifier handles testing mode and Firestore queries',
+      () async {
+        // Test in testing mode
+        AppStateNotifier.isTesting = true;
+        final notifier = PatentClassificationsNotifier();
+        notifier.initPatentClassificationsListener();
+        expect(notifier.isLoadingPatents, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(notifier.isLoadingPatents, isFalse);
+        expect(notifier.patentRecords.isNotEmpty, isTrue);
+        expect(notifier.patentRecords.length, MockData.patents.length);
+
+        notifier.setPrimaryFilter('Primary');
+        notifier.setSearchQuery('327015');
+        notifier.resetFilters();
+        notifier.cancelPatentClassificationsListener();
+        expect(notifier.patentRecords.isEmpty, isTrue);
+
+        // Test in non-testing mode with Firestore
+        AppStateNotifier.isTesting = false;
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference();
+        });
+        final notifierFirestore = PatentClassificationsNotifier(
+          testFirestore: mockFirestore,
+        );
+        notifierFirestore.initPatentClassificationsListener();
+        expect(notifierFirestore.isLoadingPatents, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        notifierFirestore.dispose();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
+
+    test(
       'TelemetryNotifier handles exception in listeners and triggers manual sync / activation',
       () async {
         // 1. TelemetryNotifier handles exceptions in all metadata/health/runs/dir/requests subscriptions
@@ -1547,6 +1674,191 @@ void main() {
         await authStreamController.close();
       },
     );
+
+    test(
+      'BankAtmsNotifier handles real Firestore streams and error path',
+      () async {
+        final notifier = BankAtmsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        expect(notifier.isLoadingAtms, isTrue);
+
+        notifier.initBankAtmsListener();
+
+        bankAtmsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('doc1', {
+              'id': '1',
+              'atmNum': 3777,
+              'bankCode': 12,
+              'bankName': {'he': 'בנק הפועלים', 'en': 'Bank Hapoalim'},
+              'branchCode': 377,
+              'address': 'שד\' התמרים 11',
+              'addressExtra': 'שדרות התמרים 11',
+              'city': 'אילת',
+              'atmLocation': {'he': 'בתוך הסניף', 'en': 'Inside Branch'},
+              'coordinates': {'latitude': 29.555, 'longitude': 34.952},
+              'geohash': 'sv0bh5bpb',
+              'hasCommission': false,
+              'hasCashWithdrawal': true,
+              'hasCashDeposit': true,
+              'hasChequeDeposit': true,
+              'hasEnvelopeDeposit': true,
+              'hasForexTransaction': true,
+              'hasAdditionalTransactions': true,
+              'hasHandicapAccess': true,
+              'lastUpdated': '2026-06-02T09:00:00Z',
+              'createdAt': '2026-06-02T09:00:00Z',
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingAtms, isFalse);
+        expect(notifier.atmRecords.first.id, '1');
+        expect(notifier.atmRecords.first.atmNum, 3777);
+
+        bankAtmsController.addError('Stream Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingAtms, isFalse);
+
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'BankAtmsNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = BankAtmsNotifier(isTesting: false);
+        notifier.initBankAtmsListener();
+        expect(notifier.isLoadingAtms, isFalse);
+        notifier.dispose();
+      },
+    );
+
+    test('BankAtmsNotifier handles Firestore snapshots exception', () async {
+      final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+        throw Exception('Collection snapshots exception');
+      });
+      final notifier = BankAtmsNotifier(
+        isTesting: false,
+        testFirestore: mockFirestoreThrow,
+      );
+      notifier.initBankAtmsListener();
+      expect(notifier.isLoadingAtms, isFalse);
+      notifier.dispose();
+    });
+
+    test(
+      'BankAtmsNotifier cancel listener resets records and loading flags',
+      () {
+        final notifier = BankAtmsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initBankAtmsListener();
+        notifier.cancelBankAtmsListener();
+        expect(notifier.atmRecords, isEmpty);
+        expect(notifier.isLoadingAtms, isTrue);
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'AppStateNotifier.updateDatasetScheduler handles existing doc and throws exception path',
+      () async {
+        AppStateNotifier.isTesting = true;
+        final appState = AppStateNotifier();
+        appState.telemetryNotifier.testFirestore = mockFirestore;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        AppStateNotifier.isTesting = false;
+
+        // 1. Existing document path
+        await appState.updateDatasetScheduler(
+          'existing-dataset-id',
+          enabled: true,
+          updateIntervalHours: 4,
+        );
+
+        // 2. Non-existent document path
+        await appState.updateDatasetScheduler(
+          'non-existent-dataset-id',
+          enabled: true,
+          updateIntervalHours: 4,
+        );
+
+        // 3. Exception throw / catch path
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Firestore update error');
+        });
+        appState.telemetryNotifier.testFirestore = mockFirestoreThrow;
+        expect(
+          () => appState.updateDatasetScheduler(
+            'any-id',
+            enabled: true,
+            updateIntervalHours: 4,
+          ),
+          throwsA(isA<Exception>()),
+        );
+
+        // Reset
+        AppStateNotifier.isTesting = true;
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        appState.dispose();
+      },
+    );
+
+    test(
+      'TelemetryNotifier.updateDatasetScheduler in production mode works successfully',
+      () async {
+        final mockFirestoreOptions = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference();
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreOptions,
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        // 1. Success case where document exists
+        await notifier.updateDatasetScheduler(
+          'existing-doc',
+          enabled: true,
+          updateIntervalHours: 6,
+        );
+
+        // 2. Success case where document does not exist
+        await notifier.updateDatasetScheduler(
+          'some-id',
+          enabled: false,
+          updateIntervalHours: 12,
+        );
+
+        // 3. Exception path
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Update scheduler exception');
+        });
+        final notifierFail = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+
+        expect(
+          () => notifierFail.updateDatasetScheduler(
+            'some-id',
+            enabled: true,
+            updateIntervalHours: 6,
+          ),
+          throwsException,
+        );
+
+        notifier.dispose();
+        notifierFail.dispose();
+      },
+    );
   });
 }
 
@@ -1660,8 +1972,14 @@ class FakeCollectionReference
 class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
   final String _id;
   final Stream<DocumentSnapshot<Map<String, dynamic>>>? snapshotStream;
-  FakeDocumentReference({String id = 'mock-id', this.snapshotStream})
-    : _id = id;
+  final bool exists;
+  final Map<String, dynamic>? data;
+  FakeDocumentReference({
+    String id = 'mock-id',
+    this.snapshotStream,
+    this.exists = false,
+    this.data,
+  }) : _id = id;
 
   @override
   String get id => _id;
@@ -1677,9 +1995,16 @@ class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
       return snapshotStream ?? const Stream.empty();
     }
     if (invocation.memberName == #get) {
-      return Future.value(
-        FakeDocumentSnapshot(_id, false, {'requestCount': 5}),
-      );
+      final exists = _id == 'existing-doc' || _id == 'existing-dataset-id';
+      final data = exists
+          ? {
+              'scheduler': {'nextRun': '2026-06-04T12:00:00Z'},
+            }
+          : {'requestCount': 5};
+      return Future.value(FakeDocumentSnapshot(_id, exists, data));
+    }
+    if (invocation.memberName == #set) {
+      return Future<void>.value();
     }
     return super.noSuchMethod(invocation);
   }

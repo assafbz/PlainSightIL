@@ -139,7 +139,7 @@ class _AdminPageState extends State<AdminPage> {
       {
         'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies in Liquidation',
-        'titleHe': 'מאגר הכונס הרשמי',
+        'titleHe': 'חברות בפירוק',
         'resourceId': DatasetIds.companiesLiquidation,
         'agencyEn': 'Ministry of Justice - Corporations Authority',
         'agencyHe': 'משרד המשפטים - רשות התאגידים',
@@ -159,6 +159,14 @@ class _AdminPageState extends State<AdminPage> {
         'resourceId': '21fde05f-62e3-401b-81cf-5c385862026d',
         'agencyEn': 'Bank of Israel',
         'agencyHe': 'בנק ישראל',
+      },
+      {
+        'id': DatasetIds.patentClassifications,
+        'titleEn': 'Patent Classifications',
+        'titleHe': 'סיווגי CPC לפטנטים',
+        'resourceId': DatasetIds.patentClassifications,
+        'agencyEn': 'Israel Patent Office',
+        'agencyHe': 'רשות הפטנטים',
       },
     ];
 
@@ -1088,7 +1096,7 @@ class _AdminPageState extends State<AdminPage> {
       {
         'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies Liquidation',
-        'titleHe': 'מאגר הכונס הרשמי',
+        'titleHe': 'חברות בפירוק',
       },
       {
         'id': DatasetIds.doctorsLicenses,
@@ -1099,6 +1107,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': '21fde05f-62e3-401b-81cf-5c385862026d',
         'titleEn': 'Bank ATMs',
         'titleHe': 'כספומטים',
+      },
+      {
+        'id': DatasetIds.patentClassifications,
+        'titleEn': 'Patent Classifications',
+        'titleHe': 'סיווגי CPC לפטנטים',
       },
       {
         'id': 'datasets_metadata',

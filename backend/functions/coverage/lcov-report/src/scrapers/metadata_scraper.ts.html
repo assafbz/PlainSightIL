@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for scrapers/metadata_scraper.ts</title>
+    <title>Code coverage report for src/scrapers/metadata_scraper.ts</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../prettify.css" />
-    <link rel="stylesheet" href="../base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../sort-arrow-sprite.png);
+            background-image: url(../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,20 +19,20 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">scrapers</a> metadata_scraper.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/scrapers</a> metadata_scraper.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.45% </span>
+                <span class="strong">92.59% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>49/53</span>
+                <span class='fraction'>50/54</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">66.66% </span>
+                <span class="strong">68.75% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>20/30</span>
+                <span class='fraction'>22/32</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94% </span>
+                <span class="strong">94.11% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>47/50</span>
+                <span class='fraction'>48/51</span>
             </div>
         
             
@@ -204,7 +204,10 @@
 <a name='L139'></a><a href='#L139'>139</a>
 <a name='L140'></a><a href='#L140'>140</a>
 <a name='L141'></a><a href='#L141'>141</a>
-<a name='L142'></a><a href='#L142'>142</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -236,7 +239,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -264,6 +269,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -346,8 +352,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import * as admin from "firebase-admin";
-import { logger } from "firebase-functions";
+import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
+import { DATASET_IDS } from "../utils/constants";
 &nbsp;
 export interface CKANPackage {
   id: string;
@@ -376,12 +383,13 @@ export interface DatasetMetadata {
   isSupported: boolean;
 }
 &nbsp;
-// Hardcoded list of dataset IDs that are currently visualized/supported in PlainSightIL (resource IDs)
-const SUPPORTED_DATASET_IDS = new Set([
-  "8935c8e5-ec77-421f-af86-d970583195f8", // Active Cellular Antennas
-  "ff398c7e-c522-4ee8-a53a-312b188a573d", // Cellular Antennas Under Construction Permits
-  "d8715392-287f-49b7-9ae3-f21ec5bf55f3", // Companies in Liquidation
-  "9c64c522-bbc2-48fe-96fb-3b2a8626f59e", // Doctors Licenses
+// Central list of dataset IDs that are currently visualized/supported in PlainSightIL (resource IDs)
+const SUPPORTED_DATASET_IDS = new Set&lt;string&gt;([
+  DATASET_IDS.CELLULAR_ANTENNAS, // Active Cellular Antennas
+  DATASET_IDS.CELLULAR_PERMITS, // Cellular Antennas Under Construction Permits
+  DATASET_IDS.COMPANIES_LIQUIDATION, // Companies in Liquidation
+  DATASET_IDS.DOCTORS_LICENSES, // Doctors Licenses
+  "21fde05f-62e3-401b-81cf-5c385862026d", // Bank ATMs
 ]);
 &nbsp;
 /**
@@ -405,7 +413,8 @@ export async function scrapeAndSyncDatasetMetadata(
 &nbsp;
     // Query CKAN package_search to fetch all packages.
     // Since there are ~1200 datasets, fetching rows=1500 in one request is efficient and avoids rate limit issues.
-    const url = "https://data.gov.il/api/3/action/package_search?rows=1500";
+    const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+    const url = `${baseUrl}/api/3/action/package_search?rows=1500`;
     logger.info(`Fetching CKAN package list from: ${url}`);
 &nbsp;
     const response = await axios.get(url);
@@ -493,16 +502,16 @@ export async function scrapeAndSyncDatasetMetadata(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-02T18:15:50.225Z
+                at 2026-06-04T07:06:29.107Z
             </div>
-        <script src="../prettify.js"></script>
+        <script src="../../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="../sorter.js"></script>
-        <script src="../block-navigation.js"></script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
     </body>
 </html>
     

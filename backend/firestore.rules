@@ -14,29 +14,28 @@ service cloud.firestore {
     match /permit_apps_blue/{docId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /permit_apps_green/{docId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /ff398c7e-c522-4ee8-a53a-312b188a573d/{docId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /d8715392-287f-49b7-9ae3-f21ec5bf55f3/{companyId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /9c64c522-bbc2-48fe-96fb-3b2a8626f59e/{docId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /21fde05f-62e3-401b-81cf-5c385862026d/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /b2c59e21-c345-4b02-b071-2890a3d431d6/{docId} {
       allow read: if true;
       allow write: if false;
       allow list: if request.query.limit <= 100;
@@ -98,7 +97,7 @@ service cloud.firestore {
                   && exists(/databases/$(database)/documents/users/$(request.auth.uid))
                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       allow write: if false;
-      allow list: if request.query.limit <= 50;
+      allow list: if request.query.limit == null || request.query.limit <= 50;
     }
   }
 }
