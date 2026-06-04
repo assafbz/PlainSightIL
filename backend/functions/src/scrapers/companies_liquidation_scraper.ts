@@ -138,7 +138,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     let offset = 0;
-    const limit = isEmulator ? 10 : 1000;
+    const limit = isEmulator ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -174,7 +174,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
           },
         ];
       } else {
-        const response = await axios.get(url);
+        const response = await axios.get(url, { timeout: 15000 });
         records = response.data?.result?.records ?? [];
       }
 

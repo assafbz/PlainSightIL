@@ -738,7 +738,7 @@ class _AdminPageState extends State<AdminPage> {
               ),
               Switch(
                 value: enabled,
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
                 activeTrackColor: AppColors.primary.withAlpha(100),
                 inactiveThumbColor: AppColors.textTertiary,
                 inactiveTrackColor: AppColors.surfaceHigh,

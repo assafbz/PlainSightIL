@@ -438,4 +438,88 @@ describe("Scraper and Sync Ingestion", () => {
     expect(result.count).toBe(0);
     expect(mockDb.batch).not.toHaveBeenCalled();
   });
+
+  it("should respect custom limit option", async () => {
+    const apiResponse = {
+      data: { result: { records: [] } }
+    };
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+
+    await scrapeAndSyncAntennas(mockDb, DATASET_IDS.CELLULAR_ANTENNAS, { limit: 50 });
+
+    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=50"));
+  });
+
+  it("should enforce 10 records and stop after 1 page in emulator mode by default", async () => {
+    const originalEmulatorVal = process.env.FUNCTIONS_EMULATOR;
+    process.env.FUNCTIONS_EMULATOR = "true";
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              מזהה: "6793",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+              חברה: "פלאפון",
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValue(apiResponse);
+
+    try {
+      const result = await scrapeAndSyncAntennas(mockDb);
+      expect(result.count).toBe(1);
+      // Since it's emulator mode and forceFullSync is not true, it should only call axios.get once
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=10"));
+    } finally {
+      process.env.FUNCTIONS_EMULATOR = originalEmulatorVal;
+    }
+  });
+
+  it("should bypass emulator limits and fetch multiple pages when forceFullSync is true", async () => {
+    const originalEmulatorVal = process.env.FUNCTIONS_EMULATOR;
+    process.env.FUNCTIONS_EMULATOR = "true";
+
+    const apiResponse1 = {
+      data: {
+        result: {
+          records: [
+            {
+              מזהה: "6793",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+              חברה: "פלאפון",
+            },
+          ],
+        },
+      },
+    };
+
+    const apiResponse2 = {
+      data: {
+        result: {
+          records: [],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse1);
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse2);
+
+    try {
+      const result = await scrapeAndSyncAntennas(mockDb, DATASET_IDS.CELLULAR_ANTENNAS, { forceFullSync: true });
+      expect(result.count).toBe(1);
+      // Since forceFullSync is true, it should fetch pages recursively until records are empty
+      expect(axios.get).toHaveBeenCalledTimes(2);
+      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=1000"));
+    } finally {
+      process.env.FUNCTIONS_EMULATOR = originalEmulatorVal;
+    }
+  });
 });

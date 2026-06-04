@@ -131,7 +131,66 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
 
 ---
 
-## 6. Pitfall: Inconsistent Dataset Titles & Backend Overwrites
+## 6. Pitfall: Dynamic Timestamps Drift in Change-Detection Tests
+
+### Symptoms
+Unit tests asserting `areRecordsEqual` write-skips failed with:
+`AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times`
+
+### Root Cause
+The mock raw records used in the test case lacked date fields. Consequently, the scraper generated them dynamically during parsing using `new Date().toISOString()`. Because the parsing within the test setup and the scraper execution happened a few milliseconds apart, the generated timestamps differed slightly. `areRecordsEqual` detected this difference and triggered a write instead of skipping it.
+
+### Corrective Action & Best Practice
+Always specify static timestamps (e.g., `"תאריך הגשת הבקשה": "2024-05-12T00:00:00"`) in mock raw records for tests verifying change-detection and skip-write logic.
+
+---
+
+## 7. Pitfall: Registry Type Incompatibilities for Scrapers
+
+### Symptoms
+Modifying the cellular permits scraper function signature to accept option parameters (e.g., `options?: { forceFullSync?: boolean }`) broke functions compilation at the registration point (`scraperRegistry` in `index.ts`) because other scrapers in the registry did not accept the same parameter options.
+
+### Root Cause
+TypeScript's strict index signature matching on `Record<string, ScraperFunction>` does not allow polymorphic function signatures if defined too rigidly.
+
+### Corrective Action & Best Practice
+Define the index registry signature using rest parameters or loose parameters (e.g., `(...args: any[]) => Promise<{ count: number }>`) and perform type casting/assertion inside the individual routes/wrappers.
+
+---
+
+## 8. Pitfall: Emulator Socket Hang-ups & Zombie Processes
+
+### Symptoms
+Local emulator functions triggered timed out after 60s with `Error: socket hang up` or `Pub/Sub Emulator fatal error: stopping all emulators`.
+
+### Root Cause
+Node processes started with `detached: true` in the workspace runner became zombie/orphaned processes when their parent CLI runner was stopped. These lingering processes kept bindings on the emulator ports and sockets, leading to severe resource conflicts.
+
+### Corrective Action & Best Practice
+Enforce clean termination of all java/node background processes using `pkill` / `killall` before restarting the emulator environment.
+
+---
+
+## 9. Pitfall: Deep Comparison Type Mismatches in Equality Utility
+
+### Symptoms
+Documents containing empty arrays or objects are incorrectly evaluated as identical to documents containing empty objects/arrays, bypassing necessary writes.
+
+### Root Cause
+The record comparison utility checked `Array.isArray(existing)` but did not enforce that `incoming` must also be an array before looping or returning true.
+
+### Corrective Action & Best Practice
+When doing type-specific deep comparisons, always check that both existing and incoming values share the same structure/type:
+```typescript
+if (Array.isArray(existing) || Array.isArray(incoming)) {
+  if (!Array.isArray(existing) || !Array.isArray(incoming)) return false;
+  // proceed with array comparison...
+}
+```
+
+---
+
+## 10. Pitfall: Inconsistent Dataset Titles & Backend Overwrites
 
 ### Symptoms
 The Companies Liquidation dataset was displayed with an incorrect title ("מאגר הכונס הרשמי") on the Dataset Directory and Admin Dashboard cards, while its corresponding visualizer screen displayed "חברות בפירוק".
