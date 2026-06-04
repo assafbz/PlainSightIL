@@ -73,7 +73,7 @@ describe("Bank ATMs Record Parser", () => {
   it("should return null if _id is missing", () => {
     const record = {
       Bank_Code: 14,
-      Bank_Name: "בנק אוצר החייל בע\"מ",
+      Bank_Name: 'בנק אוצר החייל בע"מ',
       X_Coordinate: "29.555192",
       Y_Coordinate: 34.952591,
     };
@@ -83,7 +83,7 @@ describe("Bank ATMs Record Parser", () => {
   it("should return null if Bank_Code is missing", () => {
     const record = {
       _id: 1,
-      Bank_Name: "בנק אוצר החייל בע\"מ",
+      Bank_Name: 'בנק אוצר החייל בע"מ',
       X_Coordinate: "29.555192",
       Y_Coordinate: 34.952591,
     };
@@ -94,7 +94,7 @@ describe("Bank ATMs Record Parser", () => {
     const record = {
       _id: 1,
       Bank_Code: 14,
-      Bank_Name: "בנק אוצר החייל בע\"מ",
+      Bank_Name: 'בנק אוצר החייל בע"מ',
     };
     expect(parseAtmRecord(record as any)).toBeNull();
   });
@@ -103,7 +103,7 @@ describe("Bank ATMs Record Parser", () => {
     const record = {
       _id: 1,
       Bank_Code: 14,
-      Bank_Name: "בנק אוצר החייל בע\"מ",
+      Bank_Name: 'בנק אוצר החייל בע"מ',
       X_Coordinate: "10.0",
       Y_Coordinate: 20.0,
     };
@@ -114,7 +114,7 @@ describe("Bank ATMs Record Parser", () => {
     const raw = {
       _id: 1,
       Bank_Code: 14,
-      Bank_Name: "בנק אוצר החייל בע\"מ",
+      Bank_Name: 'בנק אוצר החייל בע"מ',
       Branch_Code: 377,
       Sub_Branch_Code: 0,
       Atm_Num: 3777,
@@ -140,7 +140,7 @@ describe("Bank ATMs Record Parser", () => {
       expect(parsed.id).toBe("1");
       expect(parsed._id).toBe(1);
       expect(parsed.bankCode).toBe(14);
-      expect(parsed.bankName.he).toBe("בנק אוצר החייל בע\"מ");
+      expect(parsed.bankName.he).toBe('בנק אוצר החייל בע"מ');
       expect(parsed.bankName.en).toBe("Bank Otsar HaHayal");
       expect(parsed.branchCode).toBe(377);
       expect(parsed.subBranchCode).toBe(0);
@@ -251,7 +251,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
             {
               _id: 1,
               Bank_Code: 14,
-              Bank_Name: "בנק אוצר החייל בע\"מ",
+              Bank_Name: 'בנק אוצר החייל בע"מ',
               Branch_Code: 377,
               Sub_Branch_Code: 0,
               Atm_Num: 3777,
