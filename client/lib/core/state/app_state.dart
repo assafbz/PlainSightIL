@@ -242,9 +242,11 @@ class AppStateNotifier extends ChangeNotifier {
     if (!isFirebaseInitialized) return;
 
     try {
-      final metadataRef = FirebaseFirestore.instance
-          .collection('dataset_metadata')
-          .doc(datasetId);
+      final metadataRef =
+          // ignore: invalid_use_of_visible_for_testing_member
+          (telemetryNotifier.testFirestore ?? FirebaseFirestore.instance)
+              .collection('dataset_metadata')
+              .doc(datasetId);
 
       // Read current nextRun, or calculate a new one if it's currently missing or the interval changes
       final doc = await metadataRef.get();
