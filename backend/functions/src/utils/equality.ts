@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Compares two values recursively to determine if they are equal,
  * ignoring metadata timestamps: 'createdAt', and 'updatedAt'.
@@ -12,7 +11,10 @@ export function areRecordsEqual(existing: any, incoming: any): boolean {
   if (existing === incoming) return true;
 
   // Handle null/undefined checks
-  if ((existing === null || existing === undefined) && (incoming === null || incoming === undefined)) {
+  if (
+    (existing === null || existing === undefined) &&
+    (incoming === null || incoming === undefined)
+  ) {
     return true;
   }
   if (existing === null || existing === undefined || incoming === null || incoming === undefined) {
@@ -33,26 +35,24 @@ export function areRecordsEqual(existing: any, incoming: any): boolean {
   }
 
   // Handle Firestore GeoPoint (duck-typing coordinates check)
-  const isExistingGeoPoint = (
+  const isExistingGeoPoint =
     existing.latitude !== undefined &&
     existing.longitude !== undefined &&
     typeof existing.latitude === "number" &&
-    typeof existing.longitude === "number"
-  );
-  const isIncomingGeoPoint = (
+    typeof existing.longitude === "number";
+  const isIncomingGeoPoint =
     incoming.latitude !== undefined &&
     incoming.longitude !== undefined &&
     typeof incoming.latitude === "number" &&
-    typeof incoming.longitude === "number"
-  );
+    typeof incoming.longitude === "number";
   if (isExistingGeoPoint || isIncomingGeoPoint) {
     if (!isExistingGeoPoint || !isIncomingGeoPoint) return false;
     return existing.latitude === incoming.latitude && existing.longitude === incoming.longitude;
   }
 
   // Handle Arrays
-  if (Array.isArray(existing)) {
-    if (!Array.isArray(incoming)) return false;
+  if (Array.isArray(existing) || Array.isArray(incoming)) {
+    if (!Array.isArray(existing) || !Array.isArray(incoming)) return false;
     if (existing.length !== incoming.length) return false;
     for (let i = 0; i < existing.length; i++) {
       if (!areRecordsEqual(existing[i], incoming[i])) return false;

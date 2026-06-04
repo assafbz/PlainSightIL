@@ -18,6 +18,12 @@ framework:
   stitch:
     project_id: "10303868738682079846"
     project_title: "Israel Open Data Explorer"
+  github_issue_centric:
+    enforce_mapping: true
+    auto_create_issue: true
+    strict_sdlc: true # Setting SKIP_SDLC=1 is prohibited without HITL sign-off
+    pr_checks_required: true # All GitHub Action checks on the PR must pass successfully
+    lifecycle_terminal_state: "PR created -> checks passed -> PR merged -> Issue closed"
 ```
 
 ---

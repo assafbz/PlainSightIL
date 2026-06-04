@@ -131,7 +131,103 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
 
 ---
 
-## 6. Pitfall: Child Process Spawning Deprecation Warnings (`[DEP0190]`) on Non-Windows Hosts
+## 6. Pitfall: Dynamic Timestamps Drift in Change-Detection Tests
+
+### Symptoms
+Unit tests asserting `areRecordsEqual` write-skips failed with:
+`AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times`
+
+### Root Cause
+The mock raw records used in the test case lacked date fields. Consequently, the scraper generated them dynamically during parsing using `new Date().toISOString()`. Because the parsing within the test setup and the scraper execution happened a few milliseconds apart, the generated timestamps differed slightly. `areRecordsEqual` detected this difference and triggered a write instead of skipping it.
+
+### Corrective Action & Best Practice
+Always specify static timestamps (e.g., `"תאריך הגשת הבקשה": "2024-05-12T00:00:00"`) in mock raw records for tests verifying change-detection and skip-write logic.
+
+---
+
+## 7. Pitfall: Registry Type Incompatibilities for Scrapers
+
+### Symptoms
+Modifying the cellular permits scraper function signature to accept option parameters (e.g., `options?: { forceFullSync?: boolean }`) broke functions compilation at the registration point (`scraperRegistry` in `index.ts`) because other scrapers in the registry did not accept the same parameter options.
+
+### Root Cause
+TypeScript's strict index signature matching on `Record<string, ScraperFunction>` does not allow polymorphic function signatures if defined too rigidly.
+
+### Corrective Action & Best Practice
+Define the index registry signature using rest parameters or loose parameters (e.g., `(...args: any[]) => Promise<{ count: number }>`) and perform type casting/assertion inside the individual routes/wrappers.
+
+---
+
+## 8. Pitfall: Emulator Socket Hang-ups & Zombie Processes
+
+### Symptoms
+Local emulator functions triggered timed out after 60s with `Error: socket hang up` or `Pub/Sub Emulator fatal error: stopping all emulators`.
+
+### Root Cause
+Node processes started with `detached: true` in the workspace runner became zombie/orphaned processes when their parent CLI runner was stopped. These lingering processes kept bindings on the emulator ports and sockets, leading to severe resource conflicts.
+
+### Corrective Action & Best Practice
+Enforce clean termination of all java/node background processes using `pkill` / `killall` before restarting the emulator environment.
+
+---
+
+## 9. Pitfall: Deep Comparison Type Mismatches in Equality Utility
+
+### Symptoms
+Documents containing empty arrays or objects are incorrectly evaluated as identical to documents containing empty objects/arrays, bypassing necessary writes.
+
+### Root Cause
+The record comparison utility checked `Array.isArray(existing)` but did not enforce that `incoming` must also be an array before looping or returning true.
+
+### Corrective Action & Best Practice
+When doing type-specific deep comparisons, always check that both existing and incoming values share the same structure/type:
+```typescript
+if (Array.isArray(existing) || Array.isArray(incoming)) {
+  if (!Array.isArray(existing) || !Array.isArray(incoming)) return false;
+  // proceed with array comparison...
+}
+```
+
+---
+
+## 10. Pitfall: Inconsistent Dataset Titles & Backend Overwrites
+
+### Symptoms
+The Companies Liquidation dataset was displayed with an incorrect title ("מאגר הכונס הרשמי") on the Dataset Directory and Admin Dashboard cards, while its corresponding visualizer screen displayed "חברות בפירוק".
+
+### Root Cause
+1. In Node.js / TypeScript backend Cloud Functions, the metadata scraper (`metadata_scraper.ts`) queried the open data portal CKAN package search API and retrieved the default package title `"מאגר הכונס הרשמי"`.
+2. This title was saved into Firestore metadata under the `title` field, overriding the user-friendly title `"חברות בפירוק"`.
+3. Client mock data and tests hardcoded the incorrect title, creating a testing dependency on the wrong name.
+
+### Corrective Action & Best Practice
+Implement dynamic overrides in the metadata scraper when mapping CKAN package search results to Firestore documents:
+```typescript
+      let title = pkg.title.trim();
+      if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
+        title = "חברות בפירוק";
+      }
+```
+Ensure all mock data, widget tests, and E2E element locators are structurally synchronized to expect the clean user-friendly dataset title.
+
+---
+
+## 11. Pitfall: Bypassing/Skipping SDLC Gates (Process Quality Compliance)
+
+### Symptoms
+- Changes are pushed, merged, or deployed without all intermediate SDLC gates (Discovery, Design, Tech Design, Security, Blueprinting, Implementation, QA Validation, Lessons Learned) having their state files and deliverables properly completed, leading to undocumented changes, untracked requirements, or missed integration testing.
+
+### Root Cause
+- Fast-tracking fixes or feature implementations directly to code modifications while ignoring the active phase tracking inside `.agents/state/active_issues/`.
+- Rushing transitions without verifying formatting and lint compliance beforehand, leading to late-stage Quality Gate transition blocks.
+
+### Corrective Action & Best Practice
+- **Unconditional Process Compliance:** The SDLC process flow must always be strictly followed from start to finish. Deliverables (`PRD.md`, `DESIGN.md`, `TDD.md`, `SECURITY.md`, `BLUEPRINT.md`, `QA_REPORT.md`, `LESSONS_LEARNED.md`) must be generated in the issue's state directory.
+- **Investigate and Rectify Failures:** If a step in the SDLC is bypassed, blocked, or fails, developers (both human and AI agents) must immediately investigate the root cause (e.g., conflicting linter settings, missing requirements, or port blockages) and apply the correct fixes, rather than bypassing quality gates.
+
+---
+
+## 12. Pitfall: Child Process Spawning Deprecation Warnings (`[DEP0190]`) on Non-Windows Hosts
 
 ### Symptoms
 When starting up local dev servers or running test scripts on macOS or Linux, logs are cluttered with the warning:
@@ -151,7 +247,7 @@ const child = spawn('npm', ['run', 'build'], {
 
 ---
 
-## 7. Pitfall: GCP Metadata Server Lookup Warnings in Local Dev (`MetadataLookupWarning`)
+## 13. Pitfall: GCP Metadata Server Lookup Warnings in Local Dev (`MetadataLookupWarning`)
 
 ### Symptoms
 During startup or emulator execution, logs show repeating stacks of GCP warnings:
@@ -173,7 +269,7 @@ const emulator = spawn('npx', ['firebase-tools', 'emulators:start'], {
 
 ---
 
-## 8. Pitfall: Strict Version Checking for Node Engines in Firebase CLI
+## 14. Pitfall: Strict Version Checking for Node Engines in Firebase CLI
 
 ### Symptoms
 Setting the `engines.node` block in the functions `package.json` to comparison range values (such as `">=22"`) results in a crash during emulator load:

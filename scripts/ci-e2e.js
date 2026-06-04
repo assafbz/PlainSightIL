@@ -209,8 +209,8 @@ function startServer() {
 
 function runPlaywright() {
   console.log('🧪 [CI-E2E] Running Playwright E2E Tests...');
-  // Spawn playwright conditionally using shell only on Windows to avoid warnings.
-  playwrightProc = spawn('npx', ['playwright', 'test'], {
+  // Spawn playwright conditionally using shell only on Windows to avoid warnings, forwarding arguments.
+  playwrightProc = spawn('npx', ['playwright', 'test', ...process.argv.slice(2)], {
     cwd: rootDir,
     env: {
       ...process.env,

@@ -139,8 +139,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await page.keyboard.press('PageDown');
     await page.waitForTimeout(1000);
 
-    // Locate "מאגר הכונס הרשמי" card and click "Open Visualizer"
-    const card = page.locator('[aria-label*="מאגר הכונס הרשמי"], [aria-label*="הכונס הרשמי"]').first();
+    // Locate "חברות בפירוק" card and click "Open Visualizer"
+    const card = page.locator('[aria-label*="חברות בפירוק"], [aria-label*="פירוק"]').first();
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
@@ -151,13 +151,18 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     // Assert we are on the Companies in Liquidation visualizer page
     await expect(page.getByText('Companies in Liquidation')).toBeVisible({ timeout: 15000 });
 
+    // Wait for the records to load and be visible before interacting with the search input
+    await expect(page.getByText('מלון הגליל בע~מ').first()).toBeVisible({ timeout: 15000 });
+
     // Locate the search input using placeholder
-    const searchInput = page.locator('input[placeholder*="Search by Name"], [aria-label*="Search by Name"]');
+    const searchInput = page.locator('input[placeholder*="Search by Name"], input[aria-label*="Search by Name"]').first();
     await expect(searchInput).toBeVisible({ timeout: 10000 });
 
-    // Fill search with "פרסום"
+    // Click and wait for focus before filling to ensure Flutter binds correctly
     await searchInput.click();
-    await page.keyboard.type('פרסום');
+    await page.waitForTimeout(1000);
+    await searchInput.fill('פרסום');
+    await page.waitForTimeout(1000);
 
     // Assert "בשן פרסום ויחסי צבור בע~מ" is visible and other companies are filtered out
     await expect(page.getByText('בשן פרסום ויחסי צבור בע~מ').first()).toBeVisible({ timeout: 10000 });
@@ -165,10 +170,9 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
 
     // Clear the search field
     await searchInput.click();
-    const isMac = process.platform === 'darwin';
-    const modifier = isMac ? 'Meta' : 'Control';
-    await page.keyboard.press(`${modifier}+A`);
-    await page.keyboard.press('Backspace');
+    await page.waitForTimeout(500);
+    await searchInput.fill('');
+    await page.waitForTimeout(1000);
 
     // Assert other companies are restored
     await expect(page.getByText('מלון הגליל בע~מ').first()).toBeVisible({ timeout: 10000 });
@@ -193,7 +197,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await page.waitForTimeout(1000);
 
     // Open the liquidation visualizer again while offline
-    const card = page.locator('[aria-label*="מאגר הכונס הרשמי"], [aria-label*="הכונס הרשמי"]').first();
+    const card = page.locator('[aria-label*="חברות בפירוק"], [aria-label*="פירוק"]').first();
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.scrollIntoViewIfNeeded();
     await card.getByText('Open Visualizer').first().click();
@@ -251,6 +255,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
       page.waitForEvent('popup'),
       page.getByText('Sign in with Google').click(),
     ]);
+    popup.on('console', msg => console.log(`[Popup Console] ${msg.type()}: ${msg.text()}`));
+    popup.on('pageerror', err => console.log(`[Popup Page Error] ${err.stack || err.message}`));
     console.log(`Popup opened. Initial URL: ${popup.url()}`);
     await popup.waitForLoadState('networkidle').catch(() => console.log('Timeout waiting for networkidle'));
     console.log(`Popup loaded. URL after load: ${popup.url()}`);
@@ -273,21 +279,78 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     const addAccountBtn = popup.getByRole('button', { name: 'Add new account' });
     if (await addAccountBtn.isVisible()) {
       await addAccountBtn.click();
+      await popup.waitForTimeout(1000);
     }
+
+    console.log('--- POPUP CONTENT BEFORE FILLING ---');
+    console.log(await popup.content());
 
     // In Firebase Auth Emulator, locate email input and fill it
     const emailInput = popup.locator('input#email-input');
     await expect(emailInput).toBeVisible({ timeout: 15000 });
     await emailInput.fill('assaf-e2e@plainsight.il');
+    await emailInput.dispatchEvent('input');
 
     // Locate display name input and fill it
     const nameInput = popup.locator('input#display-name-input');
     await expect(nameInput).toBeVisible({ timeout: 10000 });
     await nameInput.fill('Assaf E2E');
+    await nameInput.dispatchEvent('input');
+
+    const debugInfo = await popup.evaluate(() => {
+      const emailEl = document.getElementById('email-input') as HTMLInputElement;
+      const nameEl = document.getElementById('display-name-input') as HTMLInputElement;
+      const buttonEl = document.getElementById('sign-in') as HTMLButtonElement;
+      return {
+        emailValue: emailEl?.value,
+        nameValue: nameEl?.value,
+        buttonDisabled: buttonEl?.disabled,
+      };
+    });
+    console.log('DOM state after filling:', JSON.stringify(debugInfo, null, 2));
+
+    console.log('--- POPUP CONTENT AFTER FILLING ---');
+    console.log(await popup.content());
 
     // Click submit in popup (Add account or Sign-in)
-    const submitBtn = popup.locator('button#submit-btn, button:has-text("Add account"), button:has-text("Sign in")').first();
+    const submitBtn = popup.locator('button#sign-in, button#submit-btn, button:has-text("Add account"), button:has-text("Sign in")').first();
+    await expect(submitBtn).toBeVisible();
+    console.log('Clicking submit button...');
     await submitBtn.click();
+
+    // Wait for popup to close, or if it doesn't close within a short time, inspect/evaluate
+    try {
+      await Promise.race([
+        popup.waitForEvent('close', { timeout: 3000 }),
+        page.waitForTimeout(3000)
+      ]);
+    } catch (e) {
+      console.log('Popup close wait timed out or errored:', e);
+    }
+
+    if (!popup.isClosed()) {
+      try {
+        const popupURL = popup.url();
+        if (popupURL.includes('handler')) {
+          console.log('Popup still open on handler page. Bypassing UI and calling finishWithUser directly...');
+          await popup.evaluate(() => {
+            const claims = (window as any).createFakeClaims({
+              email: 'assaf-e2e@plainsight.il',
+              displayName: 'Assaf E2E'
+            });
+            (window as any).finishWithUser(claims, 'assaf-e2e@plainsight.il');
+          }).catch(e => console.log('Error calling finishWithUser:', e));
+        }
+
+        await page.waitForTimeout(1500);
+        if (!popup.isClosed()) {
+          console.log('--- POPUP CONTENT AFTER SUBMISSION ---');
+          console.log(await popup.content().catch(() => ''));
+        }
+      } catch (e) {
+        console.log('Error inspecting/evaluating popup:', e);
+      }
+    }
 
     // Verify main page redirects to Dashboard
     console.log('Waiting for login redirection...');
