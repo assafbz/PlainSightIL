@@ -735,7 +735,7 @@ class TelemetryNotifier extends ChangeNotifier {
     }
   }
 
-  /// Updates the scheduler configurations for a dataset.
+  /// Update the scraper scheduler configuration for a dataset.
   Future<void> updateDatasetScheduler(
     String datasetId, {
     required bool enabled,

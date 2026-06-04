@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 import 'package:plainsight/features/profile/presentation/pages/profile_settings_page.dart';
-import 'package:plainsight/main.dart';
+import 'package:plainsight/core/widgets/navigation_drawer.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

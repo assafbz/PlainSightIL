@@ -5,7 +5,8 @@ import {
   parseHebrewBoolean,
   isValidIsraelCoordinates,
   scrapeAndSyncBankAtms,
-} from "../src/scrapers/21fde05f-62e3-401b-81cf-5c385862026d";
+} from "../src/scrapers/bank_atms_scraper";
+import { DATASET_IDS } from "../src/utils/constants";
 
 vi.mock("axios");
 vi.mock("firebase-functions", () => ({
@@ -211,7 +212,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
     mockMetadataSet = vi.fn().mockResolvedValue(true);
 
     mockDoc = vi.fn().mockImplementation((id) => {
-      if (id === "21fde05f-62e3-401b-81cf-5c385862026d") {
+      if (id === DATASET_IDS.BANK_ATMS) {
         return {
           set: mockMetadataSet,
         };
@@ -293,7 +294,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
 
-    expect(mockCollection).toHaveBeenCalledWith("21fde05f-62e3-401b-81cf-5c385862026d");
+    expect(mockCollection).toHaveBeenCalledWith(DATASET_IDS.BANK_ATMS);
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
 
     const written = mockBatch.set.mock.calls[0][1];
@@ -303,10 +304,10 @@ describe("Bank ATMs Ingest Sync Process", () => {
     expect(written.cashWithdrawal).toBe(true);
     expect(written.commission).toBe(false);
 
-    expect(mockDoc).toHaveBeenCalledWith("21fde05f-62e3-401b-81cf-5c385862026d");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.BANK_ATMS);
     expect(mockMetadataSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        activeCollection: "21fde05f-62e3-401b-81cf-5c385862026d",
+        activeCollection: DATASET_IDS.BANK_ATMS,
         status: "idle",
         recordCount: 1,
       }),

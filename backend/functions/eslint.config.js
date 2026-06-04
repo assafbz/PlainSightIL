@@ -21,6 +21,8 @@ module.exports = [
         console: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
+        module: "readonly",
+        require: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
       },

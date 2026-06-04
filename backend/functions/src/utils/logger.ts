@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from "firebase-functions";
 
 export interface LogMetadata {
@@ -93,7 +92,7 @@ export class AppLogger {
       errorDetails.message = formattedMessage;
     }
 
-    logger.error(errorDetails.message as string, {
+    logger.error(String(errorDetails.message), {
       serviceContext: this.serviceContext,
       ...errorDetails,
       ...meta,
