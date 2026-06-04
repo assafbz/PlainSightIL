@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:plainsight/core/utils/app_logger.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles system telemetry stats, scraper execution logs,
@@ -161,6 +162,12 @@ class TelemetryNotifier extends ChangeNotifier {
           'id': '21fde05f-62e3-401b-81cf-5c385862026d',
           'recordCount': 3019,
           'lastUpdated': '2026-06-02T09:00:00Z',
+          'status': 'idle',
+        },
+        DatasetIds.patentClassifications: {
+          'id': DatasetIds.patentClassifications,
+          'recordCount': 10,
+          'lastUpdated': '2026-06-03T10:00:00Z',
           'status': 'idle',
         },
       };
@@ -459,6 +466,19 @@ class TelemetryNotifier extends ChangeNotifier {
           tags: ['כספומטים', 'בנקים', 'ATM'],
           isSupported: true,
         ),
+        DatasetMetadataModel(
+          id: DatasetIds.patentClassifications,
+          datasetId: DatasetIds.patentClassifications,
+          name: 'patent_classifications',
+          title: 'סיווגי CPC לפטנטים',
+          notes:
+              'מאגר סיווגי CPC (סיווג פטנטים משותף) לבקשות פטנט של רשם הפטנטים.',
+          publisher: 'רשות הפטנטים',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 3),
+          tags: const ['פטנטים', 'סיווג', 'חדשנות', 'CPC'],
+          isSupported: true,
+        ),
       ];
       _datasetRequestCounts = {'government-budget-dataset-id': 18};
       _isLoadingDirectory = false;
@@ -666,6 +686,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncDoctorsLicenses';
       } else if (datasetId == '21fde05f-62e3-401b-81cf-5c385862026d') {
         functionName = 'manualSyncBankAtms';
+      } else if (datasetId == DatasetIds.patentClassifications) {
+        functionName = 'manualSyncPatentClassifications';
       } else {
         throw Exception('Unknown dataset ID: $datasetId');
       }

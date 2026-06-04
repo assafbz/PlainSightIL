@@ -159,6 +159,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyEn': 'Bank of Israel',
         'agencyHe': 'בנק ישראל',
       },
+      {
+        'id': DatasetIds.patentClassifications,
+        'titleEn': 'Patent Classifications',
+        'titleHe': 'סיווגי CPC לפטנטים',
+        'resourceId': DatasetIds.patentClassifications,
+        'agencyEn': 'Israel Patent Office',
+        'agencyHe': 'רשות הפטנטים',
+      },
     ];
 
     return ListenableBuilder(
@@ -1043,6 +1051,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': '21fde05f-62e3-401b-81cf-5c385862026d',
         'titleEn': 'Bank ATMs',
         'titleHe': 'כספומטים',
+      },
+      {
+        'id': DatasetIds.patentClassifications,
+        'titleEn': 'Patent Classifications',
+        'titleHe': 'סיווגי CPC לפטנטים',
       },
       {
         'id': 'datasets_metadata',
