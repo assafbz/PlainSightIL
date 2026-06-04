@@ -37,6 +37,16 @@ Maintaining fresh project context and documentation is critical for multi-agent 
 - **Active Updates**: Agents must proactively audit and update relevant ground-truth files under `.ai_context/` and `docs/` during their active phase.
 - **Reference Documentation**: Avoid letting documents drift. Ensure database schemas, E2E specs, and design guides are modified whenever feature boundaries or data models change.
 
+### E. GitHub Issue-Centric SDLC Enforcement
+- **Mandatory GitHub Issue Mapping**: Every development request, bug fix, or refactoring task must correspond to a valid issue on GitHub.
+- **Implicit Issue Creation**: If the user makes a request without specifying a GitHub issue number, the agent must immediately create the issue on GitHub using the available integration tools, retrieve the issue number from GitHub, and checkout/rename the branch to follow the convention `(agents|dev)/<issue_id>-<description>`.
+- **No Skipped SDLC**: Under no circumstances should any developer or agent skip the SDLC state phases. Bypassing gates via `SKIP_SDLC=1` is strictly prohibited unless there is an explicit and documented Human-in-the-Loop (HITL) approval/sign-off.
+- **Lifecycle End-State**: The SDLC is only complete when:
+  1. A Pull Request is created.
+  2. All GitHub actions/checks on the PR pass successfully.
+  3. The PR is merged successfully.
+  4. The corresponding GitHub issue is closed.
+
 ---
 
 ## 2. Context Engineering Guide
@@ -51,6 +61,7 @@ When engineering context for agents in this workspace, follow these guidelines:
 | **File Referencing** | Markdown links | Always link files using the absolute path (`file:///absolute/path/to/file`). Avoid surrounding links with backticks. |
 | **Code Scoping** | Target line ranges | When reading files, use tools that return specified line ranges rather than loading the whole file. |
 | **Role-Doc Mapping** | Various | Mandate that each agent updates their assigned files (e.g. PM: [product_definition.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/product_definition.md), UI/UX: [design.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/design.md), Architect: [.ai_context/database_schemas.json](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/database_schemas.json) & [.ai_context/architecture.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/architecture.md), Security/TL: [.ai_context/quality_gates.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/quality_gates.md)/[.ai_context/coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md), Dev: [docs/monorepo_setup_guide.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/monorepo_setup_guide.md), QA: [docs/e2e_test_specification.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/e2e_test_specification.md), Lessons Learned: [docs/lessons_learned.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/lessons_learned.md)). |
+| **GitHub Integration** | REST/CLI | Enforce GitHub issue mapping on every development request, verify that all GitHub checks/actions on the PR pass successfully before merge, and close the issue on successful merge. |
 
 ---
 

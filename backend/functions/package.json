@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "version": "1.0.14",
+  "version": "1.0.16",
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

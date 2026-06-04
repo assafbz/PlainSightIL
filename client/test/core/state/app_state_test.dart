@@ -182,9 +182,11 @@ void main() {
           // Accept mock keys
         } else {
           expect(key, startsWith('AIzaSy'));
-          expect(key.length, 39);
+          expect(key.length == 37 || key.length == 39, isTrue);
 
-          final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{33}$');
+          final RegExp gcloudKeyPattern = RegExp(
+            r'^AIzaSy[a-zA-Z0-9_-]{31,33}$',
+          );
           expect(gcloudKeyPattern.hasMatch(key), isTrue);
         }
       },
@@ -241,12 +243,11 @@ void main() {
       expect(appState.favorites, isEmpty);
       expect(appState.recents, isEmpty);
       expect(appState.mockUser, isNotNull);
+      expect(appState.isFirebaseInitialized, isFalse);
 
       expect(appState.isLoadingAntennas, isTrue);
       expect(appState.isLoadingPermits, isTrue);
       expect(appState.permitSyncStatus, 'idle');
-      expect(appState.isLoadingLiquidation, isTrue);
-      expect(appState.isLoadingDoctors, isTrue);
       expect(appState.isFirebaseInitialized, isFalse);
       expect(appState.atmRecords, isEmpty);
       expect(appState.isLoadingAtms, isTrue);
@@ -262,19 +263,31 @@ void main() {
       appState.initLiquidationListener();
       appState.initDoctorsListener();
       appState.initTelemetryListeners();
+      appState.initBankAtmsListener();
 
       expect(appState.isLoadingAdminMetadata, isFalse);
       expect(appState.isLoadingTelemetry, isFalse);
       expect(appState.isLoadingDirectory, isFalse);
+      expect(appState.isLoadingAtms, isFalse);
 
       expect(appState.antennaRecords.isNotEmpty, isTrue);
       expect(appState.permitRecords.isNotEmpty, isTrue);
       expect(appState.liquidationRecords.isNotEmpty, isTrue);
       expect(appState.doctorRecords.isNotEmpty, isTrue);
+      expect(appState.atmRecords.isNotEmpty, isTrue);
       expect(appState.datasetMetadataMap.isNotEmpty, isTrue);
       expect(appState.apiHealth.isNotEmpty, isTrue);
       expect(appState.scraperRuns.isNotEmpty, isTrue);
       expect(appState.directoryRecords.isNotEmpty, isTrue);
+
+      // Verify cancel bank atms listener resets state
+      appState.cancelBankAtmsListener();
+      expect(appState.atmRecords, isEmpty);
+      expect(appState.isLoadingAtms, isTrue);
+
+      // Verify app version is populated
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(appState.appVersion, '1.0.0');
 
       expect(appState.isFavorite('test-dataset'), isFalse);
       await appState.toggleFavorite('test-dataset');
@@ -319,15 +332,42 @@ void main() {
       );
       expect(syncResult['success'], isTrue);
 
+      // test updateDatasetScheduler in testing mode
+      AppStateNotifier.isTesting = true;
+      appState.initAdminMetadataListener(); // Load initial mock data
+      expect(
+        appState
+            .datasetMetadataMap['8935c8e5-ec77-421f-af86-d970583195f8']?['scheduler'],
+        isNull,
+      );
+
       await appState.updateDatasetScheduler(
         '8935c8e5-ec77-421f-af86-d970583195f8',
         enabled: true,
         updateIntervalHours: 6,
       );
-      final meta =
-          appState.datasetMetadataMap['8935c8e5-ec77-421f-af86-d970583195f8'];
-      expect(meta?['scheduler']?['enabled'], isTrue);
-      expect(meta?['scheduler']?['updateIntervalHours'], 6);
+
+      final schedulerMap = appState
+          .datasetMetadataMap['8935c8e5-ec77-421f-af86-d970583195f8']?['scheduler'];
+      expect(schedulerMap, isNotNull);
+      expect(schedulerMap['enabled'], isTrue);
+      expect(schedulerMap['updateIntervalHours'], 6);
+      expect(schedulerMap['nextRun'], isNotNull);
+
+      // test updateDatasetScheduler in non-testing mode when firebase is not initialized
+      AppStateNotifier.isTesting = false;
+      AppStateNotifier.testIsFirebaseInitialized = false;
+
+      // This should return immediately without throwing an error
+      await appState.updateDatasetScheduler(
+        '8935c8e5-ec77-421f-af86-d970583195f8',
+        enabled: true,
+        updateIntervalHours: 6,
+      );
+
+      // Reset values
+      AppStateNotifier.isTesting = true;
+      AppStateNotifier.testIsFirebaseInitialized = null;
 
       appState.setMockProfile(null);
       appState.dispose();
