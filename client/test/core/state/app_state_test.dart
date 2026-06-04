@@ -372,5 +372,45 @@ void main() {
       appState.setMockProfile(null);
       appState.dispose();
     });
+
+    test('patent classifications delegation works correctly', () async {
+      AppStateNotifier.isTesting = true;
+      final appState = AppStateNotifier();
+
+      // Verify initial state via delegated getters
+      expect(appState.patentRecords, isEmpty);
+      expect(appState.isLoadingPatents, isFalse);
+      expect(appState.isLoadingMorePatents, isFalse);
+      expect(appState.hasMorePatents, isTrue);
+
+      // Initialize and verify data loads
+      appState.initPatentClassificationsListener();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(appState.patentRecords.isNotEmpty, isTrue);
+      expect(appState.isLoadingPatents, isFalse);
+
+      // Test search query delegation
+      appState.setPatentSearchQuery('test');
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Test primary filter delegation
+      appState.setPatentPrimaryFilter('Primary');
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Test reset filters delegation
+      appState.resetPatentFilters();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Test fetchNextPage delegation
+      await appState.fetchNextPatentPage();
+
+      // Test cancel listener delegation
+      appState.cancelPatentClassificationsListener();
+      expect(appState.patentRecords, isEmpty);
+      expect(appState.isLoadingPatents, isFalse);
+      expect(appState.hasMorePatents, isTrue);
+
+      appState.dispose();
+    });
   });
 }

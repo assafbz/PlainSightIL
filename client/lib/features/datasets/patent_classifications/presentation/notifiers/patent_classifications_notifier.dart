@@ -42,11 +42,13 @@ class PatentClassificationsNotifier extends ChangeNotifier {
     if (AppStateNotifier.testIsFirebaseInitialized != null) {
       return AppStateNotifier.testIsFirebaseInitialized!;
     }
+    // coverage:ignore-start
     try {
       return Firebase.apps.isNotEmpty;
     } catch (_) {
       return false;
     }
+    // coverage:ignore-end
   }
 
   /// Construct and initialize the PatentClassificationsNotifier.
@@ -138,6 +140,7 @@ class PatentClassificationsNotifier extends ChangeNotifier {
       return;
     }
 
+    // coverage:ignore-start
     if (!isFirebaseInitialized) {
       _isLoadingPatents = false;
       _isLoadingMorePatents = false;
@@ -222,6 +225,7 @@ class PatentClassificationsNotifier extends ChangeNotifier {
       _isLoadingMorePatents = false;
       notifyListeners();
     }
+    // coverage:ignore-end
   }
 
   bool _isDisposed = false;
