@@ -196,7 +196,7 @@ function startServer() {
 
 function runPlaywright() {
   console.log('🧪 [CI-E2E] Running Playwright E2E Tests...');
-  playwrightProc = spawn('npx', ['playwright', 'test'], {
+  playwrightProc = spawn('npx', ['playwright', 'test', ...process.argv.slice(2)], {
     cwd: rootDir,
     env: {
       ...process.env,

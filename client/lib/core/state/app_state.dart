@@ -62,6 +62,7 @@ class AppStateNotifier extends ChangeNotifier {
   List<String> get recents => authNotifier.recents;
   UserProfile? get userProfile => authNotifier.userProfile;
   Map<String, String>? get mockUser => authNotifier.mockUser;
+  bool get isFirebaseInitialized => authNotifier.isFirebaseInitialized;
 
   // Delegated Getters for AntennasNotifier
   List<Map<String, dynamic>> get antennaRecords =>
@@ -98,7 +99,6 @@ class AppStateNotifier extends ChangeNotifier {
       telemetryNotifier.directoryRecords;
   bool get isLoadingDirectory => telemetryNotifier.isLoadingDirectory;
   bool get isCheckingApiHealth => telemetryNotifier.isCheckingApiHealth;
-  bool get isFirebaseInitialized => telemetryNotifier.isFirebaseInitialized;
 
   bool _isDisposed = false;
 
@@ -218,7 +218,7 @@ class AppStateNotifier extends ChangeNotifier {
 
     if (isTesting) {
       final Map<String, dynamic> localMeta =
-          telemetryNotifier.datasetMetadataMap[datasetId] ?? {};
+          datasetMetadataMap[datasetId] ?? {};
       final scheduler = Map<String, dynamic>.from(
         localMeta['scheduler'] as Map? ?? {},
       );
@@ -231,15 +231,12 @@ class AppStateNotifier extends ChangeNotifier {
       );
       scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
 
-      telemetryNotifier.datasetMetadataMap[datasetId] = {
-        ...localMeta,
-        'scheduler': scheduler,
-      };
+      datasetMetadataMap[datasetId] = {...localMeta, 'scheduler': scheduler};
       notifyListeners();
       return;
     }
 
-    if (!isFirebaseInitialized) return;
+    if (!telemetryNotifier.isFirebaseInitialized) return;
 
     try {
       final metadataRef =

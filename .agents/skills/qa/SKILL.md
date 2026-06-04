@@ -5,13 +5,16 @@ description: "Creates and executes test cases, verifies layout responsiveness, a
 
 # QA Engineer Agent Playbook
 
-You are the QA Engineer Agent. Your mission is to verify that the implemented code meets all requirements in the `PRD.md` and does not introduce regressions.
+You are the QA Engineer Agent. Your mission is to verify that the implemented code meets all requirements in the [PRD.md](file:///Users/abenzaken/Dev/PlainSightIL/.agents/state/issue_102/PRD.md), satisfies all quality gates, and does not introduce regressions. You validate both client and backend code through the complete testing pyramid.
 
 ---
 
-## 1. End-to-End (E2E) Test Strategy & Plan
+## 1. Testing Pyramid & E2E Test Strategy
 
-The E2E testing strategy for PlainSightIL validates user flows across client-backend boundaries using hermetically sealed local environments. This ensures data processed by the backend (scrapers and Cloud Functions) flows correctly into Firestore, caches locally in the client (SharedPreferences/Firestore persistence cache), and renders properly in the user interface (Flutter Web/Chrome).
+The testing strategy for PlainSightIL validates user flows across client-backend boundaries using hermetically sealed local environments. The QA Agent enforces the testing pyramid at three distinct layers:
+1. **Unit Testing**: Validating isolated logic (domain models, repositories, helper functions, and scraper functions).
+2. **Widget/Component Testing**: Verifying individual screen fragments, states, and responsive layout adaptivity.
+3. **End-to-End (E2E) Integration Testing**: Simulating full user interaction flows from the browser UI to the backend emulator databases using Playwright.
 
 ### 1.1 E2E Testing Workflow
 
@@ -20,17 +23,19 @@ The diagram below outlines the sequential lifecycle of our E2E test execution:
 ```mermaid
 graph TD
     Start[Start Test Loop] --> Kill["Run cleanup (PORT_OFFSET=id npm run kill)"]
-    Kill --> Spawn["Spawn Emulators & Web (PORT_OFFSET=id npm start)"]
-    Spawn --> Seed[Seed Firestore Mock Data]
-    Seed --> RunTests[Execute Client/Backend Test Suites]
+    Kill --> BuildBack["Build functions (npm run backend:build)"]
+    BuildBack --> RunLocalTests["Run Unit/Widget Tests (vitest & flutter test)"]
+    RunLocalTests --> Spawn["Spawn Emulators & Web (PORT_OFFSET=id npm start)"]
+    Spawn --> Seed[Seed Firestore Mock Data via sync]
+    Seed --> RunE2E["Execute Playwright E2E Test Suite"]
     
     subgraph Test Execution Areas
-        RunTests --> Guest[Guest Login Flows]
-        RunTests --> RTL[Bilingual & RTL Mirrors]
-        RunTests --> CustomPaint[CustomPainter & Geo Boundaries]
-        RunTests --> Search[Search, Filter & Pagination]
-        RunTests --> Offline[Offline Mode & Local Caches]
-        RunTests --> A11y[Accessibility & Text Contrast]
+        RunE2E --> Guest[Guest Login Flows]
+        RunE2E --> RTL[Bilingual & RTL Mirrors]
+        RunE2E --> CustomPaint[CustomPainter & Geo Boundaries]
+        RunE2E --> Search[Search, Filter & Pagination]
+        RunE2E --> Offline[Offline Mode & Local Caches]
+        RunE2E --> A11y[Accessibility & Text Contrast]
     end
     
     Guest --> AuditDocs[Audit In-Code Documentation]
@@ -61,7 +66,7 @@ graph TD
     end
     
     subgraph "Client Integration & E2E Tests"
-        C_Integration["client/integration_test/*_test.dart"]
+        C_Integration["e2e/app.spec.ts"]
     end
     
     subgraph "Database Seeding & Cleanups"
@@ -81,19 +86,40 @@ graph TD
 
 Tests must run in a predictable environment isolated from external network calls or remote databases.
 
-1.  **Kill Orphaned Processes**:
-    Before launching emulators, clean up any processes bound to the emulator and client ports by setting the active `PORT_OFFSET` (using the active `issue_id` as the offset):
-    ```bash
-    PORT_OFFSET=<issue_id> npm run kill
-    ```
-2.  **Start Services Parallelly**:
-    Launch the Firebase Emulator Suite (hosting Firestore, Auth, Functions) and compile the Flutter web client with the active `PORT_OFFSET` (using the active `issue_id` as the offset):
-    ```bash
-    PORT_OFFSET=<issue_id> npm start
-    ```
-3.  **Local Seeding and Cleanup**:
-    - Seed data via JSON files mapped to collection names (e.g., using test mock fixtures).
-    - Clear collections or restart emulator state between test suite runs to prevent cross-contamination.
+1. **Kill Orphaned Processes**:
+   Before launching emulators, clean up any processes bound to the emulator and client ports by setting the active `PORT_OFFSET` (using the active `issue_id` as the offset):
+   ```bash
+   PORT_OFFSET=<issue_id> npm run kill
+   ```
+2. **Compile Backend Functions**:
+   Ensure backend functions are compiled into JavaScript before running tests or launching emulators:
+   ```bash
+   npm run backend:build
+   ```
+3. **Execute Unit and Widget Test Suites**:
+   - Run backend function unit tests with coverage:
+     ```bash
+     npm run --prefix backend/functions test:coverage
+     ```
+   - Run client unit and widget tests with coverage:
+     ```bash
+     flutter test --coverage
+     ```
+4. **Execute Static Quality Gate Checks**:
+   - Check that all modified logic-bearing source files have corresponding test files:
+     ```bash
+     node scripts/check-test-existence.js
+     ```
+   - Verify that test coverage meets target thresholds:
+     ```bash
+     node scripts/check-coverage-thresholds.js --client --backend
+     ```
+5. **Start Services & Run Playwright E2E Suite**:
+   To run automated E2E tests in a single flow:
+   ```bash
+   PORT_OFFSET=<issue_id> npm run test:e2e:ci
+   ```
+   *Note: For manual validation, compile the release build using `flutter build web --release` and serve using `PORT_OFFSET=<issue_id> npm start` to interact with the running browser.*
 
 ---
 
@@ -113,6 +139,10 @@ The following test matrix must be evaluated for all pull requests:
 | **TC-08** | Search & Filter | Enter Hebrew search term into liquidation view. | Correctly filters database items, shows highlighted results. | Input field focus, matching highlight bounds. |
 | **TC-09** | Caching & Offline | Trigger offline state, attempt fetching directory. | Banner shows offline notice, previously cached local/Firestore data remains visible. | Alert banner padding, layout alignment. |
 | **TC-10** | Accessibility | Audit app layout with screen readers and contrast tools. | All image elements have semantic labels, touch targets >= 48dp, contrast >= 4.5:1. | Focus ring visibility, target sizes. |
+| **TC-11** | Scraper Controls | Adjust scheduler interval dropdown/slider and tap sync. | Updates scheduling configuration document in Firestore, dispatches Pub/Sub, updates ticker UI. | Scraper controls layout, log output panel. |
+| **TC-12** | Infinite Scroll | Scroll directory listing list view down to the end of the viewport. | Triggers next cursor load, displays a bottom loading spinner, appends next records correctly. | ListView bottom edge, loading indicator spinner. |
+| **TC-13** | Cache Reload | Disconnect emulator network, refresh/reload page. | Displays top offline banner, retrieves database collection data from local Firestore cache. | Top offline status banner, cached cards display. |
+| **TC-14** | Responsive Geometry | Rescale browser viewport from 375x667 to 820x1180. | Layout shifts cleanly, handles sidebar drawers, wraps text labels, no visual overflow errors. | Mobile hamburger drawer, adaptive grid items. |
 
 ---
 
@@ -132,6 +162,7 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
 ### 4.3 Accessibility (a11y) & Font Auditing
 - Verify that Outfit/Inter/Roboto fonts load properly without falling back to default system serif.
 - Confirm tap targets on navigation elements have minimum dimensions of 48x48 logical pixels.
+- Use the accessibility devtools to verify color contrast ratios and semantic focus rings.
 
 ### 4.4 Documentation Audit
 - Every public API, interface, method, helper, or Cloud Function must contain three-slash (`///`) comments (for Dart) or JSDoc comments (for TypeScript) detailing parameters, types, returns, and complex logic boundaries.
@@ -143,15 +174,36 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
 - **Bypass Assertions**: When validating login bypass, check for the absence of login-specific components (buttons/inputs) rather than general greetings like "Welcome Back" which may also be rendered on dashboard headers.
 - **Offline Caching Validation**: To verify database cache (Firestore offline persistence / LocalStorage) retrieval, navigate away and reload the screen while offline rather than asserting on an already-rendered view.
 - **Flutter Web CanvasKit Text Inputs**: Standard Playwright programmatic `.fill()` commands on transparent overlay `<input>` elements will fail to register changes inside Flutter's `TextEditingController` Dart state. To interact with Flutter inputs, first click/focus the input element, execute a robust backspace loop (50 times) to clear the existing text, and then use `page.keyboard.type('New Value')` to dispatch browser keystroke events that Flutter Web captures.
-- **Strict Mode Violations & Announces**: When asserting the presence of text elements that also generate screen-reader announcements (such as a SnackBar text or dialog titles), Playwright's default selector will match multiple elements (e.g. `flt-announcement-polite` and the semantic span). Always append `.first()` to text-based locators to prevent strict mode errors.
+  *Example implementation snippet:*
+  ```typescript
+  await page.locator('flt-text-field').click();
+  for (let i = 0; i < 50; i++) {
+    await page.keyboard.press('Backspace');
+  }
+  await page.keyboard.type('Search Query');
+  ```
+- **Strict Mode Violations & Announces**: When asserting the presence of text elements that also generate screen-reader announcements (such as a SnackBar text or dialog titles), Playwright's default selector will match multiple elements (e.g. `flt-announcement-polite` and the semantic span). Always append `.first()` to text-based locators to prevent strict mode errors:
+  ```typescript
+  await expect(page.locator('text="Settings saved"').first()).toBeVisible();
+  ```
 - **Static HTTP Port Swapping**: To prevent static server `serve` from switching to alternative ports if port 8080 is blocked or slow to release, append the `--no-port-switching` option to guarantee consistent test runs.
+
+### 4.6 Testing Pyramid & Coverage Threshold Enforcement
+- Ensure that the client unit and widget tests meet the coverage rules defined in [quality_gates.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/quality_gates.md):
+  - **Domain & Data Layers (Client & Backend)**: **90%+** unit test coverage.
+  - **Presentation Layer (State/ChangeNotifiers)**: **100%** flow and notifier path coverage.
+- If coverage script fails, locate the exact uncovered line numbers in the generated `lcov.info` file, resolve the missing unit/widget tests, and rerun.
+
+### 4.7 Performance & Rendering Audit
+- Validate that views maintain a smooth frame rate (no dropped frames, target 60/120fps) when scrolling or panning map screens.
+- Verify that Time to Interactive (TTI) is under **1.5 seconds** when running against compiled static builds.
 
 ---
 
 ## 5. Workflow Instructions
 
 ### 1. Test Planning
-- Read `PRD.md` to identify functional requirements (e.g. `FR-01`).
+- Read [PRD.md](file:///Users/abenzaken/Dev/PlainSightIL/.agents/state/issue_102/PRD.md) to identify functional requirements (e.g. `FR-01`).
 - Read the codebase diff or modified files.
 - **Context & Documentation Maintenance**: Audit and update [docs/e2e_test_specification.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/e2e_test_specification.md) if the issue introduces new visual components, user workflows, testing scenarios, tools, configurations, or changes in the E2E verification matrix.
 - Formulate a test matrix covering:
@@ -163,10 +215,7 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
   - **Documentation Audit**: Check that all new classes, public methods, endpoints, or complex code parts have three-slash (`///`) comments (Dart) or JSDoc comments (TypeScript/JS) in compliance with [coding_standards.md](file:///Users/abenzaken/Dev/PlainSightIL/.ai_context/coding_standards.md#5-in-code-documentation-standards).
 
 ### 2. Execution & Report Generation
-Execute unit, widget, and E2E tests. Run the automated checks to verify quality requirements:
-- **Test Existence Check**: Run `node scripts/check-test-existence.js` and confirm it passes.
-- **Coverage Check**: Run `node scripts/check-coverage-thresholds.js --client` or `--backend` depending on modified components and verify that the target thresholds are met.
-Create the QA Validation Report (`QA_REPORT.md`) under `.agents/state/issue_<id>/QA_REPORT.md`:
+Execute unit, widget, and E2E tests. Run the automated checks to verify quality requirements. Create the QA Validation Report (`QA_REPORT.md`) under `.agents/state/issue_<id>/QA_REPORT.md` using the template below:
 
 ```markdown
 # QA Validation Report: [Feature Name] (Issue #[Issue ID])
@@ -181,7 +230,7 @@ Create the QA Validation Report (`QA_REPORT.md`) under `.agents/state/issue_<id>
 | Ref ID | Description | Input/Condition | Expected Result | Actual Result | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | TC-01 | Responsive layout check | iPad Pro (portrait) | Responsive scaling, no overflows | Matches design | PASS |
-| TC-02 | Missing dataset check | Null API payload | Empty state banner displayed | Shows loading forever | FAIL |
+| TC-11 | Scraper interval change | Change slider to 10 min | Updates db, dispatches sync trigger | Updates db, triggers sync | PASS |
 
 ## 3. Test Coverage Audit
 Report coverage metrics captured by validation scripts:
@@ -190,7 +239,11 @@ Report coverage metrics captured by validation scripts:
 - **Verification Scripts Outcome**: PASS / FAIL
 
 ## 4. Discovered Defects (Gaps & Bugs)
-- **BUG-01 (Severity: High/Med/Low)**: Description, reproduction steps, and links to console errors.
+If any tests failed or defects were found, detail them here:
+- **BUG-01 (Severity: Blocker/High/Medium/Low)**: 
+  - *Description*: Concise summary of the bug.
+  - *Reproduction Steps*: Bullet points to reproduce the defect.
+  - *Console Trace/Logs*: Attach any stack traces, exceptions, or console log snippets.
 
 ## 5. Regression Audit
 Verify that unrelated components behave correctly after the changes.
@@ -199,14 +252,25 @@ Verify that unrelated components behave correctly after the changes.
 Document any verification challenges, emulator limitations, or test setup hurdles encountered during testing. This will be harvested by the final Lessons Learned phase.
 ```
 
-### 3. State Update
-- Update `.agents/state/active_issues/issue_<id>.md`.
-- Add `QA_REPORT.md` to artifacts.
-- If status is `FAILED`:
-  - Set the active issue review status to `rejected`.
-  - In the audit logs, describe the failure.
-  - Set phase to `blueprint-revision` and assign back to the `Senior Developer`.
-- If status is `PASSED`:
-  - Transition `current_phase` to `lessons_learned`.
-  - Set `hitl_approval_required: false`.
-  - Assign to `lessons_learned` for final review, cleanup, and playbook refinement.
+### 3. State Update & Handoff
+- Load and parse the active issue state file under `.agents/state/active_issues/issue_<id>.md`.
+- **If QA Validation FAILED**:
+  1. Modify the issue frontmatter to assign back to the developer:
+     ```yaml
+     current_phase: "implementation"
+     assigned_agent: "senior_developer"
+     status: "blueprint-revision"
+     hitl_approval_required: false
+     ```
+  2. Append an entry to the Audit Log section detailing the failure:
+     - `- **<timestamp>**: QA validation failed. Identified [BUG-01]. Demoting phase back to implementation for Senior Developer fix.`
+- **If QA Validation PASSED**:
+  1. Modify the issue frontmatter to hand off to the Lessons Learned agent:
+     ```yaml
+     current_phase: "lessons_learned"
+     assigned_agent: "lessons_learned"
+     status: "in-progress"
+     hitl_approval_required: false
+     ```
+  2. Append an entry to the Audit Log section detailing the pass:
+     - `- **<timestamp>**: QA validation passed successfully. Generated QA_REPORT.md. Transitioned phase to lessons_learned.`

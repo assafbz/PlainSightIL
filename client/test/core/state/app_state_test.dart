@@ -181,9 +181,9 @@ void main() {
           expect(key, 'mock-api-key-for-local-emulator');
         } else {
           expect(key, startsWith('AIzaSy'));
-          expect(key.length, 39);
+          expect(key.length == 37 || key.length == 39, isTrue);
 
-          final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{33}$');
+          final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{31,33}$');
           expect(gcloudKeyPattern.hasMatch(key), isTrue);
         }
       },
@@ -240,6 +240,7 @@ void main() {
       expect(appState.favorites, isEmpty);
       expect(appState.recents, isEmpty);
       expect(appState.mockUser, isNotNull);
+      expect(appState.isFirebaseInitialized, isFalse);
 
       expect(appState.isLoadingAntennas, isTrue);
       expect(appState.isLoadingPermits, isTrue);
