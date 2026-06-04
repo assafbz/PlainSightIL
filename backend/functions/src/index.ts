@@ -10,7 +10,7 @@ import { scrapeAndSyncPermitApplications } from "./scrapers/cellular_permits_scr
 import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
 import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
 import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
-import { scrapeAndSyncBankAtms } from "./scrapers/21fde05f-62e3-401b-81cf-5c385862026d";
+import { scrapeAndSyncBankAtms } from "./scrapers/bank_atms_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 
@@ -22,7 +22,7 @@ const scraperRegistry: Record<
   [DATASET_IDS.CELLULAR_PERMITS]: scrapeAndSyncPermitApplications,
   [DATASET_IDS.COMPANIES_LIQUIDATION]: scrapeAndSyncCompaniesLiquidation,
   [DATASET_IDS.DOCTORS_LICENSES]: scrapeAndSyncDoctorsLicenses,
-  "21fde05f-62e3-401b-81cf-5c385862026d": scrapeAndSyncBankAtms,
+  [DATASET_IDS.BANK_ATMS]: scrapeAndSyncBankAtms,
   datasets_metadata: scrapeAndSyncDatasetMetadata,
 };
 
@@ -31,7 +31,7 @@ const defaultIntervals: Record<string, number> = {
   [DATASET_IDS.CELLULAR_PERMITS]: 168, // Cellular Permit Apps (weekly)
   [DATASET_IDS.COMPANIES_LIQUIDATION]: 168, // Companies Liquidation (weekly)
   [DATASET_IDS.DOCTORS_LICENSES]: 168, // Doctors Licenses (weekly)
-  "21fde05f-62e3-401b-81cf-5c385862026d": 168, // Bank ATMs (weekly)
+  [DATASET_IDS.BANK_ATMS]: 168, // Bank ATMs (weekly)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
 
@@ -586,7 +586,7 @@ export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => 
   const auth = await validateAdminRequest(req, res);
   if (!auth) return;
 
-  const datasetId = "21fde05f-62e3-401b-81cf-5c385862026d";
+  const datasetId = DATASET_IDS.BANK_ATMS;
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately

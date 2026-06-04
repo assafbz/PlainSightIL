@@ -3,6 +3,7 @@ import { GeoPoint } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import axios from "axios";
 import { encodeGeohash } from "../utils/geohash";
+import { DATASET_IDS } from "../utils/constants";
 
 /**
  * Validates that coordinates fall within Israel's approximate bounding box (WGS84).
@@ -193,13 +194,13 @@ export function parseAtmRecord(record: HebrewAtmRecord): BankAtmRecord | null {
  */
 export async function scrapeAndSyncBankAtms(
   db: admin.firestore.Firestore,
-  resourceId = "21fde05f-62e3-401b-81cf-5c385862026d",
+  resourceId = DATASET_IDS.BANK_ATMS,
 ): Promise<{ success: boolean; count: number }> {
-  const datasetId = "21fde05f-62e3-401b-81cf-5c385862026d";
+  const datasetId = DATASET_IDS.BANK_ATMS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
   try {
-    const targetCollection = "21fde05f-62e3-401b-81cf-5c385862026d";
+    const targetCollection = DATASET_IDS.BANK_ATMS;
     logger.info(`Starting bank ATMs sync. Target collection: ${targetCollection}`);
 
     let offset = 0;
