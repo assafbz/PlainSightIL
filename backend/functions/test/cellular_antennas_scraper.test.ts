@@ -447,7 +447,7 @@ describe("Scraper and Sync Ingestion", () => {
 
     await scrapeAndSyncAntennas(mockDb, DATASET_IDS.CELLULAR_ANTENNAS, { limit: 50 });
 
-    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=50"));
+    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=50"), expect.any(Object));
   });
 
   it("should enforce 10 records and stop after 1 page in emulator mode by default", async () => {
@@ -476,7 +476,7 @@ describe("Scraper and Sync Ingestion", () => {
       expect(result.count).toBe(1);
       // Since it's emulator mode and forceFullSync is not true, it should only call axios.get once
       expect(axios.get).toHaveBeenCalledTimes(1);
-      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=10"));
+      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=10"), expect.any(Object));
     } finally {
       process.env.FUNCTIONS_EMULATOR = originalEmulatorVal;
     }
@@ -517,7 +517,7 @@ describe("Scraper and Sync Ingestion", () => {
       expect(result.count).toBe(1);
       // Since forceFullSync is true, it should fetch pages recursively until records are empty
       expect(axios.get).toHaveBeenCalledTimes(2);
-      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=1000"));
+      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=1000"), expect.any(Object));
     } finally {
       process.env.FUNCTIONS_EMULATOR = originalEmulatorVal;
     }

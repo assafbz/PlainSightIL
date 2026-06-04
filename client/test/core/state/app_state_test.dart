@@ -183,7 +183,9 @@ void main() {
           expect(key, startsWith('AIzaSy'));
           expect(key.length == 37 || key.length == 39, isTrue);
 
-          final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{31,33}$');
+          final RegExp gcloudKeyPattern = RegExp(
+            r'^AIzaSy[a-zA-Z0-9_-]{31,33}$',
+          );
           expect(gcloudKeyPattern.hasMatch(key), isTrue);
         }
       },

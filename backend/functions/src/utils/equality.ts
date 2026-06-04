@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Compares two values recursively to determine if they are equal,
  * ignoring metadata timestamps: 'createdAt', and 'updatedAt'.
