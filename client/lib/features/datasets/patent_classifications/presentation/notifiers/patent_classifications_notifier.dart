@@ -96,8 +96,9 @@ class PatentClassificationsNotifier extends ChangeNotifier {
       _hasMorePatents = true;
       _isLoadingPatents = true;
     } else {
-      if (!_hasMorePatents || _isLoadingMorePatents || _isLoadingPatents)
+      if (!_hasMorePatents || _isLoadingMorePatents || _isLoadingPatents) {
         return;
+      }
       _isLoadingMorePatents = true;
     }
     notifyListeners();
