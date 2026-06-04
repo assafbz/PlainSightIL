@@ -263,9 +263,14 @@ export const runScraperPubSub = functions.pubsub
         .doc(datasetId)
         .set({ status: "syncing" }, { merge: true });
 
-      const result = datasetId === DATASET_IDS.CELLULAR_PERMITS
-        ? await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, { forceFullSync: true })
-        : await scraper(db);
+      let result;
+      if (datasetId === DATASET_IDS.CELLULAR_ANTENNAS) {
+        result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, { forceFullSync: true });
+      } else if (datasetId === DATASET_IDS.CELLULAR_PERMITS) {
+        result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, { forceFullSync: true });
+      } else {
+        result = await scraper(db);
+      }
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
         count: result.count,
       });
@@ -366,6 +371,32 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   if (!auth) return;
 
   const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
+
+  // Skip startup sync check if triggered by emulator startup seeder
+  if (auth.uid === "emulator-seeder") {
+    try {
+      const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
+      const countSnap = await db.collection(datasetId).limit(1).get();
+      const hasRecords = !countSnap.empty;
+
+      if (metaDoc.exists) {
+        const metaData = metaDoc.data();
+        const nextRun = metaData?.scheduler?.nextRun;
+        const nowStr = new Date().toISOString();
+        if (hasRecords && nextRun && nextRun > nowStr) {
+          logger.info(`Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`);
+          res.status(200).json({
+            message: "Sync skipped (not due according to schedule)",
+            count: 0,
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      logger.warn(`Failed to check existing metadata for ${datasetId} on startup seeder check, proceeding with sync.`, err);
+    }
+  }
+
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
@@ -374,7 +405,8 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
       .doc(datasetId)
       .set({ status: "syncing" }, { merge: true });
 
-    const result = await scrapeAndSyncAntennas(db);
+    const forceFullSync = auth.uid !== "emulator-seeder";
+    const result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, { forceFullSync });
     logger.info("manualSyncAntennas sync completed successfully", {
       count: result.count,
     });

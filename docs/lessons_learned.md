@@ -169,3 +169,23 @@ Node processes started with `detached: true` in the workspace runner became zomb
 ### Corrective Action & Best Practice
 Enforce clean termination of all java/node background processes using `pkill` / `killall` before restarting the emulator environment.
 
+---
+
+## 9. Pitfall: Deep Comparison Type Mismatches in Equality Utility
+
+### Symptoms
+Documents containing empty arrays or objects are incorrectly evaluated as identical to documents containing empty objects/arrays, bypassing necessary writes.
+
+### Root Cause
+The record comparison utility checked `Array.isArray(existing)` but did not enforce that `incoming` must also be an array before looping or returning true.
+
+### Corrective Action & Best Practice
+When doing type-specific deep comparisons, always check that both existing and incoming values share the same structure/type:
+```typescript
+if (Array.isArray(existing) || Array.isArray(incoming)) {
+  if (!Array.isArray(existing) || !Array.isArray(incoming)) return false;
+  // proceed with array comparison...
+}
+```
+
+
