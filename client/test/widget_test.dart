@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/directory/presentation/widgets/dataset_card.dart';
-import 'package:plainsight/main.dart';
+import 'package:plainsight/app.dart';
+import 'package:plainsight/core/widgets/navigation_drawer.dart';
 
 void main() {
   setUp(() {
