@@ -38,10 +38,17 @@ try {
 }
 
 console.log(`🚀 [CI-E2E] Starting Firebase Emulators (Firestore: ${ports.firestore}, Auth: ${ports.auth}, Functions: ${ports.functions})...`);
+// Spawn emulators conditionally using shell only on Windows.
+// Suppress local GCE metadata checks via METADATA_SERVER_DETECTION and hide third-party deprecations using NODE_OPTIONS.
 const emulatorsProc = spawn('npx', ['firebase-tools', 'emulators:start', '--project', 'demo-plainsightil', '--config', 'firebase.tmp.json', '--only', 'firestore,auth,functions'], {
   cwd: path.join(rootDir, 'backend'),
-  shell: true,
-  detached: false
+  shell: process.platform === 'win32',
+  detached: false,
+  env: {
+    ...process.env,
+    METADATA_SERVER_DETECTION: 'none',
+    NODE_OPTIONS: '--no-deprecation'
+  }
 });
 
 
@@ -76,6 +83,7 @@ function cleanup(exitCode = 0) {
 
   // Run global process kill script to make absolutely sure ports are free
   console.log('🧹 [CI-E2E] Running final port sweep...');
+  // Spawn kill.js conditionally using shell only on Windows.
   const killProc = spawn('node', [path.join(rootDir, 'scripts', 'kill.js')], {
     env: {
       ...process.env,
@@ -86,7 +94,7 @@ function cleanup(exitCode = 0) {
       EMULATOR_UI_PORT: ports.ui
     },
     stdio: 'inherit',
-    shell: true
+    shell: process.platform === 'win32'
   });
   killProc.on('close', () => {
     process.exit(exitCode);
@@ -169,9 +177,14 @@ function triggerSeeding() {
 
 function startServer() {
   console.log(`🌐 [CI-E2E] Starting static HTTP server for Flutter Web build on port ${ports.client}...`);
+  // Spawn serve conditionally using shell only on Windows to prevent deprecation warnings.
   serveProc = spawn('npx', ['serve', 'client/build/web', '-l', ports.client.toString(), '-s'], {
     cwd: rootDir,
-    shell: true
+    shell: process.platform === 'win32',
+    env: {
+      ...process.env,
+      NODE_OPTIONS: '--no-deprecation'
+    }
   });
 
   serveProc.stdout.on('data', (data) => {
@@ -196,6 +209,7 @@ function startServer() {
 
 function runPlaywright() {
   console.log('🧪 [CI-E2E] Running Playwright E2E Tests...');
+  // Spawn playwright conditionally using shell only on Windows to avoid warnings, forwarding arguments.
   playwrightProc = spawn('npx', ['playwright', 'test', ...process.argv.slice(2)], {
     cwd: rootDir,
     env: {
@@ -206,7 +220,7 @@ function runPlaywright() {
       FUNCTIONS_PORT: ports.functions.toString()
     },
     stdio: 'inherit',
-    shell: true
+    shell: process.platform === 'win32'
   });
 
 
