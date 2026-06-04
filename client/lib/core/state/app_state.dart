@@ -209,12 +209,11 @@ class AppStateNotifier extends ChangeNotifier {
     String datasetId, {
     required bool enabled,
     required int updateIntervalHours,
-  }) =>
-      telemetryNotifier.updateDatasetScheduler(
-        datasetId,
-        enabled: enabled,
-        updateIntervalHours: updateIntervalHours,
-      );
+  }) => telemetryNotifier.updateDatasetScheduler(
+    datasetId,
+    enabled: enabled,
+    updateIntervalHours: updateIntervalHours,
+  );
 
   // Global layout and localization helper methods
   TextDirection get textDirection =>
