@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
@@ -207,11 +206,15 @@ class AppStateNotifier extends ChangeNotifier {
   Future<Map<String, dynamic>> triggerManualSync(String datasetId) =>
       telemetryNotifier.triggerManualSync(datasetId);
 
+  Future<void> updateDatasetScheduler(
+    String datasetId, {
+    required bool enabled,
+    required int updateIntervalHours,
   }) => telemetryNotifier.updateDatasetScheduler(
-        datasetId,
-        enabled: enabled,
-        updateIntervalHours: updateIntervalHours,
-      );
+    datasetId,
+    enabled: enabled,
+    updateIntervalHours: updateIntervalHours,
+  );
 
   // Global layout and localization helper methods
   TextDirection get textDirection =>
