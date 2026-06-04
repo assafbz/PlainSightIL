@@ -209,64 +209,12 @@ class AppStateNotifier extends ChangeNotifier {
     String datasetId, {
     required bool enabled,
     required int updateIntervalHours,
-  }) async {
-    AppLogger.info(
-      'Updating scheduler for dataset: $datasetId (enabled: $enabled, interval: $updateIntervalHours)',
-    );
-
-    if (isTesting) {
-      final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
-      final scheduler = Map<String, dynamic>.from(localMeta['scheduler'] as Map? ?? {});
-      scheduler['enabled'] = enabled;
-      scheduler['updateIntervalHours'] = updateIntervalHours;
-
-      // Compute a fake nextRun locally for testing
-      final nextRunDate = DateTime.now().add(Duration(hours: updateIntervalHours));
-      scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
-
-      _datasetMetadataMap[datasetId] = {
-        ...localMeta,
-        'scheduler': scheduler,
-      };
-      notifyListeners();
-      return;
-    }
-
-    if (!isFirebaseInitialized) return;
-
-    try {
-      final metadataRef = FirebaseFirestore.instance
-          .collection('dataset_metadata')
-          .doc(datasetId);
-
-      // Read current nextRun, or calculate a new one if it's currently missing or the interval changes
-      final doc = await metadataRef.get();
-      String nextRun = '';
-      if (doc.exists) {
-        final data = doc.data();
-        final existingScheduler = data?['scheduler'] as Map<String, dynamic>?;
-        nextRun = existingScheduler?['nextRun'] as String? ?? '';
-      }
-
-      // If nextRun is empty or scheduler was disabled and now enabled, calculate nextRun starting from now
-      if (nextRun.isEmpty || enabled) {
-        nextRun = DateTime.now().add(Duration(hours: updateIntervalHours)).toUtc().toIso8601String();
-      }
-
-      await metadataRef.set({
-        'scheduler': {
-          'enabled': enabled,
-          'updateIntervalHours': updateIntervalHours,
-          'nextRun': nextRun,
-        }
-      }, SetOptions(merge: true));
-
-      AppLogger.info('Successfully updated Firestore scheduler for $datasetId');
-    } catch (e) {
-      AppLogger.error('Failed to update dataset scheduler', e);
-      rethrow;
-    }
-  }
+  }) =>
+      telemetryNotifier.updateDatasetScheduler(
+        datasetId,
+        enabled: enabled,
+        updateIntervalHours: updateIntervalHours,
+      );
 
   // Global layout and localization helper methods
   TextDirection get textDirection =>

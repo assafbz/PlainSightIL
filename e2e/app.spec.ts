@@ -139,8 +139,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await page.keyboard.press('PageDown');
     await page.waitForTimeout(1000);
 
-    // Locate "מאגר הכונס הרשמי" card and click "Open Visualizer"
-    const card = page.locator('[aria-label*="מאגר הכונס הרשמי"], [aria-label*="הכונס הרשמי"]').first();
+    // Locate "חברות בפירוק" card and click "Open Visualizer"
+    const card = page.locator('[aria-label*="חברות בפירוק"], [aria-label*="פירוק"]').first();
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
@@ -193,7 +193,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await page.waitForTimeout(1000);
 
     // Open the liquidation visualizer again while offline
-    const card = page.locator('[aria-label*="מאגר הכונס הרשמי"], [aria-label*="הכונס הרשמי"]').first();
+    const card = page.locator('[aria-label*="חברות בפירוק"], [aria-label*="פירוק"]').first();
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.scrollIntoViewIfNeeded();
     await card.getByText('Open Visualizer').first().click();

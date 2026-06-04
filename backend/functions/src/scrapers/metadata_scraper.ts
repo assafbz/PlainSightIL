@@ -99,7 +99,10 @@ export async function scrapeAndSyncDatasetMetadata(
       }
 
       const name = (pkg.name ?? "").trim();
-      const title = pkg.title.trim();
+      let title = pkg.title.trim();
+      if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
+        title = "חברות בפירוק";
+      }
       const notes = sanitizeNotes(pkg.notes);
       const publisher = (pkg.organization?.title ?? "לא ידוע").trim();
       const resourceCount = pkg.num_resources ?? 0;

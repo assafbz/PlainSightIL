@@ -138,7 +138,7 @@ class _AdminPageState extends State<AdminPage> {
       {
         'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies in Liquidation',
-        'titleHe': 'מאגר הכונס הרשמי',
+        'titleHe': 'חברות בפירוק',
         'resourceId': DatasetIds.companiesLiquidation,
         'agencyEn': 'Ministry of Justice - Corporations Authority',
         'agencyHe': 'משרד המשפטים - רשות התאגידים',
@@ -1032,7 +1032,7 @@ class _AdminPageState extends State<AdminPage> {
       {
         'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies Liquidation',
-        'titleHe': 'מאגר הכונס הרשמי',
+        'titleHe': 'חברות בפירוק',
       },
       {
         'id': DatasetIds.doctorsLicenses,
