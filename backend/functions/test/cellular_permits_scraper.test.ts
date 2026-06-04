@@ -394,4 +394,72 @@ describe("Incremental Update Scraper Ingestion", () => {
     expect(written.lastUpdated).toBe(parsed.lastUpdated);
     expect(written.updatedAt).toBeDefined();
   });
+
+  it("should enforce the emulator limit of 100 records and stop early by default in emulator mode", async () => {
+    process.env.FUNCTIONS_EMULATOR = "true";
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              ID: "50",
+              "תאריך הגשת הבקשה": "2025-09-01 00:00:00",
+              "מס' סימוכין": 2081659,
+              חברה: "סלקום",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValue(apiResponse);
+
+    const result = await scrapeAndSyncPermitApplications(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    // Even though mocked axios returns records indefinitely, emulator should stop after 1 page fetch
+    expect(vi.mocked(axios.get)).toHaveBeenCalledTimes(1);
+
+    delete process.env.FUNCTIONS_EMULATOR;
+  });
+
+  it("should bypass emulator limit and continue page fetches if forceFullSync is true", async () => {
+    process.env.FUNCTIONS_EMULATOR = "true";
+    const apiResponse1 = {
+      data: {
+        result: {
+          records: [
+            {
+              ID: "50",
+              "תאריך הגשת הבקשה": "2025-09-01 00:00:00",
+              "מס' סימוכין": 2081659,
+              חברה: "סלקום",
+              X_ITM: 255812,
+              Y_ITM: 732929,
+            },
+          ],
+        },
+      },
+    };
+    const apiResponse2 = {
+      data: {
+        result: {
+          records: [],
+        },
+      },
+    };
+
+    vi.mocked(axios.get)
+      .mockResolvedValueOnce(apiResponse1)
+      .mockResolvedValueOnce(apiResponse2);
+
+    const result = await scrapeAndSyncPermitApplications(mockDb, undefined, { forceFullSync: true });
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    expect(vi.mocked(axios.get)).toHaveBeenCalledTimes(2);
+
+    delete process.env.FUNCTIONS_EMULATOR;
+  });
 });

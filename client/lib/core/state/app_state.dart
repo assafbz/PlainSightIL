@@ -236,7 +236,7 @@ class AppStateNotifier extends ChangeNotifier {
       return;
     }
 
-    if (!isFirebaseInitialized) return;
+    if (!telemetryNotifier.isFirebaseInitialized) return;
 
     try {
       final metadataRef = FirebaseFirestore.instance
