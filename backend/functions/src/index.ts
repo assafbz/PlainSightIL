@@ -17,7 +17,10 @@ import { DATASET_IDS } from "./utils/constants";
 
 const scraperRegistry: Record<
   string,
-  (db: admin.firestore.Firestore, options?: { forceFullSync?: boolean }) => Promise<{ count: number }>
+  (
+    db: admin.firestore.Firestore,
+    options?: { forceFullSync?: boolean },
+  ) => Promise<{ count: number }>
 > = {
   [DATASET_IDS.CELLULAR_ANTENNAS]: (db, opts) =>
     scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, opts),
@@ -27,12 +30,9 @@ const scraperRegistry: Record<
     scrapeAndSyncCompaniesLiquidation(db, DATASET_IDS.COMPANIES_LIQUIDATION, opts),
   [DATASET_IDS.DOCTORS_LICENSES]: (db, opts) =>
     scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, opts),
-  [DATASET_IDS.BANK_ATMS]: (db, opts) =>
-    scrapeAndSyncBankAtms(db, DATASET_IDS.BANK_ATMS, opts),
-  [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) =>
-    scrapeAndSyncPatentClassifications(db),
-  datasets_metadata: (db) =>
-    scrapeAndSyncDatasetMetadata(db),
+  [DATASET_IDS.BANK_ATMS]: (db, opts) => scrapeAndSyncBankAtms(db, DATASET_IDS.BANK_ATMS, opts),
+  [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) => scrapeAndSyncPatentClassifications(db),
+  datasets_metadata: (db) => scrapeAndSyncDatasetMetadata(db),
 };
 
 const defaultIntervals: Record<string, number> = {
@@ -408,7 +408,7 @@ async function shouldBypassEmulatorSeeder(datasetId: string): Promise<boolean> {
         const nowStr = new Date().toISOString();
         if (nextRun > nowStr) {
           logger.info(
-            `Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`
+            `Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`,
           );
           return true;
         }
@@ -417,7 +417,7 @@ async function shouldBypassEmulatorSeeder(datasetId: string): Promise<boolean> {
   } catch (err) {
     logger.warn(
       `Failed to check existing metadata for ${datasetId} on startup seeder check, proceeding with sync.`,
-      err
+      err,
     );
   }
   return false;
@@ -428,7 +428,7 @@ async function shouldBypassEmulatorSeeder(datasetId: string): Promise<boolean> {
  */
 function createManualSyncHandler(
   datasetId: string,
-  options: { enableSeederBypass?: boolean } = {}
+  options: { enableSeederBypass?: boolean } = {},
 ): (req: functions.https.Request, res: functions.Response) => Promise<void> {
   return async (req, res) => {
     logger.info(`manualSync for ${datasetId} HTTPS trigger invoked`);
@@ -489,19 +489,19 @@ function createManualSyncHandler(
 
 // Export the HTTPS manual sync Cloud Functions
 export const manualSyncAntennas = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.CELLULAR_ANTENNAS, { enableSeederBypass: true })
+  createManualSyncHandler(DATASET_IDS.CELLULAR_ANTENNAS, { enableSeederBypass: true }),
 );
 
 export const manualSyncPermitApps = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.CELLULAR_PERMITS, { enableSeederBypass: true })
+  createManualSyncHandler(DATASET_IDS.CELLULAR_PERMITS, { enableSeederBypass: true }),
 );
 
 export const manualSyncMetadata = functions.https.onRequest(
-  createManualSyncHandler("datasets_metadata")
+  createManualSyncHandler("datasets_metadata"),
 );
 
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.COMPANIES_LIQUIDATION)
+  createManualSyncHandler(DATASET_IDS.COMPANIES_LIQUIDATION),
 );
 
 export const manualSyncDoctorsLicenses = functions
@@ -509,7 +509,7 @@ export const manualSyncDoctorsLicenses = functions
   .https.onRequest(createManualSyncHandler(DATASET_IDS.DOCTORS_LICENSES));
 
 export const manualSyncBankAtms = functions.https.onRequest(
-  createManualSyncHandler(DATASET_IDS.BANK_ATMS)
+  createManualSyncHandler(DATASET_IDS.BANK_ATMS),
 );
 
 export const manualSyncPatentClassifications = functions

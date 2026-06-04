@@ -1,39 +1,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 1. Hoist the mock variables to make them available inside vi.mock calls
-const {
-  mockVerifyIdToken,
-  mockDbGet,
-  mockDbSet,
-  mockDbLimitGet,
-  mockFirestoreInstance,
-} = vi.hoisted(() => {
-  const verify = vi.fn().mockResolvedValue({ uid: "mock-admin-uid" });
-  const get = vi.fn().mockResolvedValue({
-    exists: false,
-    data: () => ({}),
+const { mockVerifyIdToken, mockDbGet, mockDbSet, mockDbLimitGet, mockFirestoreInstance } =
+  vi.hoisted(() => {
+    const verify = vi.fn().mockResolvedValue({ uid: "mock-admin-uid" });
+    const get = vi.fn().mockResolvedValue({
+      exists: false,
+      data: () => ({}),
+    });
+    const set = vi.fn().mockResolvedValue(true);
+    const limitGet = vi.fn().mockResolvedValue({ empty: false });
+    const instance = {
+      collection: vi.fn().mockReturnValue({
+        doc: vi.fn().mockReturnValue({
+          get,
+          set,
+        }),
+        limit: vi.fn().mockReturnValue({
+          get: limitGet,
+        }),
+      }),
+    };
+    return {
+      mockVerifyIdToken: verify,
+      mockDbGet: get,
+      mockDbSet: set,
+      mockDbLimitGet: limitGet,
+      mockFirestoreInstance: instance,
+    };
   });
-  const set = vi.fn().mockResolvedValue(true);
-  const limitGet = vi.fn().mockResolvedValue({ empty: false });
-  const instance = {
-    collection: vi.fn().mockReturnValue({
-      doc: vi.fn().mockReturnValue({
-        get,
-        set,
-      }),
-      limit: vi.fn().mockReturnValue({
-        get: limitGet,
-      }),
-    }),
-  };
-  return {
-    mockVerifyIdToken: verify,
-    mockDbGet: get,
-    mockDbSet: set,
-    mockDbLimitGet: limitGet,
-    mockFirestoreInstance: instance,
-  };
-});
 
 // 2. Mock firebase-functions partially
 vi.mock("firebase-functions/v1", async (importOriginal) => {
@@ -224,7 +219,7 @@ describe("Manual Sync Cloud Functions Factory", () => {
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         error: "Forbidden",
-      })
+      }),
     );
   });
 });
