@@ -6,7 +6,7 @@ export interface LogMetadata {
   userId?: string;
   statusCode?: number;
   latencyMs?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -22,8 +22,8 @@ export class AppLogger {
   /**
    * Log an informational message.
    */
-  static info(message: string, ...args: any[]) {
-    let meta: Record<string, any> = {};
+  static info(message: string, ...args: unknown[]) {
+    let meta: Record<string, unknown> = {};
     let formattedMessage = message;
 
     for (const arg of args) {
@@ -43,8 +43,8 @@ export class AppLogger {
   /**
    * Log a warning message.
    */
-  static warn(message: string, ...args: any[]) {
-    let meta: Record<string, any> = {};
+  static warn(message: string, ...args: unknown[]) {
+    let meta: Record<string, unknown> = {};
     let formattedMessage = message;
 
     for (const arg of args) {
@@ -65,10 +65,10 @@ export class AppLogger {
    * Log an error message with contextual details and stack trace.
    * Formats error stack trace so GCP Error Reporting parses and indexes it automatically.
    */
-  static error(message: string, ...args: any[]) {
-    const errorDetails: Record<string, any> = {};
-    let actualError: any = undefined;
-    let meta: Record<string, any> = {};
+  static error(message: string, ...args: unknown[]) {
+    const errorDetails: Record<string, unknown> = {};
+    let actualError: unknown = undefined;
+    let meta: Record<string, unknown> = {};
     let formattedMessage = message;
 
     for (const arg of args) {
@@ -92,7 +92,7 @@ export class AppLogger {
       errorDetails.message = formattedMessage;
     }
 
-    logger.error(errorDetails.message, {
+    logger.error(String(errorDetails.message), {
       serviceContext: this.serviceContext,
       ...errorDetails,
       ...meta,

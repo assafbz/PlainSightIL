@@ -41,10 +41,33 @@ const db = admin.firestore();
 
 /**
  * Helper to configure CORS headers and automatically resolve preflight OPTIONS requests.
+ * Restricts origin to localhost development ports or production domains to prevent CSRF and cross-origin exploits.
  * Returns true if the request was an OPTIONS request and has been completed.
+ * @param req Cloud Function HTTPS request object
+ * @param res Cloud Function HTTPS response object
  */
 function handleCors(req: functions.https.Request, res: functions.Response): boolean {
-  res.set("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin || "";
+
+  if (!origin) {
+    // If no origin is provided (e.g. non-browser requests), default to wildcard or omit
+    res.set("Access-Control-Allow-Origin", "*");
+  } else {
+    const isLocalhost =
+      origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
+    const isProduction =
+      origin === "https://plainsight-il.web.app" ||
+      origin === "https://plainsight-il.firebaseapp.com";
+
+    if (isLocalhost || isProduction) {
+      res.set("Access-Control-Allow-Origin", origin);
+      // Vary header tells caching layers to cache responses differently based on origin
+      res.set("Vary", "Origin");
+    } else {
+      res.set("Access-Control-Allow-Origin", "https://plainsight-il.web.app");
+    }
+  }
+
   if (req.method === "OPTIONS") {
     res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -171,7 +194,9 @@ export async function updateSchedulerOnComplete(
       },
       { merge: true },
     );
-    logger.info(`Updated scheduler for dataset ${datasetId}: status=${status}, enabled=${enabled}, nextRun=${nextRun}`);
+    logger.info(
+      `Updated scheduler for dataset ${datasetId}: status=${status}, enabled=${enabled}, nextRun=${nextRun}`,
+    );
   } catch (error) {
     logger.error(`Failed to update scheduler metadata for ${datasetId}`, error);
   }
@@ -180,47 +205,47 @@ export async function updateSchedulerOnComplete(
 /**
  * Scheduled Cloud Function running every 15 minutes to check which scrapers are due to run.
  */
-export const scheduledScraperTicker = functions.pubsub
-  .schedule("*/15 * * * *")
-  .onRun(async () => {
-    logger.info("scheduledScraperTicker trigger invoked");
-    const now = new Date().toISOString();
+export const scheduledScraperTicker = functions.pubsub.schedule("*/15 * * * *").onRun(async () => {
+  logger.info("scheduledScraperTicker trigger invoked");
+  const now = new Date().toISOString();
+  try {
+    const snapshot = await db
+      .collection("dataset_metadata")
+      .where("scheduler.enabled", "==", true)
+      .get();
+
+    const pubsub = new PubSub();
+    const topic = pubsub.topic("run-scraper-topic");
+
     try {
-      const snapshot = await db.collection("dataset_metadata")
-        .where("scheduler.enabled", "==", true)
-        .get();
-
-      const pubsub = new PubSub();
-      const topic = pubsub.topic("run-scraper-topic");
-
-      try {
-        await topic.create();
-      } catch (e: any) {
-        if (e.code !== 6) {
-          logger.warn(`Error creating topic: ${e.message}`);
-        }
+      await topic.create();
+    } catch (e: unknown) {
+      const err = e as { code?: number; message?: string };
+      if (err.code !== 6) {
+        logger.warn(`Error creating topic: ${err.message}`);
       }
-
-      for (const doc of snapshot.docs) {
-        const data = doc.data();
-        const datasetId = doc.id;
-        const nextRun = data.scheduler?.nextRun;
-
-        if (nextRun && nextRun <= now && data.status !== "syncing") {
-          logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
-
-          // Update status to syncing in Firestore immediately
-          await doc.ref.set({ status: "syncing" }, { merge: true });
-
-          // Publish event to Pub/Sub topic
-          const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
-          await topic.publishMessage({ data: dataBuffer });
-        }
-      }
-    } catch (error) {
-      logger.error("scheduledScraperTicker execution failed", error);
     }
-  });
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const datasetId = doc.id;
+      const nextRun = data.scheduler?.nextRun;
+
+      if (nextRun && nextRun <= now && data.status !== "syncing") {
+        logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
+
+        // Update status to syncing in Firestore immediately
+        await doc.ref.set({ status: "syncing" }, { merge: true });
+
+        // Publish event to Pub/Sub topic
+        const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
+        await topic.publishMessage({ data: dataBuffer });
+      }
+    }
+  } catch (error) {
+    logger.error("scheduledScraperTicker execution failed", error);
+  }
+});
 
 /**
  * Pub/Sub topic-triggered Cloud Function that executes the actual scraping.
@@ -228,10 +253,10 @@ export const scheduledScraperTicker = functions.pubsub
 export const runScraperPubSub = functions.pubsub
   .topic("run-scraper-topic")
   .onPublish(async (message) => {
-    let datasetId = "";
+    let datasetId: string;
     try {
       const data = message.json;
-      datasetId = data?.datasetId;
+      datasetId = (data as { datasetId?: string })?.datasetId || "";
     } catch (err) {
       logger.error("Failed to parse Pub/Sub message json", err);
       return;
@@ -247,20 +272,20 @@ export const runScraperPubSub = functions.pubsub
     const scraper = scraperRegistry[datasetId];
     if (!scraper) {
       logger.error(`No scraper registered for datasetId: ${datasetId}`);
-      await db.collection("dataset_metadata").doc(datasetId).set(
-        { status: "error" },
-        { merge: true }
-      );
+      await db
+        .collection("dataset_metadata")
+        .doc(datasetId)
+        .set({ status: "error" }, { merge: true });
       return;
     }
 
     const tracker = ScraperTelemetryTracker.start(datasetId);
     try {
       // Ensure status is set to syncing in database
-      await db.collection("dataset_metadata").doc(datasetId).set(
-        { status: "syncing" },
-        { merge: true }
-      );
+      await db
+        .collection("dataset_metadata")
+        .doc(datasetId)
+        .set({ status: "syncing" }, { merge: true });
 
       const result = await scraper(db);
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
@@ -288,7 +313,6 @@ async function validateAdminRequest(
   res: functions.Response,
 ): Promise<{ uid: string } | null> {
   // Allow unauthenticated GET requests in local emulator for seeding/development
-  // eslint-disable-next-line no-undef
   if (process.env.FUNCTIONS_EMULATOR === "true" && req.method === "GET") {
     functions.logger.info("Bypassing admin check for emulator seeding via GET request.");
     return { uid: "emulator-seeder" };
@@ -366,7 +390,10 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
+    await db
+      .collection("dataset_metadata")
+      .doc(datasetId)
+      .set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncAntennas(db);
     logger.info("manualSyncAntennas sync completed successfully", {
@@ -393,7 +420,6 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
   }
 });
 
-
 // HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
 export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncPermitApps HTTPS trigger invoked");
@@ -405,7 +431,10 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
+    await db
+      .collection("dataset_metadata")
+      .doc(datasetId)
+      .set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncPermitApplications(db);
     logger.info("manualSyncPermitApps sync completed successfully", {
@@ -466,7 +495,6 @@ export const manualSyncMetadata = functions.https.onRequest(async (req, res) => 
   }
 });
 
-
 // HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
 export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
   logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
@@ -478,7 +506,10 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
+    await db
+      .collection("dataset_metadata")
+      .doc(datasetId)
+      .set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncCompaniesLiquidation(db);
     logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
@@ -505,46 +536,48 @@ export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (r
   }
 });
 
-
 // HTTPS Triggered Cloud Function for Doctors Licenses - manual sync
 export const manualSyncDoctorsLicenses = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .https.onRequest(async (req, res) => {
-  logger.info("manualSyncDoctorsLicenses HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  const auth = await validateAdminRequest(req, res);
-  if (!auth) return;
+    logger.info("manualSyncDoctorsLicenses HTTPS trigger invoked");
+    if (handleCors(req, res)) return;
+    const auth = await validateAdminRequest(req, res);
+    if (!auth) return;
 
-  const datasetId = DATASET_IDS.DOCTORS_LICENSES;
-  const tracker = ScraperTelemetryTracker.start(datasetId);
-  try {
-    // Set status to syncing in Firestore immediately
-    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
+    const datasetId = DATASET_IDS.DOCTORS_LICENSES;
+    const tracker = ScraperTelemetryTracker.start(datasetId);
+    try {
+      // Set status to syncing in Firestore immediately
+      await db
+        .collection("dataset_metadata")
+        .doc(datasetId)
+        .set({ status: "syncing" }, { merge: true });
 
-    const result = await scrapeAndSyncDoctorsLicenses(db);
-    logger.info("manualSyncDoctorsLicenses sync completed successfully", {
-      count: result.count,
-    });
-    await tracker.complete(db, result.count);
-    await updateSchedulerOnComplete(db, datasetId, "idle");
-    res.status(200).json({
-      message: "Doctors licenses sync completed successfully",
-      count: result.count,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error("manualSyncDoctorsLicenses sync failed", {
-      error: err.message,
-      stack: err.stack,
-    });
-    await updateSchedulerOnComplete(db, datasetId, "error");
-    await tracker.fail(db, err);
-    res.status(500).json({
-      message: "Doctors licenses sync failed",
-      error: err.message || String(error),
-    });
-  }
-});
+      const result = await scrapeAndSyncDoctorsLicenses(db);
+      logger.info("manualSyncDoctorsLicenses sync completed successfully", {
+        count: result.count,
+      });
+      await tracker.complete(db, result.count);
+      await updateSchedulerOnComplete(db, datasetId, "idle");
+      res.status(200).json({
+        message: "Doctors licenses sync completed successfully",
+        count: result.count,
+      });
+    } catch (error) {
+      const err = error as Error;
+      logger.error("manualSyncDoctorsLicenses sync failed", {
+        error: err.message,
+        stack: err.stack,
+      });
+      await updateSchedulerOnComplete(db, datasetId, "error");
+      await tracker.fail(db, err);
+      res.status(500).json({
+        message: "Doctors licenses sync failed",
+        error: err.message || String(error),
+      });
+    }
+  });
 
 // HTTPS Triggered Cloud Function for Bank ATMs - manual sync
 export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => {
@@ -557,7 +590,10 @@ export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => 
   const tracker = ScraperTelemetryTracker.start(datasetId);
   try {
     // Set status to syncing in Firestore immediately
-    await db.collection("dataset_metadata").doc(datasetId).set({ status: "syncing" }, { merge: true });
+    await db
+      .collection("dataset_metadata")
+      .doc(datasetId)
+      .set({ status: "syncing" }, { merge: true });
 
     const result = await scrapeAndSyncBankAtms(db);
     logger.info("manualSyncBankAtms sync completed successfully", {
@@ -616,3 +652,6 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
     logger.error(`Failed to initialize user profile document for UID: ${uid}`, error);
   }
 });
+
+// Export internal helpers for testing purposes
+export { handleCors };

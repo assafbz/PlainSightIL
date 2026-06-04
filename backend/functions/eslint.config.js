@@ -15,13 +15,22 @@ module.exports = [
         project: ["tsconfig.json"],
         tsconfigRootDir: __dirname,
       },
+      globals: {
+        process: "readonly",
+        Buffer: "readonly",
+        console: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        module: "readonly",
+        require: "readonly",
+      },
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      "quotes": ["error", "double"],
+      "quotes": ["error", "double", { "avoidEscape": true }],
       "semi": ["error", "always"],
       "@typescript-eslint/no-explicit-any": "error",
     },
