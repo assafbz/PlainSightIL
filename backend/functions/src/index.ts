@@ -17,15 +17,22 @@ import { DATASET_IDS } from "./utils/constants";
 
 const scraperRegistry: Record<
   string,
-  (firestoreDb: admin.firestore.Firestore, ...args: any[]) => Promise<{ count: number }>
+  (db: admin.firestore.Firestore, options?: { forceFullSync?: boolean }) => Promise<{ count: number }>
 > = {
-  [DATASET_IDS.CELLULAR_ANTENNAS]: scrapeAndSyncAntennas,
-  [DATASET_IDS.CELLULAR_PERMITS]: scrapeAndSyncPermitApplications,
-  [DATASET_IDS.COMPANIES_LIQUIDATION]: scrapeAndSyncCompaniesLiquidation,
-  [DATASET_IDS.DOCTORS_LICENSES]: scrapeAndSyncDoctorsLicenses,
-  [DATASET_IDS.BANK_ATMS]: scrapeAndSyncBankAtms,
-  [DATASET_IDS.PATENT_CLASSIFICATIONS]: scrapeAndSyncPatentClassifications,
-  datasets_metadata: scrapeAndSyncDatasetMetadata,
+  [DATASET_IDS.CELLULAR_ANTENNAS]: (db, opts) =>
+    scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, opts),
+  [DATASET_IDS.CELLULAR_PERMITS]: (db, opts) =>
+    scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, opts),
+  [DATASET_IDS.COMPANIES_LIQUIDATION]: (db, opts) =>
+    scrapeAndSyncCompaniesLiquidation(db, DATASET_IDS.COMPANIES_LIQUIDATION, opts),
+  [DATASET_IDS.DOCTORS_LICENSES]: (db, opts) =>
+    scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, opts),
+  [DATASET_IDS.BANK_ATMS]: (db, opts) =>
+    scrapeAndSyncBankAtms(db, DATASET_IDS.BANK_ATMS, opts),
+  [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) =>
+    scrapeAndSyncPatentClassifications(db),
+  datasets_metadata: (db) =>
+    scrapeAndSyncDatasetMetadata(db),
 };
 
 const defaultIntervals: Record<string, number> = {
@@ -290,18 +297,7 @@ export const runScraperPubSub = functions.pubsub
         .doc(datasetId)
         .set({ status: "syncing" }, { merge: true });
 
-      let result;
-      if (datasetId === DATASET_IDS.CELLULAR_ANTENNAS) {
-        result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, {
-          forceFullSync: true,
-        });
-      } else if (datasetId === DATASET_IDS.CELLULAR_PERMITS) {
-        result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, {
-          forceFullSync: true,
-        });
-      } else {
-        result = await scraper(db);
-      }
+      const result = await scraper(db, { forceFullSync: true });
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
         count: result.count,
       });
@@ -394,248 +390,63 @@ async function validateAdminRequest(
   }
 }
 
-// HTTPS Triggered Cloud Function for Active Antennas - for manual invocation and dev triggers
-export const manualSyncAntennas = functions.https.onRequest(async (req, res) => {
-  logger.info("manualSyncAntennas HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  const auth = await validateAdminRequest(req, res);
-  if (!auth) return;
-
-  const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
-
-  // Skip startup sync check if triggered by emulator startup seeder
-  if (auth.uid === "emulator-seeder") {
-    try {
-      const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
-      const countSnap = await db.collection(datasetId).limit(1).get();
-      const hasRecords = !countSnap.empty;
-
-      if (metaDoc.exists) {
-        const metaData = metaDoc.data();
-        const nextRun = metaData?.scheduler?.nextRun;
-        const nowStr = new Date().toISOString();
-        if (hasRecords && nextRun && nextRun > nowStr) {
-          logger.info(
-            `Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`,
-          );
-          res.status(200).json({
-            message: "Sync skipped (not due according to schedule)",
-            count: 0,
-          });
-          return;
-        }
-      }
-    } catch (err) {
-      logger.warn(
-        `Failed to check existing metadata for ${datasetId} on startup seeder check, proceeding with sync.`,
-        err,
-      );
-    }
-  }
-
-  const tracker = ScraperTelemetryTracker.start(datasetId);
+/**
+ * Helper to check if the emulator startup seeder sync should be bypassed.
+ * Returns true if we already have records and the schedule next run is in the future.
+ */
+async function shouldBypassEmulatorSeeder(datasetId: string): Promise<boolean> {
   try {
-    // Set status to syncing in Firestore immediately
-    await db
-      .collection("dataset_metadata")
-      .doc(datasetId)
-      .set({ status: "syncing" }, { merge: true });
-
-    const forceFullSync = auth.uid !== "emulator-seeder";
-    const result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, {
-      forceFullSync,
-    });
-    logger.info("manualSyncAntennas sync completed successfully", {
-      count: result.count,
-    });
-    await tracker.complete(db, result.count);
-    await updateSchedulerOnComplete(db, datasetId, "idle");
-    res.status(200).json({
-      message: "Sync completed successfully",
-      count: result.count,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error("manualSyncAntennas sync failed", {
-      error: err.message,
-      stack: err.stack,
-    });
-    await updateSchedulerOnComplete(db, datasetId, "error");
-    await tracker.fail(db, err);
-    res.status(500).json({
-      message: "Sync failed",
-      error: err.message || String(error),
-    });
-  }
-});
-
-// HTTPS Triggered Cloud Function for Permit Applications - for manual invocation and dev triggers
-export const manualSyncPermitApps = functions.https.onRequest(async (req, res) => {
-  logger.info("manualSyncPermitApps HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  const auth = await validateAdminRequest(req, res);
-  if (!auth) return;
-
-  const datasetId = DATASET_IDS.CELLULAR_PERMITS;
-
-  const forceFullSync =
-    req.method === "POST" || req.query.force === "true" || req.body?.force === true;
-  const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-  if (isEmulator && req.method === "GET" && !forceFullSync) {
-    // Check if the cellular permits collection has data
-    const countSnapshot = await db.collection(DATASET_IDS.CELLULAR_PERMITS).limit(1).get();
-    const hasData = !countSnapshot.empty;
-
-    const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-    const metaDoc = await metadataRef.get();
-    let isDue = true;
+    const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
+    const countSnap = await db.collection(datasetId).limit(1).get();
+    const hasRecords = !countSnap.empty;
 
     if (metaDoc.exists) {
       const metaData = metaDoc.data();
       const nextRun = metaData?.scheduler?.nextRun;
       const enabled = metaData?.scheduler?.enabled !== false;
-      if (nextRun && enabled) {
-        const now = new Date().toISOString();
-        isDue = nextRun <= now;
+      if (hasRecords && nextRun && enabled) {
+        const nowStr = new Date().toISOString();
+        if (nextRun > nowStr) {
+          logger.info(
+            `Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`
+          );
+          return true;
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn(
+      `Failed to check existing metadata for ${datasetId} on startup seeder check, proceeding with sync.`,
+      err
+    );
+  }
+  return false;
+}
+
+/**
+ * Factory function to create a standardized manual sync RequestHandler.
+ */
+function createManualSyncHandler(
+  datasetId: string,
+  options: { enableSeederBypass?: boolean } = {}
+): (req: functions.https.Request, res: functions.Response) => Promise<void> {
+  return async (req, res) => {
+    logger.info(`manualSync for ${datasetId} HTTPS trigger invoked`);
+    if (handleCors(req, res)) return;
+    const auth = await validateAdminRequest(req, res);
+    if (!auth) return;
+
+    if (options.enableSeederBypass && auth.uid === "emulator-seeder") {
+      const bypass = await shouldBypassEmulatorSeeder(datasetId);
+      if (bypass) {
+        res.status(200).json({
+          message: "Sync skipped (schedule not due and data exists)",
+          count: 0,
+        });
+        return;
       }
     }
 
-    if (hasData && !isDue) {
-      logger.info(
-        `Startup seeding skipped for ${datasetId} because data already exists and sync schedule is not due.`,
-      );
-      res.status(200).json({
-        message: "Sync skipped (schedule not due and data exists)",
-        count: 0,
-      });
-      return;
-    }
-  }
-
-  const tracker = ScraperTelemetryTracker.start(datasetId);
-  try {
-    // Set status to syncing in Firestore immediately
-    await db
-      .collection("dataset_metadata")
-      .doc(datasetId)
-      .set({ status: "syncing" }, { merge: true });
-
-    const forceFullSync = auth.uid !== "emulator-seeder";
-    const result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, {
-      forceFullSync,
-    });
-    logger.info("manualSyncPermitApps sync completed successfully", {
-      count: result.count,
-    });
-    await tracker.complete(db, result.count);
-    await updateSchedulerOnComplete(db, datasetId, "idle");
-    res.status(200).json({
-      message: "Sync completed successfully",
-      count: result.count,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error("manualSyncPermitApps sync failed", {
-      error: err.message,
-      stack: err.stack,
-    });
-    await updateSchedulerOnComplete(db, datasetId, "error");
-    await tracker.fail(db, err);
-    res.status(500).json({
-      message: "Sync failed",
-      error: err.message || String(error),
-    });
-  }
-});
-
-// HTTPS Triggered Cloud Function for Dataset Metadata - manual sync
-export const manualSyncMetadata = functions.https.onRequest(async (req, res) => {
-  logger.info("manualSyncMetadata HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  const auth = await validateAdminRequest(req, res);
-  if (!auth) return;
-
-  const datasetId = "datasets_metadata";
-  const tracker = ScraperTelemetryTracker.start(datasetId);
-  try {
-    const result = await scrapeAndSyncDatasetMetadata(db);
-    logger.info("manualSyncMetadata sync completed successfully", {
-      count: result.count,
-    });
-    await tracker.complete(db, result.count);
-    await updateSchedulerOnComplete(db, datasetId, "idle");
-    res.status(200).json({
-      message: "Metadata sync completed successfully",
-      count: result.count,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error("manualSyncMetadata sync failed", {
-      error: err.message,
-      stack: err.stack,
-    });
-    await tracker.fail(db, err);
-    res.status(500).json({
-      message: "Metadata sync failed",
-      error: err.message || String(error),
-    });
-  }
-});
-
-// HTTPS Triggered Cloud Function for Companies in Liquidation - manual sync
-export const manualSyncCompaniesLiquidation = functions.https.onRequest(async (req, res) => {
-  logger.info("manualSyncCompaniesLiquidation HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  const auth = await validateAdminRequest(req, res);
-  if (!auth) return;
-
-  const datasetId = DATASET_IDS.COMPANIES_LIQUIDATION;
-  const tracker = ScraperTelemetryTracker.start(datasetId);
-  try {
-    // Set status to syncing in Firestore immediately
-    await db
-      .collection("dataset_metadata")
-      .doc(datasetId)
-      .set({ status: "syncing" }, { merge: true });
-
-    const forceFullSync = auth.uid !== "emulator-seeder";
-    const result = await scrapeAndSyncCompaniesLiquidation(db, datasetId, {
-      forceFullSync,
-    });
-    logger.info("manualSyncCompaniesLiquidation sync completed successfully", {
-      count: result.count,
-    });
-    await tracker.complete(db, result.count);
-    await updateSchedulerOnComplete(db, datasetId, "idle");
-    res.status(200).json({
-      message: "Companies in liquidation sync completed successfully",
-      count: result.count,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error("manualSyncCompaniesLiquidation sync failed", {
-      error: err.message,
-      stack: err.stack,
-    });
-    await updateSchedulerOnComplete(db, datasetId, "error");
-    await tracker.fail(db, err);
-    res.status(500).json({
-      message: "Companies in liquidation sync failed",
-      error: err.message || String(error),
-    });
-  }
-});
-
-// HTTPS Triggered Cloud Function for Doctors Licenses - manual sync
-export const manualSyncDoctorsLicenses = functions
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .https.onRequest(async (req, res) => {
-    logger.info("manualSyncDoctorsLicenses HTTPS trigger invoked");
-    if (handleCors(req, res)) return;
-    const auth = await validateAdminRequest(req, res);
-    if (!auth) return;
-
-    const datasetId = DATASET_IDS.DOCTORS_LICENSES;
     const tracker = ScraperTelemetryTracker.start(datasetId);
     try {
       // Set status to syncing in Firestore immediately
@@ -643,121 +454,67 @@ export const manualSyncDoctorsLicenses = functions
         .collection("dataset_metadata")
         .doc(datasetId)
         .set({ status: "syncing" }, { merge: true });
+
+      const scraper = scraperRegistry[datasetId];
+      if (!scraper) {
+        throw new Error(`No scraper found registered for dataset: ${datasetId}`);
+      }
 
       const forceFullSync = auth.uid !== "emulator-seeder";
-      const result = await scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, {
-        forceFullSync,
-      });
-      logger.info("manualSyncDoctorsLicenses sync completed successfully", {
+      const result = await scraper(db, { forceFullSync });
+      logger.info(`manualSync for ${datasetId} sync completed successfully`, {
         count: result.count,
       });
       await tracker.complete(db, result.count);
       await updateSchedulerOnComplete(db, datasetId, "idle");
       res.status(200).json({
-        message: "Doctors licenses sync completed successfully",
+        message: "Sync completed successfully",
         count: result.count,
       });
     } catch (error) {
       const err = error as Error;
-      logger.error("manualSyncDoctorsLicenses sync failed", {
+      logger.error(`manualSync for ${datasetId} sync failed`, {
         error: err.message,
         stack: err.stack,
       });
       await updateSchedulerOnComplete(db, datasetId, "error");
       await tracker.fail(db, err);
       res.status(500).json({
-        message: "Doctors licenses sync failed",
+        message: "Sync failed",
         error: err.message || String(error),
       });
     }
-  });
+  };
+}
 
-// HTTPS Triggered Cloud Function for Bank ATMs - manual sync
-export const manualSyncBankAtms = functions.https.onRequest(async (req, res) => {
-  logger.info("manualSyncBankAtms HTTPS trigger invoked");
-  if (handleCors(req, res)) return;
-  const auth = await validateAdminRequest(req, res);
-  if (!auth) return;
+// Export the HTTPS manual sync Cloud Functions
+export const manualSyncAntennas = functions.https.onRequest(
+  createManualSyncHandler(DATASET_IDS.CELLULAR_ANTENNAS, { enableSeederBypass: true })
+);
 
-  const datasetId = DATASET_IDS.BANK_ATMS;
-  const tracker = ScraperTelemetryTracker.start(datasetId);
-  try {
-    // Set status to syncing in Firestore immediately
-    await db
-      .collection("dataset_metadata")
-      .doc(datasetId)
-      .set({ status: "syncing" }, { merge: true });
+export const manualSyncPermitApps = functions.https.onRequest(
+  createManualSyncHandler(DATASET_IDS.CELLULAR_PERMITS, { enableSeederBypass: true })
+);
 
-    const forceFullSync = auth.uid !== "emulator-seeder";
-    const result = await scrapeAndSyncBankAtms(db, datasetId, {
-      forceFullSync,
-    });
-    logger.info("manualSyncBankAtms sync completed successfully", {
-      count: result.count,
-    });
-    await tracker.complete(db, result.count);
-    await updateSchedulerOnComplete(db, datasetId, "idle");
-    res.status(200).json({
-      message: "Bank ATMs sync completed successfully",
-      count: result.count,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error("manualSyncBankAtms sync failed", {
-      error: err.message,
-      stack: err.stack,
-    });
-    await updateSchedulerOnComplete(db, datasetId, "error");
-    await tracker.fail(db, err);
-    res.status(500).json({
-      message: "Bank ATMs sync failed",
-      error: err.message || String(error),
-    });
-  }
-});
+export const manualSyncMetadata = functions.https.onRequest(
+  createManualSyncHandler("datasets_metadata")
+);
 
-// HTTPS Triggered Cloud Function for Patent Classifications - manual sync
+export const manualSyncCompaniesLiquidation = functions.https.onRequest(
+  createManualSyncHandler(DATASET_IDS.COMPANIES_LIQUIDATION)
+);
+
+export const manualSyncDoctorsLicenses = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.DOCTORS_LICENSES));
+
+export const manualSyncBankAtms = functions.https.onRequest(
+  createManualSyncHandler(DATASET_IDS.BANK_ATMS)
+);
+
 export const manualSyncPatentClassifications = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .https.onRequest(async (req, res) => {
-    logger.info("manualSyncPatentClassifications HTTPS trigger invoked");
-    if (handleCors(req, res)) return;
-    const auth = await validateAdminRequest(req, res);
-    if (!auth) return;
-
-    const datasetId = DATASET_IDS.PATENT_CLASSIFICATIONS;
-    const tracker = ScraperTelemetryTracker.start(datasetId);
-    try {
-      // Set status to syncing in Firestore immediately
-      await db
-        .collection("dataset_metadata")
-        .doc(datasetId)
-        .set({ status: "syncing" }, { merge: true });
-
-      const result = await scrapeAndSyncPatentClassifications(db);
-      logger.info("manualSyncPatentClassifications sync completed successfully", {
-        count: result.count,
-      });
-      await tracker.complete(db, result.count);
-      await updateSchedulerOnComplete(db, datasetId, "idle");
-      res.status(200).json({
-        message: "Patent classifications sync completed successfully",
-        count: result.count,
-      });
-    } catch (error) {
-      const err = error as Error;
-      logger.error("manualSyncPatentClassifications sync failed", {
-        error: err.message,
-        stack: err.stack,
-      });
-      await updateSchedulerOnComplete(db, datasetId, "error");
-      await tracker.fail(db, err);
-      res.status(500).json({
-        message: "Patent classifications sync failed",
-        error: err.message || String(error),
-      });
-    }
-  });
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.PATENT_CLASSIFICATIONS));
 
 /**
  * Cloud Function trigger running on user registration.
