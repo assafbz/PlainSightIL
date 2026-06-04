@@ -441,7 +441,7 @@ describe("Scraper and Sync Ingestion", () => {
 
   it("should respect custom limit option", async () => {
     const apiResponse = {
-      data: { result: { records: [] } }
+      data: { result: { records: [] } },
     };
     vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
 
@@ -476,7 +476,10 @@ describe("Scraper and Sync Ingestion", () => {
       expect(result.count).toBe(1);
       // Since it's emulator mode and forceFullSync is not true, it should only call axios.get once
       expect(axios.get).toHaveBeenCalledTimes(1);
-      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=10"), expect.any(Object));
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining("limit=10"),
+        expect.any(Object),
+      );
     } finally {
       process.env.FUNCTIONS_EMULATOR = originalEmulatorVal;
     }
@@ -513,11 +516,16 @@ describe("Scraper and Sync Ingestion", () => {
     vi.mocked(axios.get).mockResolvedValueOnce(apiResponse2);
 
     try {
-      const result = await scrapeAndSyncAntennas(mockDb, DATASET_IDS.CELLULAR_ANTENNAS, { forceFullSync: true });
+      const result = await scrapeAndSyncAntennas(mockDb, DATASET_IDS.CELLULAR_ANTENNAS, {
+        forceFullSync: true,
+      });
       expect(result.count).toBe(1);
       // Since forceFullSync is true, it should fetch pages recursively until records are empty
       expect(axios.get).toHaveBeenCalledTimes(2);
-      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("limit=1000"), expect.any(Object));
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining("limit=1000"),
+        expect.any(Object),
+      );
     } finally {
       process.env.FUNCTIONS_EMULATOR = originalEmulatorVal;
     }

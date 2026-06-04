@@ -451,11 +451,11 @@ describe("Incremental Update Scraper Ingestion", () => {
       },
     };
 
-    vi.mocked(axios.get)
-      .mockResolvedValueOnce(apiResponse1)
-      .mockResolvedValueOnce(apiResponse2);
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse1).mockResolvedValueOnce(apiResponse2);
 
-    const result = await scrapeAndSyncPermitApplications(mockDb, undefined, { forceFullSync: true });
+    const result = await scrapeAndSyncPermitApplications(mockDb, undefined, {
+      forceFullSync: true,
+    });
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
     expect(vi.mocked(axios.get)).toHaveBeenCalledTimes(2);

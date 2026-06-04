@@ -265,9 +265,13 @@ export const runScraperPubSub = functions.pubsub
 
       let result;
       if (datasetId === DATASET_IDS.CELLULAR_ANTENNAS) {
-        result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, { forceFullSync: true });
+        result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, {
+          forceFullSync: true,
+        });
       } else if (datasetId === DATASET_IDS.CELLULAR_PERMITS) {
-        result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, { forceFullSync: true });
+        result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, {
+          forceFullSync: true,
+        });
       } else {
         result = await scraper(db);
       }
@@ -383,7 +387,9 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
         const nextRun = metaData?.scheduler?.nextRun;
         const nowStr = new Date().toISOString();
         if (hasRecords && nextRun && nextRun > nowStr) {
-          logger.info(`Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`);
+          logger.info(
+            `Dataset ${datasetId} is already seeded and not due yet (nextRun: ${nextRun}). Skipping startup sync.`,
+          );
           res.status(200).json({
             message: "Sync skipped (not due according to schedule)",
             count: 0,
@@ -392,7 +398,10 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
         }
       }
     } catch (err) {
-      logger.warn(`Failed to check existing metadata for ${datasetId} on startup seeder check, proceeding with sync.`, err);
+      logger.warn(
+        `Failed to check existing metadata for ${datasetId} on startup seeder check, proceeding with sync.`,
+        err,
+      );
     }
   }
 
@@ -405,7 +414,9 @@ export const manualSyncAntennas = functions.https.onRequest(async (req, res) => 
       .set({ status: "syncing" }, { merge: true });
 
     const forceFullSync = auth.uid !== "emulator-seeder";
-    const result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, { forceFullSync });
+    const result = await scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, {
+      forceFullSync,
+    });
     logger.info("manualSyncAntennas sync completed successfully", {
       count: result.count,
     });
@@ -439,7 +450,8 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
 
   const datasetId = DATASET_IDS.CELLULAR_PERMITS;
 
-  const forceFullSync = req.method === "POST" || req.query.force === "true" || req.body?.force === true;
+  const forceFullSync =
+    req.method === "POST" || req.query.force === "true" || req.body?.force === true;
   const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
   if (isEmulator && req.method === "GET" && !forceFullSync) {
     // Check if the cellular permits collection has data
@@ -461,7 +473,9 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
     }
 
     if (hasData && !isDue) {
-      logger.info(`Startup seeding skipped for ${datasetId} because data already exists and sync schedule is not due.`);
+      logger.info(
+        `Startup seeding skipped for ${datasetId} because data already exists and sync schedule is not due.`,
+      );
       res.status(200).json({
         message: "Sync skipped (schedule not due and data exists)",
         count: 0,
@@ -478,7 +492,9 @@ export const manualSyncPermitApps = functions.https.onRequest(async (req, res) =
       .doc(datasetId)
       .set({ status: "syncing" }, { merge: true });
 
-    const result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, { forceFullSync });
+    const result = await scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, {
+      forceFullSync,
+    });
     logger.info("manualSyncPermitApps sync completed successfully", {
       count: result.count,
     });
