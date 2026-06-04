@@ -177,7 +177,8 @@ void main() {
         final key = localFirebaseOptions.apiKey;
         expect(key.isNotEmpty, isTrue);
 
-        if (key == 'mock-api-key-for-local-emulator' || key == 'AIzaSyMockApiKeyForLocalEmulator_32ch') {
+        if (key == 'mock-api-key-for-local-emulator' ||
+            key == 'AIzaSyMockApiKeyForLocalEmulator_32ch') {
           // Accept mock keys
         } else {
           expect(key, startsWith('AIzaSy'));
@@ -323,7 +324,8 @@ void main() {
         enabled: true,
         updateIntervalHours: 6,
       );
-      final meta = appState.datasetMetadataMap['8935c8e5-ec77-421f-af86-d970583195f8'];
+      final meta =
+          appState.datasetMetadataMap['8935c8e5-ec77-421f-af86-d970583195f8'];
       expect(meta?['scheduler']?['enabled'], isTrue);
       expect(meta?['scheduler']?['updateIntervalHours'], 6);
 

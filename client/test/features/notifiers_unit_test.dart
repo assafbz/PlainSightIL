@@ -1734,9 +1734,7 @@ class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
               'scheduler': {'nextRun': '2026-06-04T12:00:00Z'},
             }
           : {'requestCount': 5};
-      return Future.value(
-        FakeDocumentSnapshot(_id, exists, data),
-      );
+      return Future.value(FakeDocumentSnapshot(_id, exists, data));
     }
     if (invocation.memberName == #set) {
       return Future.value(null);
