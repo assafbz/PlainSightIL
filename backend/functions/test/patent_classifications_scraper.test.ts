@@ -58,7 +58,7 @@ describe("Patent Classifications Record Parser", () => {
       "שם האמצאה בעברית": "שילוב תרופות",
       "שם האמצאה באנגלית": "DRUG COMBINATION",
       "לבקשה CPC סיווג": "A61P35/00",
-      "ראשי": "ראשי",
+      ראשי: "ראשי",
     };
 
     const parsed = parsePatentRecord(raw);
@@ -81,7 +81,7 @@ describe("Patent Classifications Record Parser", () => {
       "מספר בקשה": 326672,
       "שם האמצאה בעברית": "תכשירים",
       "לבקשה CPC סיווג": "C22C19/05",
-      "ראשי": "",
+      ראשי: "",
     };
 
     const parsed = parsePatentRecord(raw);
@@ -166,7 +166,7 @@ describe("Patent Classifications Ingest Sync Process", () => {
               "מספר בקשה": 327015,
               "שם האמצאה באנגלית": "DRUG COMBINATION",
               "לבקשה CPC סיווג": "A61P35/00",
-              "ראשי": "ראשי",
+              ראשי: "ראשי",
             },
             {
               _id: 741199,
@@ -216,7 +216,7 @@ describe("Patent Classifications Ingest Sync Process", () => {
               "מספר בקשה": 327015,
               "שם האמצאה באנגלית": "DRUG COMBINATION",
               "לבקשה CPC סיווג": "A61P35/00",
-              "ראשי": "ראשי",
+              ראשי: "ראשי",
             },
             {
               _id: 741200, // <= 741200 (Delta Sync boundary)

@@ -1513,7 +1513,7 @@ void main() {
         notifierFirestore.initPatentClassificationsListener();
         expect(notifierFirestore.isLoadingPatents, isTrue);
         await Future<void>.delayed(const Duration(milliseconds: 10));
-        
+
         notifierFirestore.dispose();
         notifier.dispose();
         AppStateNotifier.isTesting = true;

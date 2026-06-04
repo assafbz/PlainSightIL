@@ -14,5 +14,6 @@ class DatasetIds {
   static const String doctorsLicenses = '9c64c522-bbc2-48fe-96fb-3b2a8626f59e';
 
   /// Patent Applications CPC Classifications dataset ID.
-  static const String patentClassifications = 'b2c59e21-c345-4b02-b071-2890a3d431d6';
+  static const String patentClassifications =
+      'b2c59e21-c345-4b02-b071-2890a3d431d6';
 }

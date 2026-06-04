@@ -198,7 +198,9 @@ class PatentDetailDrawer extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  appState.translate('patent_classifications_publisher'),
+                                  appState.translate(
+                                    'patent_classifications_publisher',
+                                  ),
                                   style: AppTypography.bodySm(
                                     context,
                                     color: AppColors.textPrimary,
@@ -314,13 +316,11 @@ class PatentDetailDrawer extends StatelessWidget {
             ),
             child: Text(
               value,
-              style: AppTypography.bodyLg(
-                context,
-                color: AppColors.textPrimary,
-              ).copyWith(
-                fontWeight: FontWeight.w500,
-                fontFamily: isHebrew ? 'Assistant' : 'Outfit',
-              ),
+              style: AppTypography.bodyLg(context, color: AppColors.textPrimary)
+                  .copyWith(
+                    fontWeight: FontWeight.w500,
+                    fontFamily: isHebrew ? 'Assistant' : 'Outfit',
+                  ),
             ),
           ),
         ],

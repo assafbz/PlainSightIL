@@ -13,7 +13,7 @@ export interface HebrewPatentRecord {
   "שם האמצאה בעברית"?: string;
   "שם האמצאה באנגלית"?: string;
   "לבקשה CPC סיווג"?: string;
-  "ראשי"?: string;
+  ראשי?: string;
 }
 
 /**
@@ -44,7 +44,13 @@ export function parsePatentRecord(record: HebrewPatentRecord): PatentClassificat
   const rawAppNum = record["מספר בקשה"];
   const rawCpc = record["לבקשה CPC סיווג"];
 
-  if (rawId === undefined || rawId === null || rawAppNum === undefined || rawAppNum === null || !rawCpc) {
+  if (
+    rawId === undefined ||
+    rawId === null ||
+    rawAppNum === undefined ||
+    rawAppNum === null ||
+    !rawCpc
+  ) {
     return null;
   }
 
@@ -145,7 +151,9 @@ export async function scrapeAndSyncPatentClassifications(
       for (const rec of records) {
         // Delta sync termination check: if we see an _id we've already synced, we can stop
         if (rec._id <= lastSyncedMaxId) {
-          logger.info(`Reached previously synced record (_id: ${rec._id} <= lastSyncedMaxId: ${lastSyncedMaxId}). Stopping sync.`);
+          logger.info(
+            `Reached previously synced record (_id: ${rec._id} <= lastSyncedMaxId: ${lastSyncedMaxId}). Stopping sync.`,
+          );
           reachedExistingRecords = true;
           hasMore = false;
           break;
@@ -223,7 +231,9 @@ export async function scrapeAndSyncPatentClassifications(
       }
     }
 
-    logger.info(`Ingestion complete. Processed: ${processedCount}, Wrote: ${newWritesCount} records.`);
+    logger.info(
+      `Ingestion complete. Processed: ${processedCount}, Wrote: ${newWritesCount} records.`,
+    );
 
     // Retrieve total count of documents in the collection
     const countSnapshot = await targetRef.count().get();

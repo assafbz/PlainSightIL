@@ -50,10 +50,7 @@ class PatentClassificationsNotifier extends ChangeNotifier {
   }
 
   /// Construct and initialize the PatentClassificationsNotifier.
-  PatentClassificationsNotifier({
-    bool isTesting = false,
-    this.testFirestore,
-  });
+  PatentClassificationsNotifier({bool isTesting = false, this.testFirestore});
 
   /// Initialize and load the initial page of patent classifications.
   void initPatentClassificationsListener() {
@@ -99,7 +96,8 @@ class PatentClassificationsNotifier extends ChangeNotifier {
       _hasMorePatents = true;
       _isLoadingPatents = true;
     } else {
-      if (!_hasMorePatents || _isLoadingMorePatents || _isLoadingPatents) return;
+      if (!_hasMorePatents || _isLoadingMorePatents || _isLoadingPatents)
+        return;
       _isLoadingMorePatents = true;
     }
     notifyListeners();
@@ -173,7 +171,10 @@ class PatentClassificationsNotifier extends ChangeNotifier {
           final cleanSearch = searchString.toUpperCase();
           query = query
               .where('cpcClassification', isGreaterThanOrEqualTo: cleanSearch)
-              .where('cpcClassification', isLessThanOrEqualTo: '$cleanSearch\uf8ff');
+              .where(
+                'cpcClassification',
+                isLessThanOrEqualTo: '$cleanSearch\uf8ff',
+              );
           queryIsOrderedByCpc = true;
         }
       }
@@ -196,7 +197,11 @@ class PatentClassificationsNotifier extends ChangeNotifier {
       final fetchedDocs = querySnapshot.docs;
 
       final newRecords = fetchedDocs
-          .map((doc) => PatentClassificationRecordModel.fromMap(doc.data() as Map<String, dynamic>))
+          .map(
+            (doc) => PatentClassificationRecordModel.fromMap(
+              doc.data() as Map<String, dynamic>,
+            ),
+          )
           .toList();
 
       if (isRefresh) {

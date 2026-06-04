@@ -15,14 +15,15 @@ class PatentClassificationsScreen extends StatefulWidget {
   const PatentClassificationsScreen({super.key, required this.appState});
 
   @override
-  State<PatentClassificationsScreen> createState() => _PatentClassificationsScreenState();
+  State<PatentClassificationsScreen> createState() =>
+      _PatentClassificationsScreenState();
 }
 
-class _PatentClassificationsScreenState extends State<PatentClassificationsScreen> {
+class _PatentClassificationsScreenState
+    extends State<PatentClassificationsScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
-  String _activeSearchQuery = '';
   String _activeFilter = 'All'; // 'All', 'Primary', 'Secondary'
 
   @override
@@ -45,7 +46,8 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       widget.appState.fetchNextPatentPage();
     }
   }
@@ -53,9 +55,6 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
   void _onSearchChanged(String val) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      setState(() {
-        _activeSearchQuery = val;
-      });
       widget.appState.setPatentSearchQuery(val);
     });
   }
@@ -86,7 +85,9 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
 
   Widget _buildFilterChip(String filterKey, String displayLabel) {
     final isSelected = _activeFilter == filterKey;
-    final labelColor = isSelected ? AppColors.textPrimary : AppColors.textSecondary;
+    final labelColor = isSelected
+        ? AppColors.textPrimary
+        : AppColors.textSecondary;
 
     return GestureDetector(
       onTap: () => _onFilterChanged(filterKey),
@@ -99,7 +100,9 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
               : AppColors.surfaceLow.withAlpha(120),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary.withAlpha(120) : AppColors.glassBorder,
+            color: isSelected
+                ? AppColors.primary.withAlpha(120)
+                : AppColors.glassBorder,
             width: 1.5,
           ),
         ),
@@ -115,7 +118,6 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = widget.appState.locale == 'he';
     final list = widget.appState.patentRecords;
 
     return Scaffold(
@@ -130,7 +132,9 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                   center: const Alignment(0.6, -0.6),
                   radius: 1.2,
                   colors: [
-                    const Color(0x1F9C27B0), // subtle purple glow for patent/legal accent
+                    const Color(
+                      0x1F9C27B0,
+                    ), // subtle purple glow for patent/legal accent
                     AppColors.baseBg,
                   ],
                 ),
@@ -155,7 +159,9 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          widget.appState.translate('patent_classifications_title'),
+                          widget.appState.translate(
+                            'patent_classifications_title',
+                          ),
                           style: AppTypography.headlineLg(
                             context,
                             color: AppColors.textPrimary,
@@ -172,7 +178,9 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                           return IconButton(
                             icon: Icon(
                               isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav ? AppColors.danger : AppColors.textSecondary,
+                              color: isFav
+                                  ? AppColors.danger
+                                  : AppColors.textSecondary,
                             ),
                             onPressed: () => widget.appState.toggleFavorite(
                               DatasetIds.patentClassifications,
@@ -252,9 +260,22 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       children: [
-                        _buildFilterChip('All', widget.appState.translate('patent_primary_chip_all')),
-                        _buildFilterChip('Primary', widget.appState.translate('patent_primary_chip_primary')),
-                        _buildFilterChip('Secondary', widget.appState.translate('patent_primary_chip_secondary')),
+                        _buildFilterChip(
+                          'All',
+                          widget.appState.translate('patent_primary_chip_all'),
+                        ),
+                        _buildFilterChip(
+                          'Primary',
+                          widget.appState.translate(
+                            'patent_primary_chip_primary',
+                          ),
+                        ),
+                        _buildFilterChip(
+                          'Secondary',
+                          widget.appState.translate(
+                            'patent_primary_chip_secondary',
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -293,7 +314,11 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                             if (index == list.length) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16.0),
-                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
                               );
                             }
 
@@ -317,56 +342,81 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                                     decoration: BoxDecoration(
                                       border: BorderDirectional(
                                         start: BorderSide(
-                                          color: item.isPrimary ? AppColors.primary : AppColors.secondary,
+                                          color: item.isPrimary
+                                              ? AppColors.primary
+                                              : AppColors.secondary,
                                           width: 4,
                                         ),
                                       ),
                                     ),
                                     padding: const EdgeInsets.all(16.0),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // Header Row: CPC classification code & Badge
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Expanded(
                                               child: Text(
                                                 item.cpcClassification,
-                                                style: AppTypography.bodyLg(
-                                                  context,
-                                                  color: AppColors.textPrimary,
-                                                ).copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontFamily: 'Outfit',
-                                                ),
+                                                style:
+                                                    AppTypography.bodyLg(
+                                                      context,
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                    ).copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontFamily: 'Outfit',
+                                                    ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
                                             const SizedBox(width: 8),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 2,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: (item.isPrimary ? AppColors.primary : AppColors.secondary)
-                                                    .withAlpha(20),
-                                                borderRadius: BorderRadius.circular(8),
+                                                color:
+                                                    (item.isPrimary
+                                                            ? AppColors.primary
+                                                            : AppColors
+                                                                  .secondary)
+                                                        .withAlpha(20),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                                 border: Border.all(
-                                                  color: (item.isPrimary ? AppColors.primary : AppColors.secondary)
-                                                      .withAlpha(80),
+                                                  color:
+                                                      (item.isPrimary
+                                                              ? AppColors
+                                                                    .primary
+                                                              : AppColors
+                                                                    .secondary)
+                                                          .withAlpha(80),
                                                 ),
                                               ),
                                               child: Text(
                                                 item.isPrimary
-                                                    ? widget.appState.translate('patent_is_primary')
-                                                    : widget.appState.translate('patent_is_secondary'),
+                                                    ? widget.appState.translate(
+                                                        'patent_is_primary',
+                                                      )
+                                                    : widget.appState.translate(
+                                                        'patent_is_secondary',
+                                                      ),
                                                 style: AppTypography.labelXs(
                                                   context,
-                                                  color: item.isPrimary ? AppColors.primary : AppColors.secondary,
+                                                  color: item.isPrimary
+                                                      ? AppColors.primary
+                                                      : AppColors.secondary,
                                                 ),
                                               ),
                                             ),
@@ -378,13 +428,14 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                                         if (item.titleHebrew.isNotEmpty)
                                           Text(
                                             item.titleHebrew,
-                                            style: AppTypography.bodySm(
-                                              context,
-                                              color: AppColors.textPrimary,
-                                            ).copyWith(
-                                              fontFamily: 'Assistant',
-                                              height: 1.3,
-                                            ),
+                                            style:
+                                                AppTypography.bodySm(
+                                                  context,
+                                                  color: AppColors.textPrimary,
+                                                ).copyWith(
+                                                  fontFamily: 'Assistant',
+                                                  height: 1.3,
+                                                ),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -392,13 +443,15 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
                                           const SizedBox(height: 4),
                                           Text(
                                             item.titleEnglish,
-                                            style: AppTypography.bodySm(
-                                              context,
-                                              color: AppColors.textSecondary,
-                                            ).copyWith(
-                                              fontFamily: 'Outfit',
-                                              height: 1.3,
-                                            ),
+                                            style:
+                                                AppTypography.bodySm(
+                                                  context,
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ).copyWith(
+                                                  fontFamily: 'Outfit',
+                                                  height: 1.3,
+                                                ),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -407,11 +460,14 @@ class _PatentClassificationsScreenState extends State<PatentClassificationsScree
 
                                         // Footer Row: Application number & publisher label
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Expanded(
                                               child: Text(
-                                                widget.appState.translate('patent_classifications_publisher'),
+                                                widget.appState.translate(
+                                                  'patent_classifications_publisher',
+                                                ),
                                                 style: AppTypography.labelXs(
                                                   context,
                                                   color: AppColors.textTertiary,

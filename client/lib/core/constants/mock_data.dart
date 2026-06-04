@@ -169,8 +169,7 @@ class MockData {
       datasetId: DatasetIds.patentClassifications,
       name: 'patent_classifications',
       title: 'סיווגי CPC לפטנטים',
-      notes:
-          'מאגר סיווגי CPC (סיווג פטנטים משותף) לבקשות פטנט של רשם הפטנטים.',
+      notes: 'מאגר סיווגי CPC (סיווג פטנטים משותף) לבקשות פטנט של רשם הפטנטים.',
       publisher: 'רשות הפטנטים',
       resourceCount: 1,
       lastUpdated: DateTime(2026, 6, 3),

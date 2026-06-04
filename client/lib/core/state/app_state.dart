@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
@@ -122,8 +121,9 @@ class AppStateNotifier extends ChangeNotifier {
     liquidationNotifier = LiquidationNotifier(isTesting: isTesting);
     doctorsNotifier = DoctorsNotifier(isTesting: isTesting);
     bankAtmsNotifier = BankAtmsNotifier(isTesting: isTesting);
-    patentClassificationsNotifier =
-        PatentClassificationsNotifier(isTesting: isTesting);
+    patentClassificationsNotifier = PatentClassificationsNotifier(
+      isTesting: isTesting,
+    );
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
       functionsPort: functionsPort,
@@ -553,11 +553,9 @@ class AppStateNotifier extends ChangeNotifier {
       'doctor_unlicensed': 'לא מורשה',
       'doctors_publisher': 'משרד הבריאות - האגף לרישוי מקצועות רפואיים',
       'patent_classifications_title': 'סיווגי CPC לפטנטים',
-      'patent_classifications_desc':
-          'סיווגי CPC לבקשות פטנט של רשם הפטנטים.',
+      'patent_classifications_desc': 'סיווגי CPC לבקשות פטנט של רשם הפטנטים.',
       'patent_classifications_count': '~741,000+ רשומות',
-      'patent_classifications_search_placeholder':
-          'חפש לפי מספר בקשה או סיווג',
+      'patent_classifications_search_placeholder': 'חפש לפי מספר בקשה או סיווג',
       'patent_classifications_publisher': 'רשות הפטנטים',
       'patent_app_num_label': 'מספר בקשה: ',
       'patent_class_label': 'סיווג CPC: ',
