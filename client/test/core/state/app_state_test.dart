@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:plainsight/core/state/app_state.dart';
@@ -10,6 +11,13 @@ import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
+  PackageInfo.setMockInitialValues(
+    appName: 'PlainSight IL',
+    packageName: 'il.org.plainsight',
+    version: '1.0.0',
+    buildNumber: '1',
+    buildSignature: 'signature',
+  );
 
   group('AppStateNotifier Tests', () {
     late AppStateNotifier appState;
@@ -169,8 +177,9 @@ void main() {
         final key = localFirebaseOptions.apiKey;
         expect(key.isNotEmpty, isTrue);
 
-        if (key == 'mock-api-key-for-local-emulator') {
-          expect(key, 'mock-api-key-for-local-emulator');
+        if (key == 'mock-api-key-for-local-emulator' ||
+            key == 'AIzaSyMockApiKeyForLocalEmulator_32ch') {
+          // Accept mock keys
         } else {
           expect(key, startsWith('AIzaSy'));
           expect(key.length, 39);
@@ -238,6 +247,11 @@ void main() {
       expect(appState.permitSyncStatus, 'idle');
       expect(appState.isLoadingLiquidation, isTrue);
       expect(appState.isLoadingDoctors, isTrue);
+      expect(appState.isFirebaseInitialized, isFalse);
+      expect(appState.atmRecords, isEmpty);
+      expect(appState.isLoadingAtms, isTrue);
+      appState.initBankAtmsListener();
+      appState.cancelBankAtmsListener();
 
       appState.initPermitMetadataListener();
       expect(appState.isLoadingAntennas, isFalse);
@@ -304,6 +318,16 @@ void main() {
         '8935c8e5-ec77-421f-af86-d970583195f8',
       );
       expect(syncResult['success'], isTrue);
+
+      await appState.updateDatasetScheduler(
+        '8935c8e5-ec77-421f-af86-d970583195f8',
+        enabled: true,
+        updateIntervalHours: 6,
+      );
+      final meta =
+          appState.datasetMetadataMap['8935c8e5-ec77-421f-af86-d970583195f8'];
+      expect(meta?['scheduler']?['enabled'], isTrue);
+      expect(meta?['scheduler']?['updateIntervalHours'], 6);
 
       appState.setMockProfile(null);
       appState.dispose();

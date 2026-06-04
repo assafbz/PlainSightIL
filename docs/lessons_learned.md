@@ -188,4 +188,24 @@ if (Array.isArray(existing) || Array.isArray(incoming)) {
 }
 ```
 
+---
 
+## 10. Pitfall: Inconsistent Dataset Titles & Backend Overwrites
+
+### Symptoms
+The Companies Liquidation dataset was displayed with an incorrect title ("מאגר הכונס הרשמי") on the Dataset Directory and Admin Dashboard cards, while its corresponding visualizer screen displayed "חברות בפירוק".
+
+### Root Cause
+1. In Node.js / TypeScript backend Cloud Functions, the metadata scraper (`metadata_scraper.ts`) queried the open data portal CKAN package search API and retrieved the default package title `"מאגר הכונס הרשמי"`.
+2. This title was saved into Firestore metadata under the `title` field, overriding the user-friendly title `"חברות בפירוק"`.
+3. Client mock data and tests hardcoded the incorrect title, creating a testing dependency on the wrong name.
+
+### Corrective Action & Best Practice
+Implement dynamic overrides in the metadata scraper when mapping CKAN package search results to Firestore documents:
+```typescript
+      let title = pkg.title.trim();
+      if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
+        title = "חברות בפירוק";
+      }
+```
+Ensure all mock data, widget tests, and E2E element locators are structurally synchronized to expect the clean user-friendly dataset title.

@@ -37,7 +37,7 @@ describe("Equality Utility", () => {
     const p2 = { latitude: 32.1, longitude: 34.8 };
     const p3 = { latitude: 32.2, longitude: 34.8 };
     const p4 = { latitude: 32.1 };
-    
+
     expect(areRecordsEqual(p1, p2)).toBe(true);
     expect(areRecordsEqual(p1, p3)).toBe(false);
     expect(areRecordsEqual(p1, p4)).toBe(false);
