@@ -128,3 +128,67 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
   final double px = delta.dx * scale;
   final double py = -delta.dy * scale; // Flip Y for screen space
   ```
+
+---
+
+## 6. Pitfall: Child Process Spawning Deprecation Warnings (`[DEP0190]`) on Non-Windows Hosts
+
+### Symptoms
+When starting up local dev servers or running test scripts on macOS or Linux, logs are cluttered with the warning:
+`(node:XXXXX) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities...`
+
+### Root Cause
+Spawning CLI processes (like `npm`, `npx`, or `flutter`) with `shell: true` is only required on Windows systems (where these commands map to `.cmd` or `.bat` wrapper files). On macOS and Linux, executing them with `shell: true` triggers Node deprecation warnings and can disrupt process termination hierarchy.
+
+### Corrective Action & Best Practice
+Use conditional shell activation based on the platform name:
+```javascript
+const child = spawn('npm', ['run', 'build'], {
+  cwd: targetDir,
+  shell: process.platform === 'win32'
+});
+```
+
+---
+
+## 7. Pitfall: GCP Metadata Server Lookup Warnings in Local Dev (`MetadataLookupWarning`)
+
+### Symptoms
+During startup or emulator execution, logs show repeating stacks of GCP warnings:
+`[Backend-Err] (node:XXXX) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN`
+
+### Root Cause
+Google Cloud Client Libraries (such as `google-auth-library` or GCP Pub/Sub wrappers) attempt to query the internal Google metadata server to verify GCE environment properties. Locally, these requests time out and produce long logs.
+
+### Corrective Action & Best Practice
+Set the `METADATA_SERVER_DETECTION` environment variable to `'none'` when launching node/emulator child processes locally:
+```javascript
+const emulator = spawn('npx', ['firebase-tools', 'emulators:start'], {
+  env: {
+    ...process.env,
+    METADATA_SERVER_DETECTION: 'none'
+  }
+});
+```
+
+---
+
+## 8. Pitfall: Strict Version Checking for Node Engines in Firebase CLI
+
+### Symptoms
+Setting the `engines.node` block in the functions `package.json` to comparison range values (such as `">=22"`) results in a crash during emulator load:
+`Failed to load function definition from source: FirebaseError: Detected node engine >=22 in package.json, which is not a supported version. Valid versions are 20, 22, 24`
+
+### Root Cause
+The Firebase CLI parser does not support semver range operators for local Node engine checks and expects exact engine string keys like `"20"`, `"22"`, or `"24"`.
+
+### Corrective Action & Best Practice
+Keep the engines configuration set to the target deploy version (e.g. `"22"`), and suppress mismatch warnings locally by setting the `--no-deprecation` Node flag:
+```javascript
+const child = spawn('npx', ['firebase-tools', ...], {
+  env: {
+    ...process.env,
+    NODE_OPTIONS: '--no-deprecation'
+  }
+});
+```

@@ -57,10 +57,16 @@ try {
 
 // 1. Build backend functions
 console.log('📦 Building backend functions...');
+// Spawn npm build command conditionally using shell only on Windows to avoid DEP0190 security warnings on macOS/Linux.
+// Silence deprecation warnings in package-build processes via NODE_OPTIONS.
 const buildProc = spawn('npm', ['run', 'build'], {
   cwd: path.join(rootDir, 'backend', 'functions'),
   stdio: 'inherit',
-  shell: true
+  shell: process.platform === 'win32',
+  env: {
+    ...process.env,
+    NODE_OPTIONS: '--no-deprecation'
+  }
 });
 
 buildProc.on('close', (code) => {
@@ -78,10 +84,17 @@ function startServices() {
 
   // Start Firebase Emulators using the generated temp config file
   console.log(`🔥 Starting Firebase Emulators (Firestore on ${ports.firestore}, Auth on ${ports.auth}, Functions on ${ports.functions})...`);
+  // Conditionally spawn via shell only on Windows. Detach process for background run.
+  // Suppress local GCE metadata checks via METADATA_SERVER_DETECTION and hide third-party deprecations using NODE_OPTIONS.
   const backendProc = spawn('npx', ['firebase-tools', 'emulators:start', '--project', 'demo-plainsightil', '--config', 'firebase.tmp.json'], {
     cwd: path.join(rootDir, 'backend'),
-    shell: true,
-    detached: true
+    shell: process.platform === 'win32',
+    detached: true,
+    env: {
+      ...process.env,
+      METADATA_SERVER_DETECTION: 'none',
+      NODE_OPTIONS: '--no-deprecation'
+    }
   });
   children.push(backendProc);
 
@@ -109,9 +122,10 @@ function startServices() {
       '--dart-define', `GIT_BRANCH=${gitBranch}`
     );
     
+    // Spawn flutter conditionally using shell only on Windows to prevent macOS DEP0190 warnings.
     const clientProc = spawn('flutter', clientArgs, {
       cwd: path.join(rootDir, 'client'),
-      shell: true,
+      shell: process.platform === 'win32',
       detached: true
     });
     children.push(clientProc);
