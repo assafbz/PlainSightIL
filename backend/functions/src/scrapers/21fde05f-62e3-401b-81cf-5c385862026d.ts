@@ -196,6 +196,7 @@ export function parseAtmRecord(record: HebrewAtmRecord): BankAtmRecord | null {
 export async function scrapeAndSyncBankAtms(
   db: admin.firestore.Firestore,
   resourceId = "21fde05f-62e3-401b-81cf-5c385862026d",
+  options?: { forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = "21fde05f-62e3-401b-81cf-5c385862026d";
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -204,8 +205,10 @@ export async function scrapeAndSyncBankAtms(
     const targetCollection = "21fde05f-62e3-401b-81cf-5c385862026d";
     logger.info(`Starting bank ATMs sync. Target collection: ${targetCollection}`);
 
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
-    const limit = 1000;
+    const limit = isEmulator && !forceFullSync ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -276,6 +279,11 @@ export async function scrapeAndSyncBankAtms(
         if (hasWrites) {
           await batch.commit();
         }
+      }
+
+      if (isEmulator && !forceFullSync) {
+        hasMore = false;
+        break;
       }
 
       offset += limit;
