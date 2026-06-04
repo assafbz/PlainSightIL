@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
@@ -61,6 +62,7 @@ class AppStateNotifier extends ChangeNotifier {
   List<String> get recents => authNotifier.recents;
   UserProfile? get userProfile => authNotifier.userProfile;
   Map<String, String>? get mockUser => authNotifier.mockUser;
+  bool get isFirebaseInitialized => authNotifier.isFirebaseInitialized;
 
   // Delegated Getters for AntennasNotifier
   List<Map<String, dynamic>> get antennaRecords =>
@@ -215,7 +217,7 @@ class AppStateNotifier extends ChangeNotifier {
     );
 
     if (isTesting) {
-      final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
+      final Map<String, dynamic> localMeta = datasetMetadataMap[datasetId] ?? {};
       final scheduler = Map<String, dynamic>.from(localMeta['scheduler'] as Map? ?? {});
       scheduler['enabled'] = enabled;
       scheduler['updateIntervalHours'] = updateIntervalHours;
@@ -224,7 +226,7 @@ class AppStateNotifier extends ChangeNotifier {
       final nextRunDate = DateTime.now().add(Duration(hours: updateIntervalHours));
       scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
 
-      _datasetMetadataMap[datasetId] = {
+      datasetMetadataMap[datasetId] = {
         ...localMeta,
         'scheduler': scheduler,
       };

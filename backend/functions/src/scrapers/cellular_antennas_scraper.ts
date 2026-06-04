@@ -257,6 +257,7 @@ export async function saveAntennasToFirestore(
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
   resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS,
+  options?: { limit?: number; forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -268,7 +269,12 @@ export async function scrapeAndSyncAntennas(
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = isEmulator ? 10 : 1000;
+    let limit = 1000;
+    if (options?.limit !== undefined) {
+      limit = options.limit;
+    } else if (isEmulator && !options?.forceFullSync) {
+      limit = 10;
+    }
     let hasMore = true;
     let processedCount = 0;
 
@@ -307,7 +313,7 @@ export async function scrapeAndSyncAntennas(
         processedCount += parsedRecords.length;
       }
 
-      if (isEmulator || isUrl) {
+      if ((isEmulator && !options?.forceFullSync) || isUrl) {
         hasMore = false;
       } else {
         offset += limit;

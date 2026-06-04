@@ -249,6 +249,8 @@ describe("Companies Liquidation Scraper Ingestion", () => {
       "שם החברה": 'אלברט לוי הנדסה בע"מ',
       "מספר זיהוי של החברה": 512345678,
       "סטטוס תיק": "פירוק פעיל",
+      "תאריך הגשת הבקשה": "2026-05-15 00:00:00",
+      "תאריך קבלת צו פירוק": "2026-05-15 00:00:00",
     };
 
     const parsed = parseLiquidationRecord(rawRecord)!;

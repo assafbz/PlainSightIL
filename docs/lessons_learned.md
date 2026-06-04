@@ -128,3 +128,38 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
   final double px = delta.dx * scale;
   final double py = -delta.dy * scale; // Flip Y for screen space
   ```
+
+---
+
+## 6. Pitfall: Timing-Based Test Flakiness (Dynamic Date Fallbacks)
+
+### Symptoms
+Unit tests verifying that a record skip write works (asserting `mockBatch.set` was not called) randomly fail with mock database calls being executed.
+
+### Root Cause
+- When mock API responses or parsed records do not specify dates, the parser falls back to `new Date().toISOString()`.
+- If the test setup and the scraper invocation happen across a millisecond boundary, the generated dates differ.
+- The `areRecordsEqual` comparison evaluates the records as different, leading to unexpected writes and assertion failures.
+
+### Corrective Action & Best Practice
+Always specify concrete, deterministic timestamps (e.g. `"2026-05-15 00:00:00"`) in mock payloads for tests asserting identity or equality checks to avoid timing-based test flakiness.
+
+---
+
+## 7. Pitfall: Deep Comparison Type Mismatches in Equality Utility
+
+### Symptoms
+Documents containing empty arrays or objects are incorrectly evaluated as identical to documents containing empty objects/arrays, bypassing necessary writes.
+
+### Root Cause
+The record comparison utility checked `Array.isArray(existing)` but did not enforce that `incoming` must also be an array before looping or returning true.
+
+### Corrective Action & Best Practice
+When doing type-specific deep comparisons, always check that both existing and incoming values share the same structure/type:
+```typescript
+if (Array.isArray(existing) || Array.isArray(incoming)) {
+  if (!Array.isArray(existing) || !Array.isArray(incoming)) return false;
+  // proceed with array comparison...
+}
+```
+
