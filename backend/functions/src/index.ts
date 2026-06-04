@@ -196,9 +196,10 @@ export const scheduledScraperTicker = functions.pubsub.schedule("*/15 * * * *").
 
     try {
       await topic.create();
-    } catch (e: any) {
-      if (e.code !== 6) {
-        logger.warn(`Error creating topic: ${e.message}`);
+    } catch (e) {
+      const err = e as { code?: number; message?: string };
+      if (err.code !== 6) {
+        logger.warn(`Error creating topic: ${err.message}`);
       }
     }
 
@@ -229,7 +230,7 @@ export const scheduledScraperTicker = functions.pubsub.schedule("*/15 * * * *").
 export const runScraperPubSub = functions.pubsub
   .topic("run-scraper-topic")
   .onPublish(async (message) => {
-    let datasetId = "";
+    let datasetId: string | undefined;
     try {
       const data = message.json;
       datasetId = data?.datasetId;
@@ -300,6 +301,7 @@ async function validateAdminRequest(
   res: functions.Response,
 ): Promise<{ uid: string } | null> {
   // Allow unauthenticated GET requests in local emulator for seeding/development
+
   if (process.env.FUNCTIONS_EMULATOR === "true" && req.method === "GET") {
     functions.logger.info("Bypassing admin check for emulator seeding via GET request.");
     return { uid: "emulator-seeder" };

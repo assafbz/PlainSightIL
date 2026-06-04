@@ -131,6 +131,7 @@ Strict workspace validation is enforced by hooks to keep code quality high. Bran
 
 ---
 
+
 ## 6. Pitfall: Dynamic Timestamps Drift in Change-Detection Tests
 
 ### Symptoms
@@ -209,3 +210,18 @@ Implement dynamic overrides in the metadata scraper when mapping CKAN package se
       }
 ```
 Ensure all mock data, widget tests, and E2E element locators are structurally synchronized to expect the clean user-friendly dataset title.
+
+---
+
+## 11. Pitfall: Bypassing/Skipping SDLC Gates (Process Quality Compliance)
+
+### Symptoms
+- Changes are pushed, merged, or deployed without all intermediate SDLC gates (Discovery, Design, Tech Design, Security, Blueprinting, Implementation, QA Validation, Lessons Learned) having their state files and deliverables properly completed, leading to undocumented changes, untracked requirements, or missed integration testing.
+
+### Root Cause
+- Fast-tracking fixes or feature implementations directly to code modifications while ignoring the active phase tracking inside `.agents/state/active_issues/`.
+- Rushing transitions without verifying formatting and lint compliance beforehand, leading to late-stage Quality Gate transition blocks.
+
+### Corrective Action & Best Practice
+- **Unconditional Process Compliance:** The SDLC process flow must always be strictly followed from start to finish. Deliverables (`PRD.md`, `DESIGN.md`, `TDD.md`, `SECURITY.md`, `BLUEPRINT.md`, `QA_REPORT.md`, `LESSONS_LEARNED.md`) must be generated in the issue's state directory.
+- **Investigate and Rectify Failures:** If a step in the SDLC is bypassed, blocked, or fails, developers (both human and AI agents) must immediately investigate the root cause (e.g., conflicting linter settings, missing requirements, or port blockages) and apply the correct fixes, rather than bypassing quality gates.
