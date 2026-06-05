@@ -107,7 +107,12 @@ vi.mock("firebase-admin", () => ({
 }));
 
 // 6. Now import functions under test
-import { manualSyncAntennas, manualSyncMetadata, manualSyncDoctorsLicenses, manualSyncCarImporters } from "../src/index";
+import {
+  manualSyncAntennas,
+  manualSyncMetadata,
+  manualSyncDoctorsLicenses,
+  manualSyncCarImporters,
+} from "../src/index";
 
 describe("Manual Sync Cloud Functions Factory", () => {
   let req: any;

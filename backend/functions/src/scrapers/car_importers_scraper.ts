@@ -36,34 +36,32 @@ export interface CarImporterRecord {
   updatedAt?: string;
 }
 
-export function parseCarImporterRecord(
-  record: HebrewCarImporterRecord,
-): CarImporterRecord | null {
+export function parseCarImporterRecord(record: HebrewCarImporterRecord): CarImporterRecord | null {
   const rawId = record._id;
   if (rawId === undefined || rawId === null) {
     return null;
   }
 
   const id = String(rawId).trim();
-  const importerCode = record.semel_yevuan !== undefined && record.semel_yevuan !== null
-    ? Number(record.semel_yevuan)
-    : null;
+  const importerCode =
+    record.semel_yevuan !== undefined && record.semel_yevuan !== null
+      ? Number(record.semel_yevuan)
+      : null;
   const importerName = (record.shem_yevuan ?? "").trim();
   const modelType = (record.sug_degem ?? "").trim();
-  const makerCode = record.tozeret_cd !== undefined && record.tozeret_cd !== null
-    ? Number(record.tozeret_cd)
-    : null;
+  const makerCode =
+    record.tozeret_cd !== undefined && record.tozeret_cd !== null
+      ? Number(record.tozeret_cd)
+      : null;
   const makerName = (record.tozeret_nm ?? "").trim();
-  const modelCode = record.degem_cd !== undefined && record.degem_cd !== null
-    ? Number(record.degem_cd)
-    : null;
+  const modelCode =
+    record.degem_cd !== undefined && record.degem_cd !== null ? Number(record.degem_cd) : null;
   const modelName = (record.degem_nm ?? "").trim();
-  const productionYear = record.shnat_yitzur !== undefined && record.shnat_yitzur !== null
-    ? Number(record.shnat_yitzur)
-    : null;
-  const price = record.mehir !== undefined && record.mehir !== null
-    ? Number(record.mehir)
-    : null;
+  const productionYear =
+    record.shnat_yitzur !== undefined && record.shnat_yitzur !== null
+      ? Number(record.shnat_yitzur)
+      : null;
+  const price = record.mehir !== undefined && record.mehir !== null ? Number(record.mehir) : null;
   const commercialName = (record.kinuy_mishari ?? "").trim();
 
   const lastUpdated = new Date().toISOString();

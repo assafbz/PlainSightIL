@@ -55,11 +55,7 @@ class CarImportersNotifier extends ChangeNotifier {
       _carImportersSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _carImporterRecords = snapshot.docs
-              .map(
-                (doc) => CarImporterRecordModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                ),
-              )
+              .map((doc) => CarImporterRecordModel.fromMap(doc.data()))
               .toList();
           _isLoadingCarImporters = false;
           notifyListeners();
@@ -130,11 +126,7 @@ class CarImportersNotifier extends ChangeNotifier {
           .listen(
             (snapshot) {
               _carImporterRecords = snapshot.docs
-                  .map(
-                    (doc) => CarImporterRecordModel.fromMap(
-                      doc.data() as Map<String, dynamic>,
-                    ),
-                  )
+                  .map((doc) => CarImporterRecordModel.fromMap(doc.data()))
                   .toList();
               _isLoadingCarImporters = false;
               notifyListeners();

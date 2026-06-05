@@ -19,7 +19,7 @@ describe("Car Importers Record Parser", () => {
   it("should return null if _id is missing", () => {
     const record = {
       semel_yevuan: 1,
-      shem_yevuan: "קרסו מוטורס בע\"מ",
+      shem_yevuan: 'קרסו מוטורס בע"מ',
     };
     expect(parseCarImporterRecord(record as any)).toBeNull();
   });
@@ -28,7 +28,7 @@ describe("Car Importers Record Parser", () => {
     const raw = {
       _id: 1,
       semel_yevuan: 1,
-      shem_yevuan: "קרסו מוטורס בע\"מ",
+      shem_yevuan: 'קרסו מוטורס בע"מ',
       sug_degem: "P",
       tozeret_cd: 928,
       tozeret_nm: "רנו צרפת",
@@ -45,7 +45,7 @@ describe("Car Importers Record Parser", () => {
       expect(parsed.id).toBe("1");
       expect(parsed._id).toBe(1);
       expect(parsed.importerCode).toBe(1);
-      expect(parsed.importerName).toBe("קרסו מוטורס בע\"מ");
+      expect(parsed.importerName).toBe('קרסו מוטורס בע"מ');
       expect(parsed.modelType).toBe("P");
       expect(parsed.makerCode).toBe(928);
       expect(parsed.makerName).toBe("רנו צרפת");
@@ -156,7 +156,7 @@ describe("Car Importers Ingest Sync Process", () => {
             {
               _id: 1,
               semel_yevuan: 1,
-              shem_yevuan: "קרסו מוטורס בע\"מ",
+              shem_yevuan: 'קרסו מוטורס בע"מ',
             },
           ],
         },
@@ -176,7 +176,7 @@ describe("Car Importers Ingest Sync Process", () => {
 
     const written = mockBatch.set.mock.calls[0][1];
     expect(written.id).toBe("1");
-    expect(written.importerName).toBe("קרסו מוטורס בע\"מ");
+    expect(written.importerName).toBe('קרסו מוטורס בע"מ');
 
     expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.CAR_IMPORTERS);
     expect(mockMetadataSet).toHaveBeenCalledWith(
@@ -207,7 +207,7 @@ describe("Car Importers Ingest Sync Process", () => {
             {
               _id: 1,
               semel_yevuan: 1,
-              shem_yevuan: "קרסו מוטורס בע\"מ",
+              shem_yevuan: 'קרסו מוטורס בע"מ',
             },
           ],
         },
