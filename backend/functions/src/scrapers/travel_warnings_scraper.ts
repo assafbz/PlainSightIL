@@ -15,7 +15,7 @@ export interface HebrewTravelWarningRecord {
   details?: string;
   logo?: string;
   date?: string | null;
-  "משרד"?: string;
+  משרד?: string;
 }
 
 /**
@@ -58,7 +58,9 @@ export function extractWarningLevel(recommendations: string): number {
  * @param record The raw record from the API
  * @returns Mapped record, or null if key fields are missing or invalid
  */
-export function parseTravelWarningRecord(record: HebrewTravelWarningRecord): TravelWarningRecord | null {
+export function parseTravelWarningRecord(
+  record: HebrewTravelWarningRecord,
+): TravelWarningRecord | null {
   const rawId = record._id;
   if (rawId === undefined || rawId === null) {
     return null;

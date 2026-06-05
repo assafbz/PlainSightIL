@@ -56,7 +56,7 @@ describe("Travel Warnings Record Parser", () => {
       details: "להמלצה באתר המטה לביטחון לאומי",
       logo: "לוגו",
       date: "2026-06-03T06:58:30.099Z",
-      משרד: "מל\"ל",
+      משרד: 'מל"ל',
     };
 
     const parsed = parseTravelWarningRecord(raw);
@@ -70,7 +70,7 @@ describe("Travel Warnings Record Parser", () => {
       expect(parsed.details).toBe("להמלצה באתר המטה לביטחון לאומי");
       expect(parsed.logo).toBe("לוגו");
       expect(parsed.date).toBe("2026-06-03T06:58:30.099Z");
-      expect(parsed.office).toBe("מל\"ל");
+      expect(parsed.office).toBe('מל"ל');
       expect(parsed.warningLevel).toBe(2);
     }
   });
@@ -145,7 +145,7 @@ describe("Travel Warnings Ingest Sync Process", () => {
               country: "אוגנדה",
               recommendations: "רמה 2/ איום מזדמן: המלצה לנקוט באמצעי זהירות מוגברים.",
               date: "2026-06-03T00:00:00Z",
-              משרד: "מל\"ל",
+              משרד: 'מל"ל',
             },
           ],
         },
