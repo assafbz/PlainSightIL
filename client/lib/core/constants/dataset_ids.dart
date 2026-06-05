@@ -16,4 +16,7 @@ class DatasetIds {
   /// Patent Applications CPC Classifications dataset ID.
   static const String patentClassifications =
       'b2c59e21-c345-4b02-b071-2890a3d431d6';
+
+  /// Car Importers and New Car Price Lists dataset ID.
+  static const String carImporters = '39f455bf-6db0-4926-859d-017f34eacbcb';
 }
