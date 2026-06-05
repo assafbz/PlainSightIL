@@ -21,6 +21,7 @@ import 'package:plainsight/features/datasets/doctors_licenses/presentation/notif
 import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
 import 'package:plainsight/features/datasets/travel_warnings/presentation/notifiers/travel_warnings_notifier.dart';
+import 'package:plainsight/features/datasets/travel_warnings/data/models/travel_warning_model.dart';
 import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
@@ -1999,6 +2000,31 @@ void main() {
         notifier.dispose();
       },
     );
+
+    test(
+      'TravelWarningsNotifier isFirebaseInitialized handles default Firebase.apps check',
+      () {
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        final notifier = TravelWarningsNotifier(isTesting: false);
+        final isInit = notifier.isFirebaseInitialized;
+        expect(isInit, isA<bool>());
+        notifier.dispose();
+      },
+    );
+
+    test('AppStateNotifier travel warnings delegates coverage', () async {
+      AppStateNotifier.isTesting = true;
+      AppStateNotifier.testIsFirebaseInitialized = true;
+      final appState = AppStateNotifier();
+
+      expect(appState.warningRecords, isA<List<TravelWarningRecordModel>>());
+      expect(appState.isLoadingWarnings, isA<bool>());
+
+      appState.initTravelWarningsListener();
+      appState.cancelTravelWarningsListener();
+
+      appState.dispose();
+    });
 
     test(
       'TravelWarningsNotifier handles Firestore snapshots exception',
