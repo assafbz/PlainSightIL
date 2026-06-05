@@ -193,6 +193,24 @@ void main() {
     );
 
     test(
+      'FirebaseOptions dev configurations are validly formatted to satisfy auth requirements',
+      () {
+        final key = devFirebaseOptions.apiKey;
+
+        if (key.isNotEmpty) {
+          expect(key, startsWith('AIzaSy'));
+          expect(key.length, 39);
+
+          final RegExp gcloudKeyPattern = RegExp(r'^AIzaSy[a-zA-Z0-9_-]{33}$');
+          expect(gcloudKeyPattern.hasMatch(key), isTrue);
+        }
+
+        expect(devFirebaseOptions.projectId, 'plainsightil');
+        expect(devFirebaseOptions.appId, isNotEmpty);
+      },
+    );
+
+    test(
       'retrieve user profile updates state when listener triggered',
       () async {
         AppStateNotifier.isTesting = true;

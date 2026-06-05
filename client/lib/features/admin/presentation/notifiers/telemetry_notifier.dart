@@ -817,14 +817,21 @@ class TelemetryNotifier extends ChangeNotifier {
     }
   }
 
-  /// Resolves the functions HTTP emulator base URL.
+  /// Resolves the functions HTTP base URL (emulator or cloud).
   String get functionsBaseUrl {
-    const String projectId = 'demo-plainsightil';
+    final bool useEmulator = AppStateNotifier.useEmulator;
     const String region = 'us-central1';
-    final bool isAndroid =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
-    return 'http://$host:$functionsPort/$projectId/$region';
+
+    if (useEmulator) {
+      const String projectId = 'demo-plainsightil';
+      final bool isAndroid =
+          !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      final String host = isAndroid ? '10.0.2.2' : '127.0.0.1';
+      return 'http://$host:$functionsPort/$projectId/$region';
+    } else {
+      const String projectId = 'plainsightil';
+      return 'https://$region-$projectId.cloudfunctions.net';
+    }
   }
 
   /// Cancels active telemetry and admin metadata subscriptions.
