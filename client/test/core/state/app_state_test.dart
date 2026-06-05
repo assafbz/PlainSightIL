@@ -125,6 +125,7 @@ void main() {
       expect(appState.translate('profile_settings_title'), 'Profile Settings');
       expect(appState.translate('save_profile'), 'Save Profile');
       expect(appState.translate('first_name'), 'First Name');
+      expect(appState.translate('car_importers_title'), 'Car Price Lists');
 
       // Change locale to Hebrew and check translation
       appState.setLocale('he');
@@ -136,6 +137,7 @@ void main() {
       expect(appState.translate('profile_settings_title'), 'הגדרות פרופיל');
       expect(appState.translate('save_profile'), 'שמור פרופיל');
       expect(appState.translate('first_name'), 'שם פרטי');
+      expect(appState.translate('car_importers_title'), 'מחירוני רכב חדש');
     });
 
     test('translate returns the key itself if no translation is found', () {
@@ -276,6 +278,11 @@ void main() {
       appState.initBankAtmsListener();
       appState.cancelBankAtmsListener();
 
+      appState.initCarImportersListener();
+      expect(appState.carImporterRecords.isNotEmpty, isTrue);
+      appState.cancelCarImportersListener();
+      expect(appState.carImporterRecords, isEmpty);
+
       appState.initPermitMetadataListener();
       expect(appState.isLoadingAntennas, isFalse);
       expect(appState.isLoadingPermits, isFalse);
@@ -291,12 +298,14 @@ void main() {
       expect(appState.isLoadingTelemetry, isFalse);
       expect(appState.isLoadingDirectory, isFalse);
       expect(appState.isLoadingAtms, isFalse);
+      expect(appState.isLoadingCarImporters, isFalse);
 
       expect(appState.antennaRecords.isNotEmpty, isTrue);
       expect(appState.permitRecords.isNotEmpty, isTrue);
       expect(appState.liquidationRecords.isNotEmpty, isTrue);
       expect(appState.doctorRecords.isNotEmpty, isTrue);
       expect(appState.atmRecords.isNotEmpty, isTrue);
+      expect(appState.carImporterRecords.isNotEmpty, isTrue);
       expect(appState.datasetMetadataMap.isNotEmpty, isTrue);
       expect(appState.apiHealth.isNotEmpty, isTrue);
       expect(appState.scraperRuns.isNotEmpty, isTrue);

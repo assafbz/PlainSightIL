@@ -19,4 +19,14 @@ class DatasetIds {
 
   /// Car Importers and New Car Price Lists dataset ID.
   static const String carImporters = '39f455bf-6db0-4926-859d-017f34eacbcb';
+
+  /// Returns a list of all registered dataset GUIDs.
+  static List<String> get all => [
+    cellularAntennas,
+    cellularPermits,
+    companiesLiquidation,
+    doctorsLicenses,
+    patentClassifications,
+    carImporters,
+  ];
 }
