@@ -5,6 +5,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/state/local_storage.dart';
+import 'package:plainsight/core/state/local_storage_stub.dart';
+import 'package:plainsight/core/state/local_storage_io.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 
@@ -461,5 +464,56 @@ void main() {
       state2.dispose();
       state3.dispose();
     });
+
+    test('handles exceptions gracefully during locale loading', () async {
+      LocalStorage.impl = FailingLocalStorage();
+
+      final state = AppStateNotifier();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(state.locale, 'en');
+
+      state.dispose();
+      LocalStorage.impl = LocalStorageIO();
+    });
   });
+}
+
+class FailingLocalStorage implements LocalStorageImpl {
+  @override
+  Future<void> init() async {
+    throw Exception('Simulated init failure');
+  }
+
+  @override
+  List<String> getFavorites() => [];
+
+  @override
+  Future<void> saveFavorites(List<String> favorites) async {}
+
+  @override
+  List<String> getRecents() => [];
+
+  @override
+  Future<void> saveRecents(List<String> recents) async {}
+
+  @override
+  bool getGuestMode() => false;
+
+  @override
+  Future<void> saveGuestMode(bool enabled) async {}
+
+  @override
+  Future<void> clearAll() async {}
+
+  @override
+  String? getLastSavedBranch() => null;
+
+  @override
+  Future<void> saveLastSavedBranch(String branch) async {}
+
+  @override
+  String getLocale() => 'en';
+
+  @override
+  Future<void> saveLocale(String locale) async {}
 }

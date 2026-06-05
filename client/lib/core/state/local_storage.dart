@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'local_storage_stub.dart';
 // Conditional imports to load the correct storage adapter depending on the runtime platform.
 // This prevents cross-compilation errors (e.g. referencing 'dart:html' on mobile/desktop).
@@ -9,7 +10,11 @@ import 'local_storage_stub.dart'
 /// Main entry point for local storage operations across all platforms.
 /// Resolves statically to either [LocalStorageWeb] or [LocalStorageIO] at runtime.
 class LocalStorage {
-  static final LocalStorageImpl _impl = platform.getLocalStorage();
+  static LocalStorageImpl _impl = platform.getLocalStorage();
+
+  /// Sets the mock implementation for testing.
+  @visibleForTesting
+  static set impl(LocalStorageImpl value) => _impl = value;
 
   /// Initialize local storage.
   static Future<void> init() => _impl.init();
