@@ -232,7 +232,7 @@ function main() {
       console.error('');
     });
     
-    console.error('Please add tests to cover the highlighted lines or set SKIP_SDLC=1 to bypass.');
+    console.error('Please add tests to cover the highlighted lines.');
     process.exit(1);
   }
   

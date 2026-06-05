@@ -40,7 +40,7 @@ Maintaining fresh project context and documentation is critical for multi-agent 
 ### E. GitHub Issue-Centric SDLC Enforcement
 - **Mandatory GitHub Issue Mapping**: Every development request, bug fix, or refactoring task must correspond to a valid issue on GitHub.
 - **Implicit Issue Creation**: If the user makes a request without specifying a GitHub issue number, the agent must immediately create the issue on GitHub using the available integration tools, retrieve the issue number from GitHub, and checkout/rename the branch to follow the convention `(agents|dev)/<issue_id>-<description>`.
-- **No Skipped SDLC**: Under no circumstances should any developer or agent skip the SDLC state phases. Bypassing gates via `SKIP_SDLC=1` is strictly prohibited unless there is an explicit and documented Human-in-the-Loop (HITL) approval/sign-off.
+- **No Skipped SDLC**: Under no circumstances should any developer or agent skip the SDLC state phases. Bypassing gates is strictly prohibited. All transitions must proceed through the defined quality gates.
 - **Lifecycle End-State**: The SDLC is only complete when:
   1. A Pull Request is created.
   2. All GitHub actions/checks on the PR pass successfully.
