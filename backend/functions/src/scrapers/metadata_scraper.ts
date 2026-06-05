@@ -139,8 +139,24 @@ export async function scrapeAndSyncDatasetMetadata(
 
       await batch.commit();
     }
-
     logger.info(`Successfully synced ${processedCount} dataset metadata records.`);
+
+    // Retrieve total count of documents in the collection
+    const countSnapshot = await targetRef.count().get();
+    const totalRecords = countSnapshot.data().count;
+
+    const metadataRef = db.collection("dataset_metadata").doc(collectionName);
+    await metadataRef.set(
+      {
+        id: collectionName,
+        activeCollection: collectionName,
+        lastUpdated: now,
+        recordCount: totalRecords,
+        status: "idle",
+      },
+      { merge: true },
+    );
+
     return { success: true, count: processedCount };
   } catch (error) {
     logger.error("Dataset metadata sync failed:", error);

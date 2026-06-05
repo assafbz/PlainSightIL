@@ -259,11 +259,37 @@ export const scheduledScraperTicker = functions
         const datasetId = doc.id;
         const nextRun = data.scheduler?.nextRun;
 
+        // Check if stuck in syncing state (syncStartedAt older than 1 hour)
+        if (data.status === "syncing") {
+          const syncStartedAt = data.syncStartedAt || data.lastUpdated;
+          if (syncStartedAt) {
+            const startTime = new Date(syncStartedAt).getTime();
+            const elapsedMs = Date.now() - startTime;
+            const STUCK_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+            if (elapsedMs > STUCK_THRESHOLD_MS) {
+              logger.warn(
+                `Dataset ${datasetId} has been stuck in syncing for ${Math.round(elapsedMs / 60000)} minutes. Resetting to error.`,
+              );
+              // Telemetry tracker log failure
+              const tracker = ScraperTelemetryTracker.start(datasetId);
+              (tracker as any).startTime = new Date(syncStartedAt);
+              await tracker.fail(db, new Error("Sync timed out / stuck in syncing state"));
+
+              // Reset status using updateSchedulerOnComplete
+              await updateSchedulerOnComplete(db, datasetId, "error");
+              continue;
+            }
+          }
+        }
+
         if (nextRun && nextRun <= now && data.status !== "syncing") {
           logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
 
           // Update status to syncing in Firestore immediately
-          await doc.ref.set({ status: "syncing" }, { merge: true });
+          await doc.ref.set(
+            { status: "syncing", syncStartedAt: new Date().toISOString() },
+            { merge: true },
+          );
 
           // Publish event to Pub/Sub topic
           const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
@@ -279,7 +305,7 @@ export const scheduledScraperTicker = functions
  * Pub/Sub topic-triggered Cloud Function that executes the actual scraping.
  */
 export const runScraperPubSub = functions
-  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .pubsub.topic("run-scraper-topic")
   .onPublish(async (message) => {
     let datasetId: string;
@@ -314,7 +340,7 @@ export const runScraperPubSub = functions
       await db
         .collection("dataset_metadata")
         .doc(datasetId)
-        .set({ status: "syncing" }, { merge: true });
+        .set({ status: "syncing", syncStartedAt: new Date().toISOString() }, { merge: true });
 
       const result = await scraper(db, { forceFullSync: true });
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
@@ -472,7 +498,7 @@ function createManualSyncHandler(
       await db
         .collection("dataset_metadata")
         .doc(datasetId)
-        .set({ status: "syncing" }, { merge: true });
+        .set({ status: "syncing", syncStartedAt: new Date().toISOString() }, { merge: true });
 
       const scraper = scraperRegistry[datasetId];
       if (!scraper) {
