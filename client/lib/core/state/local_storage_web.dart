@@ -93,6 +93,24 @@ class LocalStorageWeb implements LocalStorageImpl {
       html.window.localStorage['last_git_branch'] = branch;
     } catch (_) {}
   }
+
+  /// Retrieves the saved locale code from localStorage, defaulting to 'en'.
+  @override
+  String getLocale() {
+    try {
+      return html.window.localStorage['locale'] ?? 'en';
+    } catch (_) {
+      return 'en';
+    }
+  }
+
+  /// Saves the active locale code in localStorage.
+  @override
+  Future<void> saveLocale(String locale) async {
+    try {
+      html.window.localStorage['locale'] = locale;
+    } catch (_) {}
+  }
 }
 
 /// Web factory method returning a new [LocalStorageWeb] instance.
