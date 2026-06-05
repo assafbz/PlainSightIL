@@ -170,6 +170,12 @@ class TelemetryNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-03T10:00:00Z',
           'status': 'idle',
         },
+        DatasetIds.travelWarnings: {
+          'id': DatasetIds.travelWarnings,
+          'recordCount': 197,
+          'lastUpdated': '2026-06-03T19:00:00Z',
+          'status': 'idle',
+        },
         DatasetIds.vehicleRecalls: {
           'id': DatasetIds.vehicleRecalls,
           'recordCount': 2,
@@ -332,6 +338,22 @@ class TelemetryNotifier extends ChangeNotifier {
           'recordsProcessed': 100,
           'firestoreReadsEstimate': 0,
           'firestoreWritesEstimate': 100,
+          'errorMessage': '',
+          'errorStack': '',
+        },
+        {
+          'datasetId': DatasetIds.travelWarnings,
+          'startTime': DateTime.now()
+              .subtract(const Duration(hours: 2, minutes: 30))
+              .toIso8601String(),
+          'endTime': DateTime.now()
+              .subtract(const Duration(hours: 2, minutes: 29))
+              .toIso8601String(),
+          'durationMs': 2400,
+          'status': 'success',
+          'recordsProcessed': 197,
+          'firestoreReadsEstimate': 0,
+          'firestoreWritesEstimate': 197,
           'errorMessage': '',
           'errorStack': '',
         },
@@ -506,6 +528,18 @@ class TelemetryNotifier extends ChangeNotifier {
           resourceCount: 1,
           lastUpdated: DateTime(2026, 6, 3),
           tags: const ['פטנטים', 'סיווג', 'חדשנות', 'CPC'],
+          isSupported: true,
+        ),
+        DatasetMetadataModel(
+          id: DatasetIds.travelWarnings,
+          datasetId: DatasetIds.travelWarnings,
+          name: 'travel_warnings',
+          title: 'אזהרות מסע',
+          notes: 'אזהרות מסע והנחיות בטיחות מטעם המל"ל ומשרד החוץ.',
+          publisher: 'המטה לביטחון לאומי',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 3),
+          tags: const ['אזהרות', 'בטחון', 'נסיעות', 'חו"ל'],
           isSupported: true,
         ),
         DatasetMetadataModel(
@@ -755,6 +789,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncMetadata';
       } else if (datasetId == DatasetIds.patentClassifications) {
         functionName = 'manualSyncPatentClassifications';
+      } else if (datasetId == DatasetIds.travelWarnings) {
+        functionName = 'manualSyncTravelWarnings';
       } else if (datasetId == DatasetIds.vehicleRecalls) {
         functionName = 'manualSyncVehicleRecalls';
       } else if (datasetId == DatasetIds.carImporters) {

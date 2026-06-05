@@ -15,8 +15,13 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   test.beforeAll(async ({ browser }) => {
     // Extend hook timeout to 3 minutes for cold DDC compilation
     test.setTimeout(180000);
+    // Create browser context with geolocation permissions pre-granted
+    const context = await browser.newContext({
+      permissions: ['geolocation'],
+      geolocation: { latitude: 32.0853, longitude: 34.7818 },
+    });
     // Create page and set console listeners
-    page = await browser.newPage();
+    page = await context.newPage();
     await page.setViewportSize({ width: 1280, height: 1200 });
     page.on('console', msg => console.log(`[Browser Console] ${msg.type()}: ${msg.text()}`));
     page.on('pageerror', err => console.log(`[Browser Page Error] ${err.stack || err.message}`));
@@ -133,16 +138,24 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await expect(directoryTab).toBeVisible();
     await directoryTab.click();
 
-    // Move mouse to center and scroll down using wheel to load third card semantics in Flutter Web
+    // Move mouse to center and scroll down repeatedly until the card is visible/attached
     await page.mouse.move(400, 300);
-    await page.mouse.wheel(0, 600);
-    await page.keyboard.press('PageDown');
-    await page.waitForTimeout(1000);
-
-    // Locate "חברות בפירוק" card and click "Open Visualizer"
     const card = page.locator('[aria-label*="חברות בפירוק"], [aria-label*="פירוק"]').first();
-    await expect(card).toBeVisible({ timeout: 15000 });
-    await card.scrollIntoViewIfNeeded();
+
+    let isCardVisible = false;
+    for (let i = 0; i < 20; i++) {
+      if (await card.isVisible()) {
+        isCardVisible = true;
+        break;
+      }
+      await page.mouse.wheel(0, 300);
+      await page.keyboard.press('PageDown');
+      await page.waitForTimeout(300);
+    }
+    await expect(card).toBeVisible({ timeout: 5000 });
+    // Scroll down a bit more to bring the bottom of the card (and its buttons) fully into the viewport
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(500);
 
     const openVisualizerBtn = card.getByText('Open Visualizer').first();
     await expect(openVisualizerBtn).toBeVisible();
@@ -190,16 +203,24 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     const directoryTab = page.getByRole('button', { name: 'Directory' }).first();
     await directoryTab.click();
 
-    // Move mouse to center and scroll down using wheel to load card semantics
+    // Move mouse to center and scroll down repeatedly until the card is visible/attached
     await page.mouse.move(400, 300);
-    await page.mouse.wheel(0, 600);
-    await page.keyboard.press('PageDown');
-    await page.waitForTimeout(1000);
-
-    // Open the liquidation visualizer again while offline
     const card = page.locator('[aria-label*="חברות בפירוק"], [aria-label*="פירוק"]').first();
-    await expect(card).toBeVisible({ timeout: 10000 });
-    await card.scrollIntoViewIfNeeded();
+
+    let isCardVisible = false;
+    for (let i = 0; i < 20; i++) {
+      if (await card.isVisible()) {
+        isCardVisible = true;
+        break;
+      }
+      await page.mouse.wheel(0, 300);
+      await page.keyboard.press('PageDown');
+      await page.waitForTimeout(300);
+    }
+    await expect(card).toBeVisible({ timeout: 5000 });
+    // Scroll down a bit more to bring the bottom of the card (and its buttons) fully into the viewport
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(500);
     await card.getByText('Open Visualizer').first().click();
 
     // Assert previously loaded cache items are retrieved and visible offline
@@ -405,5 +426,57 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
 
     // Verify drawer now shows the updated name
     await expect(page.getByText('AssafUpdated E2EUpdated').first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('E2E-TRV-01: Travel Warnings Directory & Detail Flow', async () => {
+    // Navigate to Directory tab in the bottom bar
+    const directoryTab = page.getByRole('button', { name: 'Directory' }).first();
+    await expect(directoryTab).toBeVisible();
+    await directoryTab.click();
+
+    // Scroll to "אזהרות מסע" card
+    await page.mouse.move(400, 300);
+    const card = page.locator('[aria-label*="אזהרות מסע"], [aria-label*="מסע"]').first();
+    
+    let isCardVisible = false;
+    for (let i = 0; i < 20; i++) {
+      if (await card.isVisible()) {
+        isCardVisible = true;
+        break;
+      }
+      await page.mouse.wheel(0, 300);
+      await page.keyboard.press('PageDown');
+      await page.waitForTimeout(300);
+    }
+    await expect(card).toBeVisible({ timeout: 10000 });
+    // Scroll down a bit more to bring the bottom of the card (and its buttons) fully into the viewport
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(500);
+
+    // Click Open Visualizer
+    const openVisualizerBtn = card.getByText('Open Visualizer').first();
+    await expect(openVisualizerBtn).toBeVisible();
+    await openVisualizerBtn.click();
+
+    // Assert we successfully navigate to Travel Warnings page
+    await expect(page.getByText('Travel Warnings')).toBeVisible({ timeout: 15000 });
+
+    // Wait for travel warning records to be visible
+    const warningItem = page.getByRole('button', { name: /אוגנדה|אוזבקיסטאן|אוסטריה|Uganda|Uzbekistan|Austria/ }).first();
+    await expect(warningItem).toBeVisible({ timeout: 15000 });
+
+    // Click the card to open detail drawer
+    await warningItem.click();
+
+    // Verify detail drawer is open
+    await expect(page.getByText('Travel Warning Details').first()).toBeVisible({ timeout: 10000 });
+
+    // Close the drawer by pressing Escape key
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // Click Back to return to Directory page
+    await page.getByRole('button', { name: 'Back' }).first().click();
+    await expect(page.getByText('Dataset Directory')).toBeVisible({ timeout: 10000 });
   });
 });

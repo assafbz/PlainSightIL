@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">58.51% </span>
+                <span class="strong">58.36% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>134/229</span>
+                <span class='fraction'>136/233</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">47.36% </span>
+                <span class="strong">42.85% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>9/19</span>
+                <span class='fraction'>9/21</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">58.84% </span>
+                <span class="strong">58.69% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>133/226</span>
+                <span class='fraction'>135/230</span>
             </div>
         
             
@@ -664,7 +664,24 @@
 <a name='L599'></a><a href='#L599'>599</a>
 <a name='L600'></a><a href='#L600'>600</a>
 <a name='L601'></a><a href='#L601'>601</a>
-<a name='L602'></a><a href='#L602'>602</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L602'></a><a href='#L602'>602</a>
+<a name='L603'></a><a href='#L603'>603</a>
+<a name='L604'></a><a href='#L604'>604</a>
+<a name='L605'></a><a href='#L605'>605</a>
+<a name='L606'></a><a href='#L606'>606</a>
+<a name='L607'></a><a href='#L607'>607</a>
+<a name='L608'></a><a href='#L608'>608</a>
+<a name='L609'></a><a href='#L609'>609</a>
+<a name='L610'></a><a href='#L610'>610</a>
+<a name='L611'></a><a href='#L611'>611</a>
+<a name='L612'></a><a href='#L612'>612</a>
+<a name='L613'></a><a href='#L613'>613</a>
+<a name='L614'></a><a href='#L614'>614</a>
+<a name='L615'></a><a href='#L615'>615</a>
+<a name='L616'></a><a href='#L616'>616</a>
+<a name='L617'></a><a href='#L617'>617</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -700,8 +717,13 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1137,7 +1159,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">36x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
@@ -1204,6 +1226,14 @@
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1279,6 +1309,8 @@ import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidat
 import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
 import { scrapeAndSyncBankAtms } from "./scrapers/bank_atms_scraper";
 import { scrapeAndSyncPatentClassifications } from "./scrapers/patent_classifications_scraper";
+import { scrapeAndSyncTravelWarnings } from "./scrapers/travel_warnings_scraper";
+import { scrapeAndSyncLocalMarketBonds } from "./scrapers/local_market_bonds_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 &nbsp;
@@ -1299,6 +1331,9 @@ const scraperRegistry: Record&lt;
     scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, opts),
   [DATASET_IDS.<span class="fstat-no" title="function not covered" >BANK_ATMS]: (d</span>b, <span class="cstat-no" title="statement not covered" >opts) =&gt; scrapeAndSyncBankAtms(db, DATASET_IDS.BANK_ATMS, opts),</span>
   [DATASET_IDS.<span class="fstat-no" title="function not covered" >PATENT_CLASSIFICATIONS]: (<span class="cstat-no" title="statement not covered" >d</span>b) =&gt; scrapeAndSyncPatentClassifications(db),</span>
+  [DATASET_IDS.<span class="fstat-no" title="function not covered" >TRAVEL_WARNINGS]: (d</span>b, <span class="cstat-no" title="statement not covered" >opts) =&gt;</span>
+    scrapeAndSyncTravelWarnings(db, DATASET_IDS.TRAVEL_WARNINGS, opts),
+  [DATASET_IDS.<span class="fstat-no" title="function not covered" >LOCAL_MARKET_BONDS]: (<span class="cstat-no" title="statement not covered" >d</span>b) =&gt; scrapeAndSyncLocalMarketBonds(db),</span>
 <span class="fstat-no" title="function not covered" >  datasets_metadata: (<span class="cstat-no" title="statement not covered" >d</span>b) =&gt; scrapeAndSyncDatasetMetadata(db),</span>
 };
 &nbsp;
@@ -1309,6 +1344,8 @@ const defaultIntervals: Record&lt;string, number&gt; = {
   [DATASET_IDS.DOCTORS_LICENSES]: 168, // Doctors Licenses (weekly)
   [DATASET_IDS.BANK_ATMS]: 168, // Bank ATMs (weekly)
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: 24, // Patent Classifications (daily)
+  [DATASET_IDS.TRAVEL_WARNINGS]: 24, // Travel Warnings (daily)
+  [DATASET_IDS.LOCAL_MARKET_BONDS]: 24, // Local Market Bonds (daily)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
 &nbsp;
@@ -1828,6 +1865,14 @@ export const manualSyncPatentClassifications = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .https.onRequest(createManualSyncHandler(DATASET_IDS.PATENT_CLASSIFICATIONS));
 &nbsp;
+export const manualSyncTravelWarnings = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.TRAVEL_WARNINGS));
+&nbsp;
+export const manualSyncLocalMarketBonds = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.LOCAL_MARKET_BONDS));
+&nbsp;
 /**
  * Cloud Function trigger running on user registration.
  * Creates an initial user profile in the users Firestore collection.
@@ -1873,7 +1918,7 @@ export { handleCors };
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-05T14:01:14.639Z
+                at 2026-06-05T14:33:18.046Z
             </div>
         <script src="../prettify.js"></script>
         <script>

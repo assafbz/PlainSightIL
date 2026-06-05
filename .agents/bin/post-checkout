@@ -36,7 +36,7 @@ fi
 # 2. Check if pubspec.yaml changed between branches
 if git diff --name-only "$PREV_HEX" "$NEW_HEX" | grep -q 'client/pubspec.yaml'; then
   echo "📦 Dependency change detected in 'client/pubspec.yaml'. Installing packages..."
-  (cd client && flutter pub get)
+  (cd client && unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX && flutter pub get)
 fi
 
 # 3. Check if package.json in backend/functions changed

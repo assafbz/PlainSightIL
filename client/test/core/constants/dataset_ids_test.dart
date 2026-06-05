@@ -34,10 +34,11 @@ void main() {
 
       // Verify the all getter list
       final allIds = DatasetIds.all;
-      expect(allIds.length, 8);
+      expect(allIds.length, 9);
       expect(allIds.contains(DatasetIds.carImporters), isTrue);
       expect(allIds.contains(DatasetIds.cellularAntennas), isTrue);
       expect(allIds.contains(DatasetIds.localMarketBonds), isTrue);
+      expect(allIds.contains(DatasetIds.travelWarnings), isTrue);
       expect(allIds.contains(DatasetIds.vehicleRecalls), isTrue);
     });
 

@@ -8,6 +8,7 @@ import 'package:plainsight/features/datasets/companies_liquidation/pages/compani
 import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
 import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
 import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
+import 'package:plainsight/features/datasets/travel_warnings/pages/travel_warnings_page.dart';
 import 'package:plainsight/features/datasets/vehicle_recalls/pages/vehicle_recalls_page.dart';
 import 'package:plainsight/features/datasets/car_importers/pages/car_importers_page.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/pages/local_market_bonds_page.dart';
@@ -151,6 +152,12 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         MaterialPageRoute<void>(
           builder: (context) =>
               PatentClassificationsScreen(appState: widget.appState),
+        ),
+      );
+    } else if (dataset.id == DatasetIds.travelWarnings) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => TravelWarningsScreen(appState: widget.appState),
         ),
       );
     } else if (dataset.id == DatasetIds.vehicleRecalls) {

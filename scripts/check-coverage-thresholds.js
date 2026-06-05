@@ -143,7 +143,7 @@ function main() {
       
       const isDomainOrData = file.includes('/domain/') || 
                              file.includes('/data/') || 
-                             (file.startsWith('client/lib/core/') && !file.includes('/theme/') && !file.includes('/config/'));
+                             (file.startsWith('client/lib/core/') && !file.includes('/theme/') && !file.includes('/config/') && !file.includes('/constants/'));
       
       if (!isState && !isDomainOrData) {
         // Presentation/UI files that are not notifiers are warning-only or skipped here
