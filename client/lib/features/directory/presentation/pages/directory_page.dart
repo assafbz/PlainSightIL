@@ -115,8 +115,12 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         dataset.id == DatasetIds.cellularPermits) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) =>
-              CellularAntennasScreen(appState: widget.appState),
+          builder: (context) => CellularAntennasScreen(
+            appState: widget.appState,
+            initialFilterIndex: dataset.id == DatasetIds.cellularPermits
+                ? 1
+                : 0,
+          ),
         ),
       );
     } else if (dataset.id == DatasetIds.companiesLiquidation) {
