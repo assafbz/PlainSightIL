@@ -122,8 +122,13 @@ emulatorsProc.stderr.on('data', (data) => {
 
 emulatorsProc.on('close', (code) => {
   console.log(`🔥 [CI-E2E] Emulators process closed with code ${code}`);
-  if (code !== 0 && code !== null) {
-    cleanup(code);
+  if (!playwrightProc) {
+    console.error('❌ [CI-E2E] Emulators closed unexpectedly before Playwright tests started/completed.');
+    cleanup(code || 1);
+  } else {
+    if (code !== 0 && code !== null) {
+      cleanup(code);
+    }
   }
 });
 

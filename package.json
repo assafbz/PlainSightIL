@@ -1,6 +1,6 @@
 {
   "name": "plainsightil-root",
-  "version": "1.0.42",
+  "version": "1.0.43",
   "description": "Root workspace management scripts for PlainSightIL",
   "private": true,
   "scripts": {
@@ -22,6 +22,6 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "firebase-tools": "^13.10.0"
+    "firebase-tools": "^15.19.1"
   }
 }
