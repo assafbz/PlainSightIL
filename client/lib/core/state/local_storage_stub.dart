@@ -30,6 +30,12 @@ abstract class LocalStorageImpl {
 
   /// Save the active branch name into local preferences.
   Future<void> saveLastSavedBranch(String branch);
+
+  /// Retrieve the saved locale code ('en' or 'he').
+  String getLocale();
+
+  /// Save the locale code ('en' or 'he').
+  Future<void> saveLocale(String locale);
 }
 
 /// Factory stub method to instantiate the platform-specific local storage implementation.
