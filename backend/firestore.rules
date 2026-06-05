@@ -40,6 +40,11 @@ service cloud.firestore {
       allow write: if false;
       allow list: if request.query.limit <= 100;
     }
+    match /2c33523f-87aa-44ec-a736-edbb0a82975e/{docId} {
+      allow read: if true;
+      allow write: if false;
+      allow list: if request.query.limit <= 100;
+    }
     match /39f455bf-6db0-4926-859d-017f34eacbcb/{docId} {
       allow read: if true;
       allow write: if false;

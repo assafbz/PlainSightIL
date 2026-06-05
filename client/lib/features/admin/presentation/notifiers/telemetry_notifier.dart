@@ -170,6 +170,12 @@ class TelemetryNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-03T10:00:00Z',
           'status': 'idle',
         },
+        DatasetIds.vehicleRecalls: {
+          'id': DatasetIds.vehicleRecalls,
+          'recordCount': 2,
+          'lastUpdated': '2026-06-04T12:00:00Z',
+          'status': 'idle',
+        },
         DatasetIds.carImporters: {
           'id': DatasetIds.carImporters,
           'recordCount': 99489,
@@ -497,6 +503,18 @@ class TelemetryNotifier extends ChangeNotifier {
           isSupported: true,
         ),
         DatasetMetadataModel(
+          id: DatasetIds.vehicleRecalls,
+          datasetId: DatasetIds.vehicleRecalls,
+          name: 'vehicle_recalls',
+          title: 'קריאות חוזרות לרכב',
+          notes: 'מאגר קריאות חוזרות (Recall) לבטיחות ותקינות רכבים בישראל.',
+          publisher: 'משרד התחבורה',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 4),
+          tags: const ['רכבים', 'בטיחות', 'קריאות חוזרות', 'Recall'],
+          isSupported: true,
+        ),
+        DatasetMetadataModel(
           id: DatasetIds.carImporters,
           datasetId: DatasetIds.carImporters,
           name: 'car_importers',
@@ -719,6 +737,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncMetadata';
       } else if (datasetId == DatasetIds.patentClassifications) {
         functionName = 'manualSyncPatentClassifications';
+      } else if (datasetId == DatasetIds.vehicleRecalls) {
+        functionName = 'manualSyncVehicleRecalls';
       } else if (datasetId == DatasetIds.carImporters) {
         functionName = 'manualSyncCarImporters';
       } else {

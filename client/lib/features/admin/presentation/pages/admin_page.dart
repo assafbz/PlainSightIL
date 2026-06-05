@@ -169,6 +169,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyHe': 'רשות הפטנטים',
       },
       {
+        'id': DatasetIds.vehicleRecalls,
+        'titleEn': 'Vehicle Recalls',
+        'titleHe': 'קריאות חוזרות (Recall) לרכב',
+        'resourceId': DatasetIds.vehicleRecalls,
+        'agencyEn': 'Ministry of Transport',
+        'agencyHe': 'משרד התחבורה והבטיחות בדרכים',
+      },
+      {
         'id': DatasetIds.localMarketBonds,
         'titleEn': 'Local Market Bonds',
         'titleHe': 'הנפקת אג"ח סחירות בשוק המקומי',

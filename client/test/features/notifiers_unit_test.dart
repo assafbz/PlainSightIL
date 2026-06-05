@@ -20,6 +20,7 @@ import 'package:plainsight/features/datasets/companies_liquidation/presentation/
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/vehicle_recalls/presentation/notifiers/vehicle_recalls_notifier.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import 'package:plainsight/features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
@@ -920,6 +921,8 @@ void main() {
     telemetryRequestsController;
     late StreamController<QuerySnapshot<Map<String, dynamic>>>
     bankAtmsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    vehicleRecallsController;
 
     setUp(() {
       AppStateNotifier.isTesting = false;
@@ -946,6 +949,8 @@ void main() {
       telemetryRequestsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
       bankAtmsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      vehicleRecallsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
 
       mockFirestore = FakeFirebaseFirestore((path) {
@@ -1000,6 +1005,10 @@ void main() {
           return FakeCollectionReference(stream: doctorsController.stream);
         } else if (path == '21fde05f-62e3-401b-81cf-5c385862026d') {
           return FakeCollectionReference(stream: bankAtmsController.stream);
+        } else if (path == '2c33523f-87aa-44ec-a736-edbb0a82975e') {
+          return FakeCollectionReference(
+            stream: vehicleRecallsController.stream,
+          );
         }
         // Permit collection fallback
         return FakeCollectionReference(stream: permitsController.stream);
@@ -1020,6 +1029,7 @@ void main() {
       telemetryDirectoryController.close();
       telemetryRequestsController.close();
       bankAtmsController.close();
+      vehicleRecallsController.close();
     });
 
     test(
@@ -1162,6 +1172,68 @@ void main() {
         final notifier = LiquidationNotifier(isTesting: false);
         notifier.initLiquidationListener();
         expect(notifier.isLoadingLiquidation, isFalse);
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'VehicleRecallsNotifier handles real Firestore stream and error path',
+      () async {
+        final notifier = VehicleRecallsNotifier(testFirestore: mockFirestore);
+        notifier.initRecallsListener();
+
+        vehicleRecallsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('rec1', {
+              'recallId': 54321,
+              'recallYear': 2026,
+              'manufacturerName': 'Honda',
+              'modelName': 'Civic',
+              'recallType': 'Safety',
+              'defectDescription': 'Airbag issue',
+              'defectCategory': 'Airbags',
+              'buildStartDate': '2025-01-01',
+              'buildEndDate': '2025-12-31',
+              'lastUpdated': '2026-06-01T00:00:00Z',
+              'createdAt': '2026-06-01T00:00:00Z',
+              'scrapedAt': '2026-06-01T00:00:00Z',
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingRecalls, isFalse);
+        expect(notifier.recallRecords.first.recallId, 54321);
+
+        vehicleRecallsController.addError('Vehicle Recalls Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingRecalls, isFalse);
+
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'VehicleRecallsNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = VehicleRecallsNotifier();
+        notifier.initRecallsListener();
+        expect(notifier.isLoadingRecalls, isFalse);
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'VehicleRecallsNotifier handles Firestore snapshots exception',
+      () async {
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Collection snapshots exception');
+        });
+        final notifier = VehicleRecallsNotifier(
+          testFirestore: mockFirestoreThrow,
+        );
+        notifier.initRecallsListener();
+        expect(notifier.isLoadingRecalls, isFalse);
         notifier.dispose();
       },
     );

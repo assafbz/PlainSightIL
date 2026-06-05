@@ -17,6 +17,9 @@ class DatasetIds {
   static const String patentClassifications =
       'b2c59e21-c345-4b02-b071-2890a3d431d6';
 
+  /// Vehicle Recalls dataset ID.
+  static const String vehicleRecalls = '2c33523f-87aa-44ec-a736-edbb0a82975e';
+
   /// Car Importers and New Car Price Lists dataset ID.
   static const String carImporters = '39f455bf-6db0-4926-859d-017f34eacbcb';
 
@@ -30,6 +33,7 @@ class DatasetIds {
     companiesLiquidation,
     doctorsLicenses,
     patentClassifications,
+    vehicleRecalls,
     carImporters,
     localMarketBonds,
   ];
