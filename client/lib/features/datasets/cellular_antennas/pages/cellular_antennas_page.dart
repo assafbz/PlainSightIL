@@ -13,8 +13,13 @@ import '../widgets/map_controls_overlay.dart';
 
 class CellularAntennasScreen extends StatefulWidget {
   final AppStateNotifier appState;
+  final int initialFilterIndex;
 
-  const CellularAntennasScreen({super.key, required this.appState});
+  const CellularAntennasScreen({
+    super.key,
+    required this.appState,
+    this.initialFilterIndex = 0,
+  });
 
   @override
   State<CellularAntennasScreen> createState() => _CellularAntennasScreenState();
@@ -22,8 +27,8 @@ class CellularAntennasScreen extends StatefulWidget {
 
 class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     with TickerProviderStateMixin {
-  int _selectedFilterIndex =
-      0; // 0: Active Towers (Default), 1: Construction Permits
+  late int
+  _selectedFilterIndex; // 0: Active Towers (Default), 1: Construction Permits
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _radarController;
@@ -40,6 +45,7 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
   @override
   void initState() {
     super.initState();
+    _selectedFilterIndex = widget.initialFilterIndex;
     _radarController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -47,7 +53,11 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     if (!AppStateNotifier.isTesting) {
       _radarController.repeat();
     }
-    widget.appState.addRecent(DatasetIds.cellularAntennas);
+    widget.appState.addRecent(
+      widget.initialFilterIndex == 1
+          ? DatasetIds.cellularPermits
+          : DatasetIds.cellularAntennas,
+    );
     widget.appState.initAntennaListener();
     widget.appState.initPermitMetadataListener();
   }
@@ -359,14 +369,16 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
           ListenableBuilder(
             listenable: appState,
             builder: (context, _) {
-              final isFav = appState.isFavorite(DatasetIds.cellularAntennas);
+              final currentDatasetId = _selectedFilterIndex == 1
+                  ? DatasetIds.cellularPermits
+                  : DatasetIds.cellularAntennas;
+              final isFav = appState.isFavorite(currentDatasetId);
               return IconButton(
                 icon: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border,
                   color: isFav ? AppColors.danger : AppColors.textSecondary,
                 ),
-                onPressed: () =>
-                    appState.toggleFavorite(DatasetIds.cellularAntennas),
+                onPressed: () => appState.toggleFavorite(currentDatasetId),
               );
             },
           ),
@@ -622,6 +634,11 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
               _selectedFilterIndex = index;
               _selectedRecordId = null; // Clear selection when filter changes
             });
+            widget.appState.addRecent(
+              index == 1
+                  ? DatasetIds.cellularPermits
+                  : DatasetIds.cellularAntennas,
+            );
           },
           borderRadius: BorderRadius.circular(15),
           child: Container(
