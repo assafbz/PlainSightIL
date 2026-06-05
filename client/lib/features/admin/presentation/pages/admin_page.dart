@@ -174,6 +174,46 @@ class _AdminPageState extends State<AdminPage> {
       listenable: widget.appState,
       builder: (context, _) {
         final metadataMap = widget.appState.datasetMetadataMap;
+
+        // Primary directory spec
+        final Map<String, String> directorySpec = {
+          'id': 'datasets_metadata',
+          'titleEn': 'Dataset Directory',
+          'titleHe': 'מדריך מאגרי מידע',
+          'resourceId': 'datasets_metadata',
+          'agencyEn': 'Government Open Data Portal',
+          'agencyHe': 'פורטל הנתונים הממשלתי',
+        };
+
+        // Enrich directory dataset
+        final dirLiveData = metadataMap[directorySpec['id']] ?? {};
+        final dirStatus = (dirLiveData['status'] as String? ?? 'idle').toLowerCase();
+        final dirRecordCount = dirLiveData['recordCount'] as num? ?? 0;
+        final dirLastUpdated = dirLiveData['lastUpdated'] as String? ?? '';
+
+        final Map<String, dynamic> enrichedDirectory = {
+          ...directorySpec,
+          'status': dirStatus,
+          'recordCount': dirRecordCount.toInt(),
+          'lastUpdated': dirLastUpdated,
+          'liveData': dirLiveData,
+        };
+
+        // Filter directory dataset
+        final bool showDirectory = () {
+          final title = (widget.appState.locale == 'he'
+                  ? enrichedDirectory['titleHe']
+                  : enrichedDirectory['titleEn'])
+              .toString()
+              .toLowerCase();
+          final resourceId = enrichedDirectory['resourceId'].toString().toLowerCase();
+          final query = _searchQuery.toLowerCase();
+
+          final matchesSearch = title.contains(query) || resourceId.contains(query);
+          final matchesStatus = _statusFilter == 'all' || enrichedDirectory['status'] == _statusFilter;
+
+          return matchesSearch && matchesStatus;
+        }();
         final isLoading = widget.appState.isLoadingAdminMetadata;
 
         // Map over data spec and merge live status from appState
@@ -260,7 +300,7 @@ class _AdminPageState extends State<AdminPage> {
                                       ? const Center(
                                           child: CircularProgressIndicator(),
                                         )
-                                      : filteredDatasets.isEmpty
+                                      : (!showDirectory && filteredDatasets.isEmpty)
                                       ? Center(
                                           child: Text(
                                             widget.appState.translate(
@@ -272,22 +312,47 @@ class _AdminPageState extends State<AdminPage> {
                                             ),
                                           ),
                                         )
-                                      : ListView.builder(
+                                      : ListView(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 16.0,
                                             vertical: 8.0,
                                           ),
-                                          physics:
-                                              const BouncingScrollPhysics(),
-                                          itemCount: filteredDatasets.length,
-                                          itemBuilder: (context, index) {
-                                            final dataset =
-                                                filteredDatasets[index];
-                                            return _buildDatasetCard(
-                                              context,
-                                              dataset,
-                                            );
-                                          },
+                                          physics: const BouncingScrollPhysics(),
+                                          children: [
+                                            if (showDirectory) ...[
+                                              // Section Header for Primary Directory
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
+                                                child: Text(
+                                                  widget.appState.locale == 'he'
+                                                      ? 'מדריך מאגרים ראשי'
+                                                      : 'Primary Dataset Directory',
+                                                  style: AppTypography.bodySm(
+                                                    context,
+                                                    color: AppColors.primary,
+                                                  ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                                ),
+                                              ),
+                                              _buildDatasetCard(context, enrichedDirectory),
+                                              const SizedBox(height: 24),
+                                            ],
+                                            if (filteredDatasets.isNotEmpty) ...[
+                                              // Section Header for Supported Datasets
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 12.0),
+                                                child: Text(
+                                                  widget.appState.locale == 'he'
+                                                      ? 'מאגרי מידע נתמכים'
+                                                      : 'Supported Datasets',
+                                                  style: AppTypography.bodySm(
+                                                    context,
+                                                    color: AppColors.secondary,
+                                                  ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                                ),
+                                              ),
+                                              ...filteredDatasets.map((dataset) => _buildDatasetCard(context, dataset)),
+                                            ],
+                                          ],
                                         ),
                                 ),
                               ],

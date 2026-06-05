@@ -740,6 +740,7 @@ void main() {
     test('HTTP calls triggerApiHealthCheck and triggerManualSync', () async {
       var pingCalled = false;
       var syncCalled = false;
+      var metadataSyncCalled = false;
 
       final httpClient = FakeHttpClient(
         onGet: (url, {headers}) {
@@ -754,6 +755,12 @@ void main() {
             syncCalled = true;
             return http.Response(
               '{"message":"Synced successfully", "count": 150}',
+              200,
+            );
+          } else if (url.path.contains('manualSyncMetadata')) {
+            metadataSyncCalled = true;
+            return http.Response(
+              '{"message":"Metadata synced successfully", "count": 1245}',
               200,
             );
           }
@@ -790,6 +797,14 @@ void main() {
       expect(syncCalled, isTrue);
       expect(syncResult['success'], isTrue);
       expect(syncResult['count'], 150);
+
+      // Test manual sync for datasets_metadata
+      final metadataSyncResult = await notifier.triggerManualSync(
+        'datasets_metadata',
+      );
+      expect(metadataSyncCalled, isTrue);
+      expect(metadataSyncResult['success'], isTrue);
+      expect(metadataSyncResult['count'], 1245);
 
       // Test manual sync with unknown/failure cases
       final failSyncResult = await notifier.triggerManualSync(

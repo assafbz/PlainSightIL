@@ -170,6 +170,17 @@ class TelemetryNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-03T10:00:00Z',
           'status': 'idle',
         },
+        'datasets_metadata': {
+          'id': 'datasets_metadata',
+          'recordCount': 1245,
+          'lastUpdated': '2026-06-03T10:00:00Z',
+          'status': 'idle',
+          'scheduler': {
+            'enabled': true,
+            'updateIntervalHours': 168,
+            'nextRun': '2026-06-10T10:00:00Z',
+          },
+        },
       };
       _isLoadingAdminMetadata = false;
       notifyListeners();
@@ -686,6 +697,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncDoctorsLicenses';
       } else if (datasetId == '21fde05f-62e3-401b-81cf-5c385862026d') {
         functionName = 'manualSyncBankAtms';
+      } else if (datasetId == 'datasets_metadata') {
+        functionName = 'manualSyncMetadata';
       } else if (datasetId == DatasetIds.patentClassifications) {
         functionName = 'manualSyncPatentClassifications';
       } else {
