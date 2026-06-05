@@ -16,4 +16,7 @@ class DatasetIds {
   /// Patent Applications CPC Classifications dataset ID.
   static const String patentClassifications =
       'b2c59e21-c345-4b02-b071-2890a3d431d6';
+
+  /// Local Market Bonds dataset ID.
+  static const String localMarketBonds = 'c92fdda2-0939-4110-8ebc-edfcf35e8723';
 }
