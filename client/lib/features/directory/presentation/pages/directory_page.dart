@@ -9,6 +9,8 @@ import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_lice
 import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
 import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
 import 'package:plainsight/features/datasets/vehicle_recalls/pages/vehicle_recalls_page.dart';
+import 'package:plainsight/features/datasets/car_importers/pages/car_importers_page.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/pages/local_market_bonds_page.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
@@ -116,8 +118,12 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
         dataset.id == DatasetIds.cellularPermits) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) =>
-              CellularAntennasScreen(appState: widget.appState),
+          builder: (context) => CellularAntennasScreen(
+            appState: widget.appState,
+            initialFilterIndex: dataset.id == DatasetIds.cellularPermits
+                ? 1
+                : 0,
+          ),
         ),
       );
     } else if (dataset.id == DatasetIds.companiesLiquidation) {
@@ -151,6 +157,19 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => VehicleRecallsScreen(appState: widget.appState),
+        ),
+      );
+    } else if (dataset.id == DatasetIds.carImporters) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => CarImportersScreen(appState: widget.appState),
+        ),
+      );
+    } else if (dataset.id == DatasetIds.localMarketBonds) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) =>
+              LocalMarketBondsScreen(appState: widget.appState),
         ),
       );
     }

@@ -83,6 +83,9 @@ vi.mock("../src/scrapers/bank_atms_scraper", () => ({
 vi.mock("../src/scrapers/patent_classifications_scraper", () => ({
   scrapeAndSyncPatentClassifications: vi.fn().mockResolvedValue({ count: 15 }),
 }));
+vi.mock("../src/scrapers/car_importers_scraper", () => ({
+  scrapeAndSyncCarImporters: vi.fn().mockResolvedValue({ count: 50 }),
+}));
 
 // 4. Mock telemetry and scheduler utility functions
 vi.mock("../src/utils/telemetry", () => ({
@@ -104,7 +107,12 @@ vi.mock("firebase-admin", () => ({
 }));
 
 // 6. Now import functions under test
-import { manualSyncAntennas, manualSyncMetadata, manualSyncDoctorsLicenses } from "../src/index";
+import {
+  manualSyncAntennas,
+  manualSyncMetadata,
+  manualSyncDoctorsLicenses,
+  manualSyncCarImporters,
+} from "../src/index";
 
 describe("Manual Sync Cloud Functions Factory", () => {
   let req: any;
@@ -147,7 +155,10 @@ describe("Manual Sync Cloud Functions Factory", () => {
 
     await manualSyncAntennas(req, res);
 
-    expect(mockDbSet).toHaveBeenCalledWith({ status: "syncing" }, { merge: true });
+    expect(mockDbSet).toHaveBeenCalledWith(
+      { status: "syncing", syncStartedAt: expect.any(String) },
+      { merge: true },
+    );
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
@@ -197,7 +208,10 @@ describe("Manual Sync Cloud Functions Factory", () => {
 
     await manualSyncAntennas(req, res);
 
-    expect(mockDbSet).toHaveBeenCalledWith({ status: "syncing" }, { merge: true });
+    expect(mockDbSet).toHaveBeenCalledWith(
+      { status: "syncing", syncStartedAt: expect.any(String) },
+      { merge: true },
+    );
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
@@ -217,6 +231,21 @@ describe("Manual Sync Cloud Functions Factory", () => {
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
       count: 10,
+    });
+  });
+
+  it("should support manualSyncCarImporters trigger", async () => {
+    mockDbGet.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ role: "admin" }),
+    });
+
+    await manualSyncCarImporters(req, res);
+
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      message: "Sync completed successfully",
+      count: 50,
     });
   });
 

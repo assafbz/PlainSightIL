@@ -125,6 +125,7 @@ void main() {
       expect(appState.translate('profile_settings_title'), 'Profile Settings');
       expect(appState.translate('save_profile'), 'Save Profile');
       expect(appState.translate('first_name'), 'First Name');
+      expect(appState.translate('car_importers_title'), 'Car Price Lists');
 
       // Change locale to Hebrew and check translation
       appState.setLocale('he');
@@ -136,6 +137,7 @@ void main() {
       expect(appState.translate('profile_settings_title'), 'הגדרות פרופיל');
       expect(appState.translate('save_profile'), 'שמור פרופיל');
       expect(appState.translate('first_name'), 'שם פרטי');
+      expect(appState.translate('car_importers_title'), 'מחירוני רכב חדש');
     });
 
     test('translate returns the key itself if no translation is found', () {
@@ -276,6 +278,16 @@ void main() {
       appState.initBankAtmsListener();
       appState.cancelBankAtmsListener();
 
+      appState.initCarImportersListener();
+      expect(appState.carImporterRecords.isNotEmpty, isTrue);
+      appState.cancelCarImportersListener();
+      expect(appState.carImporterRecords, isEmpty);
+
+      expect(appState.bondRecords, isEmpty);
+      expect(appState.isLoadingBonds, isFalse);
+      appState.initBondsListener();
+      appState.cancelBondsListener();
+
       appState.initPermitMetadataListener();
       expect(appState.isLoadingAntennas, isFalse);
       expect(appState.isLoadingPermits, isFalse);
@@ -286,17 +298,24 @@ void main() {
       appState.initDoctorsListener();
       appState.initTelemetryListeners();
       appState.initBankAtmsListener();
+      appState.initBondsListener();
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(appState.isLoadingAdminMetadata, isFalse);
       expect(appState.isLoadingTelemetry, isFalse);
       expect(appState.isLoadingDirectory, isFalse);
       expect(appState.isLoadingAtms, isFalse);
+      expect(appState.isLoadingCarImporters, isFalse);
+      expect(appState.isLoadingBonds, isFalse);
 
       expect(appState.antennaRecords.isNotEmpty, isTrue);
       expect(appState.permitRecords.isNotEmpty, isTrue);
       expect(appState.liquidationRecords.isNotEmpty, isTrue);
       expect(appState.doctorRecords.isNotEmpty, isTrue);
       expect(appState.atmRecords.isNotEmpty, isTrue);
+      expect(appState.carImporterRecords.isNotEmpty, isTrue);
+      expect(appState.bondRecords.isNotEmpty, isTrue);
       expect(appState.datasetMetadataMap.isNotEmpty, isTrue);
       expect(appState.apiHealth.isNotEmpty, isTrue);
       expect(appState.scraperRuns.isNotEmpty, isTrue);
@@ -306,6 +325,10 @@ void main() {
       appState.cancelBankAtmsListener();
       expect(appState.atmRecords, isEmpty);
       expect(appState.isLoadingAtms, isTrue);
+
+      appState.cancelBondsListener();
+      expect(appState.bondRecords, isEmpty);
+      expect(appState.isLoadingBonds, isFalse);
 
       // Verify app version is populated
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -431,6 +454,46 @@ void main() {
       expect(appState.patentRecords, isEmpty);
       expect(appState.isLoadingPatents, isFalse);
       expect(appState.hasMorePatents, isTrue);
+
+      appState.dispose();
+    });
+
+    test('local market bonds delegation works correctly', () async {
+      AppStateNotifier.isTesting = true;
+      final appState = AppStateNotifier();
+
+      // Verify initial state via delegated getters
+      expect(appState.bondRecords, isEmpty);
+      expect(appState.isLoadingBonds, isFalse);
+      expect(appState.isLoadingMoreBonds, isFalse);
+      expect(appState.hasMoreBonds, isTrue);
+
+      // Initialize and verify data loads
+      appState.initBondsListener();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(appState.bondRecords.isNotEmpty, isTrue);
+      expect(appState.isLoadingBonds, isFalse);
+
+      // Test search query delegation
+      appState.setBondsSearchQuery('122');
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Test filter delegation
+      appState.setBondsFilter('Government');
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Test reset filters delegation
+      appState.resetBondsFilters();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Test fetchNextPage delegation
+      await appState.fetchNextBondsPage();
+
+      // Test cancel listener delegation
+      appState.cancelBondsListener();
+      expect(appState.bondRecords, isEmpty);
+      expect(appState.isLoadingBonds, isFalse);
+      expect(appState.hasMoreBonds, isTrue);
 
       appState.dispose();
     });

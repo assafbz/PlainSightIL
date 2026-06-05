@@ -19,4 +19,22 @@ class DatasetIds {
 
   /// Vehicle Recalls dataset ID.
   static const String vehicleRecalls = '2c33523f-87aa-44ec-a736-edbb0a82975e';
+
+  /// Car Importers and New Car Price Lists dataset ID.
+  static const String carImporters = '39f455bf-6db0-4926-859d-017f34eacbcb';
+
+  /// Local Market Bonds dataset ID.
+  static const String localMarketBonds = 'c92fdda2-0939-4110-8ebc-edfcf35e8723';
+
+  /// Returns a list of all registered dataset GUIDs.
+  static List<String> get all => [
+    cellularAntennas,
+    cellularPermits,
+    companiesLiquidation,
+    doctorsLicenses,
+    patentClassifications,
+    vehicleRecalls,
+    carImporters,
+    localMarketBonds,
+  ];
 }

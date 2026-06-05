@@ -13,6 +13,8 @@ import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scrape
 import { scrapeAndSyncBankAtms } from "./scrapers/bank_atms_scraper";
 import { scrapeAndSyncPatentClassifications } from "./scrapers/patent_classifications_scraper";
 import { scrapeAndSyncVehicleRecalls } from "./scrapers/vehicle_recalls_scraper";
+import { scrapeAndSyncCarImporters } from "./scrapers/car_importers_scraper";
+import { scrapeAndSyncLocalMarketBonds } from "./scrapers/local_market_bonds_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 
@@ -35,6 +37,9 @@ const scraperRegistry: Record<
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) => scrapeAndSyncPatentClassifications(db),
   [DATASET_IDS.VEHICLE_RECALLS]: (db, opts) =>
     scrapeAndSyncVehicleRecalls(db, DATASET_IDS.VEHICLE_RECALLS, opts),
+  [DATASET_IDS.CAR_IMPORTERS]: (db, opts) =>
+    scrapeAndSyncCarImporters(db, DATASET_IDS.CAR_IMPORTERS, opts),
+  [DATASET_IDS.LOCAL_MARKET_BONDS]: (db) => scrapeAndSyncLocalMarketBonds(db),
   datasets_metadata: (db) => scrapeAndSyncDatasetMetadata(db),
 };
 
@@ -46,6 +51,8 @@ const defaultIntervals: Record<string, number> = {
   [DATASET_IDS.BANK_ATMS]: 168, // Bank ATMs (weekly)
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: 24, // Patent Classifications (daily)
   [DATASET_IDS.VEHICLE_RECALLS]: 168, // Vehicle Recalls (weekly)
+  [DATASET_IDS.CAR_IMPORTERS]: 168, // Car Importers (weekly)
+  [DATASET_IDS.LOCAL_MARKET_BONDS]: 24, // Local Market Bonds (daily)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
 
@@ -259,11 +266,37 @@ export const scheduledScraperTicker = functions
         const datasetId = doc.id;
         const nextRun = data.scheduler?.nextRun;
 
+        // Check if stuck in syncing state (syncStartedAt older than 1 hour)
+        if (data.status === "syncing") {
+          const syncStartedAt = data.syncStartedAt || data.lastUpdated;
+          if (syncStartedAt) {
+            const startTime = new Date(syncStartedAt).getTime();
+            const elapsedMs = Date.now() - startTime;
+            const STUCK_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+            if (elapsedMs > STUCK_THRESHOLD_MS) {
+              logger.warn(
+                `Dataset ${datasetId} has been stuck in syncing for ${Math.round(elapsedMs / 60000)} minutes. Resetting to error.`,
+              );
+              // Telemetry tracker log failure
+              const tracker = ScraperTelemetryTracker.start(datasetId);
+              (tracker as any).startTime = new Date(syncStartedAt);
+              await tracker.fail(db, new Error("Sync timed out / stuck in syncing state"));
+
+              // Reset status using updateSchedulerOnComplete
+              await updateSchedulerOnComplete(db, datasetId, "error");
+              continue;
+            }
+          }
+        }
+
         if (nextRun && nextRun <= now && data.status !== "syncing") {
           logger.info(`Dataset ${datasetId} is due. Triggering sync.`);
 
           // Update status to syncing in Firestore immediately
-          await doc.ref.set({ status: "syncing" }, { merge: true });
+          await doc.ref.set(
+            { status: "syncing", syncStartedAt: new Date().toISOString() },
+            { merge: true },
+          );
 
           // Publish event to Pub/Sub topic
           const dataBuffer = Buffer.from(JSON.stringify({ datasetId }));
@@ -279,7 +312,7 @@ export const scheduledScraperTicker = functions
  * Pub/Sub topic-triggered Cloud Function that executes the actual scraping.
  */
 export const runScraperPubSub = functions
-  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .pubsub.topic("run-scraper-topic")
   .onPublish(async (message) => {
     let datasetId: string;
@@ -314,7 +347,7 @@ export const runScraperPubSub = functions
       await db
         .collection("dataset_metadata")
         .doc(datasetId)
-        .set({ status: "syncing" }, { merge: true });
+        .set({ status: "syncing", syncStartedAt: new Date().toISOString() }, { merge: true });
 
       const result = await scraper(db, { forceFullSync: true });
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
@@ -472,7 +505,7 @@ function createManualSyncHandler(
       await db
         .collection("dataset_metadata")
         .doc(datasetId)
-        .set({ status: "syncing" }, { merge: true });
+        .set({ status: "syncing", syncStartedAt: new Date().toISOString() }, { merge: true });
 
       const scraper = scraperRegistry[datasetId];
       if (!scraper) {
@@ -542,6 +575,16 @@ export const manualSyncPatentClassifications = functions
 export const manualSyncVehicleRecalls = functions
   .runWith({ serviceAccount: SERVICE_ACCOUNT })
   .https.onRequest(createManualSyncHandler(DATASET_IDS.VEHICLE_RECALLS));
+
+export const manualSyncCarImporters = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(
+    createManualSyncHandler(DATASET_IDS.CAR_IMPORTERS, { enableSeederBypass: true }),
+  );
+
+export const manualSyncLocalMarketBonds = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.LOCAL_MARKET_BONDS));
 
 /**
  * Cloud Function trigger running on user registration.

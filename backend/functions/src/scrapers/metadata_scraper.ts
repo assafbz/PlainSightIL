@@ -37,6 +37,8 @@ const SUPPORTED_DATASET_IDS = new Set<string>([
   DATASET_IDS.COMPANIES_LIQUIDATION, // Companies in Liquidation
   DATASET_IDS.DOCTORS_LICENSES, // Doctors Licenses
   DATASET_IDS.PATENT_CLASSIFICATIONS, // Patent Applications CPC Classifications
+  DATASET_IDS.CAR_IMPORTERS, // Car Importers
+  DATASET_IDS.LOCAL_MARKET_BONDS, // Local Market Bonds
   "21fde05f-62e3-401b-81cf-5c385862026d", // Bank ATMs
 ]);
 
@@ -138,8 +140,24 @@ export async function scrapeAndSyncDatasetMetadata(
 
       await batch.commit();
     }
-
     logger.info(`Successfully synced ${processedCount} dataset metadata records.`);
+
+    // Retrieve total count of documents in the collection
+    const countSnapshot = await targetRef.count().get();
+    const totalRecords = countSnapshot.data().count;
+
+    const metadataRef = db.collection("dataset_metadata").doc(collectionName);
+    await metadataRef.set(
+      {
+        id: collectionName,
+        activeCollection: collectionName,
+        lastUpdated: now,
+        recordCount: totalRecords,
+        status: "idle",
+      },
+      { merge: true },
+    );
+
     return { success: true, count: processedCount };
   } catch (error) {
     logger.error("Dataset metadata sync failed:", error);
