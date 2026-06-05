@@ -187,7 +187,8 @@ class _AdminPageState extends State<AdminPage> {
 
         // Enrich directory dataset
         final dirLiveData = metadataMap[directorySpec['id']] ?? {};
-        final dirStatus = (dirLiveData['status'] as String? ?? 'idle').toLowerCase();
+        final dirStatus = (dirLiveData['status'] as String? ?? 'idle')
+            .toLowerCase();
         final dirRecordCount = dirLiveData['recordCount'] as num? ?? 0;
         final dirLastUpdated = dirLiveData['lastUpdated'] as String? ?? '';
 
@@ -201,16 +202,22 @@ class _AdminPageState extends State<AdminPage> {
 
         // Filter directory dataset
         final bool showDirectory = () {
-          final title = (widget.appState.locale == 'he'
-                  ? enrichedDirectory['titleHe']
-                  : enrichedDirectory['titleEn'])
+          final title =
+              (widget.appState.locale == 'he'
+                      ? enrichedDirectory['titleHe']
+                      : enrichedDirectory['titleEn'])
+                  .toString()
+                  .toLowerCase();
+          final resourceId = enrichedDirectory['resourceId']
               .toString()
               .toLowerCase();
-          final resourceId = enrichedDirectory['resourceId'].toString().toLowerCase();
           final query = _searchQuery.toLowerCase();
 
-          final matchesSearch = title.contains(query) || resourceId.contains(query);
-          final matchesStatus = _statusFilter == 'all' || enrichedDirectory['status'] == _statusFilter;
+          final matchesSearch =
+              title.contains(query) || resourceId.contains(query);
+          final matchesStatus =
+              _statusFilter == 'all' ||
+              enrichedDirectory['status'] == _statusFilter;
 
           return matchesSearch && matchesStatus;
         }();
@@ -300,7 +307,8 @@ class _AdminPageState extends State<AdminPage> {
                                       ? const Center(
                                           child: CircularProgressIndicator(),
                                         )
-                                      : (!showDirectory && filteredDatasets.isEmpty)
+                                      : (!showDirectory &&
+                                            filteredDatasets.isEmpty)
                                       ? Center(
                                           child: Text(
                                             widget.appState.translate(
@@ -317,40 +325,67 @@ class _AdminPageState extends State<AdminPage> {
                                             horizontal: 16.0,
                                             vertical: 8.0,
                                           ),
-                                          physics: const BouncingScrollPhysics(),
+                                          physics:
+                                              const BouncingScrollPhysics(),
                                           children: [
                                             if (showDirectory) ...[
                                               // Section Header for Primary Directory
                                               Padding(
-                                                padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 12.0,
+                                                  top: 4.0,
+                                                ),
                                                 child: Text(
                                                   widget.appState.locale == 'he'
                                                       ? 'מדריך מאגרים ראשי'
                                                       : 'Primary Dataset Directory',
-                                                  style: AppTypography.bodySm(
-                                                    context,
-                                                    color: AppColors.primary,
-                                                  ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                                  style:
+                                                      AppTypography.bodySm(
+                                                        context,
+                                                        color:
+                                                            AppColors.primary,
+                                                      ).copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 0.5,
+                                                      ),
                                                 ),
                                               ),
-                                              _buildDatasetCard(context, enrichedDirectory),
+                                              _buildDatasetCard(
+                                                context,
+                                                enrichedDirectory,
+                                              ),
                                               const SizedBox(height: 24),
                                             ],
-                                            if (filteredDatasets.isNotEmpty) ...[
+                                            if (filteredDatasets
+                                                .isNotEmpty) ...[
                                               // Section Header for Supported Datasets
                                               Padding(
-                                                padding: const EdgeInsets.only(bottom: 12.0),
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 12.0,
+                                                ),
                                                 child: Text(
                                                   widget.appState.locale == 'he'
                                                       ? 'מאגרי מידע נתמכים'
                                                       : 'Supported Datasets',
-                                                  style: AppTypography.bodySm(
-                                                    context,
-                                                    color: AppColors.secondary,
-                                                  ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                                  style:
+                                                      AppTypography.bodySm(
+                                                        context,
+                                                        color:
+                                                            AppColors.secondary,
+                                                      ).copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 0.5,
+                                                      ),
                                                 ),
                                               ),
-                                              ...filteredDatasets.map((dataset) => _buildDatasetCard(context, dataset)),
+                                              ...filteredDatasets.map(
+                                                (dataset) => _buildDatasetCard(
+                                                  context,
+                                                  dataset,
+                                                ),
+                                              ),
                                             ],
                                           ],
                                         ),
