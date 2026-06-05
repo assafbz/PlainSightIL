@@ -183,6 +183,10 @@ When changes affect custom drawing on canvas widgets (e.g. `CustomPainter`):
 - Validate that views maintain a smooth frame rate (no dropped frames, target 60/120fps) when scrolling or panning map screens.
 - Verify that Time to Interactive (TTI) is under **1.5 seconds** when running against compiled static builds.
 
+### 4.8 Asynchronous Test Timer Resolution
+- When writing widget or unit tests that verify asynchronous behavior (such as mock database queries with simulation delays, or lazy-loading pagination notifiers), ensure tests use fake async clocks or advance timers explicitly.
+- In widget tests, use `await tester.pump(const Duration(milliseconds: 100))` (or another appropriate duration) to let asynchronous futures settle and avoid assertions executing on stale/loading states.
+
 ---
 
 ## 5. Workflow Instructions
