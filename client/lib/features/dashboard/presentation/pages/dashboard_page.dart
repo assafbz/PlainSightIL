@@ -7,6 +7,7 @@ import 'package:plainsight/features/datasets/companies_liquidation/pages/compani
 import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
 import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
 import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
+import 'package:plainsight/features/datasets/vehicle_recalls/pages/vehicle_recalls_page.dart';
 import 'package:plainsight/features/datasets/car_importers/pages/car_importers_page.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
@@ -31,6 +32,8 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('atm_title');
     } else if (item.id == DatasetIds.patentClassifications) {
       return appState.translate('patent_classifications_title');
+    } else if (item.id == DatasetIds.vehicleRecalls) {
+      return appState.translate('recalls_title');
     } else if (item.id == DatasetIds.carImporters) {
       return appState.translate('car_importers_title');
     }
@@ -53,6 +56,8 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('atm_desc');
     } else if (item.id == DatasetIds.patentClassifications) {
       return appState.translate('patent_classifications_desc');
+    } else if (item.id == DatasetIds.vehicleRecalls) {
+      return appState.translate('recalls_desc');
     } else if (item.id == DatasetIds.carImporters) {
       return appState.translate('car_importers_desc');
     }
@@ -91,6 +96,12 @@ class DashboardScreen extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => PatentClassificationsScreen(appState: appState),
+        ),
+      );
+    } else if (id == DatasetIds.vehicleRecalls) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => VehicleRecallsScreen(appState: appState),
         ),
       );
     } else if (id == DatasetIds.carImporters) {
@@ -156,6 +167,7 @@ class DashboardScreen extends StatelessWidget {
         final isDoctors = item.id == DatasetIds.doctorsLicenses;
         final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
         final isPatent = item.id == DatasetIds.patentClassifications;
+        final isRecall = item.id == DatasetIds.vehicleRecalls;
         final isCar = item.id == DatasetIds.carImporters;
         final icon = isAtm
             ? Icons.atm
@@ -165,18 +177,22 @@ class DashboardScreen extends StatelessWidget {
                         ? Icons.gavel
                         : (isPatent
                               ? Icons.category
-                              : (isCar
-                                    ? Icons.directions_car
-                                    : Icons.cell_tower))));
+                              : (isRecall
+                                    ? Icons.warning_amber_outlined
+                                    : (isCar
+                                          ? Icons.directions_car
+                                          : Icons.cell_tower)))));
         final accentColor = isAtm
             ? const Color(0xFF2E7D32)
             : (isLiquidation
                   ? AppColors.danger
                   : (isPatent
                         ? const Color(0xFF673AB7)
-                        : (isCar
-                              ? const Color(0xFF00ACC1)
-                              : AppColors.primary)));
+                        : (isRecall
+                              ? const Color(0xFFD32F2F)
+                              : (isCar
+                                    ? const Color(0xFF00ACC1)
+                                    : AppColors.primary))));
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
@@ -218,6 +234,7 @@ class DashboardScreen extends StatelessWidget {
           final isDoctors = item.id == DatasetIds.doctorsLicenses;
           final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
           final isPatent = item.id == DatasetIds.patentClassifications;
+          final isRecall = item.id == DatasetIds.vehicleRecalls;
           final isCar = item.id == DatasetIds.carImporters;
           final accentColor = isAtm
               ? const Color(0xFF2E7D32)
@@ -225,9 +242,11 @@ class DashboardScreen extends StatelessWidget {
                     ? AppColors.danger
                     : (isPatent
                           ? const Color(0xFF673AB7)
-                          : (isCar
-                                ? const Color(0xFF00ACC1)
-                                : AppColors.primary)));
+                          : (isRecall
+                                ? const Color(0xFFD32F2F)
+                                : (isCar
+                                      ? const Color(0xFF00ACC1)
+                                      : AppColors.primary))));
           final icon = isAtm
               ? Icons.atm
               : (isDoctors
@@ -236,9 +255,11 @@ class DashboardScreen extends StatelessWidget {
                           ? Icons.gavel
                           : (isPatent
                                 ? Icons.category
-                                : (isCar
-                                      ? Icons.directions_car
-                                      : Icons.cell_tower))));
+                                : (isRecall
+                                      ? Icons.warning_amber_outlined
+                                      : (isCar
+                                            ? Icons.directions_car
+                                            : Icons.cell_tower)))));
           return Container(
             width: 200,
             margin: const EdgeInsetsDirectional.only(end: 12.0),
@@ -305,6 +326,7 @@ class DashboardScreen extends StatelessWidget {
         final isDoctors = item.id == DatasetIds.doctorsLicenses;
         final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
         final isPatent = item.id == DatasetIds.patentClassifications;
+        final isRecall = item.id == DatasetIds.vehicleRecalls;
         final isCar = item.id == DatasetIds.carImporters;
         final icon = isAtm
             ? Icons.atm
@@ -314,18 +336,22 @@ class DashboardScreen extends StatelessWidget {
                         ? Icons.gavel
                         : (isPatent
                               ? Icons.category
-                              : (isCar
-                                    ? Icons.directions_car
-                                    : Icons.cell_tower))));
+                              : (isRecall
+                                    ? Icons.warning_amber_outlined
+                                    : (isCar
+                                          ? Icons.directions_car
+                                          : Icons.cell_tower)))));
         final accentColor = isAtm
             ? const Color(0xFF2E7D32)
             : (isLiquidation
                   ? AppColors.danger
                   : (isPatent
                         ? const Color(0xFF673AB7)
-                        : (isCar
-                              ? const Color(0xFF00ACC1)
-                              : AppColors.primary)));
+                        : (isRecall
+                              ? const Color(0xFFD32F2F)
+                              : (isCar
+                                    ? const Color(0xFF00ACC1)
+                                    : AppColors.primary))));
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(

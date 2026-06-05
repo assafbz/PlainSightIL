@@ -20,6 +20,9 @@ class DatasetIds {
   /// Travel Warnings dataset ID.
   static const String travelWarnings = '2a01d234-b2b0-4d46-baa0-cec05c401e7d';
 
+  /// Vehicle Recalls dataset ID.
+  static const String vehicleRecalls = '2c33523f-87aa-44ec-a736-edbb0a82975e';
+
   /// Car Importers and New Car Price Lists dataset ID.
   static const String carImporters = '39f455bf-6db0-4926-859d-017f34eacbcb';
 
@@ -34,6 +37,7 @@ class DatasetIds {
     doctorsLicenses,
     patentClassifications,
     travelWarnings,
+    vehicleRecalls,
     carImporters,
     localMarketBonds,
   ];

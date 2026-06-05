@@ -22,6 +22,9 @@ import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/ba
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
 import 'package:plainsight/features/datasets/travel_warnings/presentation/notifiers/travel_warnings_notifier.dart';
 import 'package:plainsight/features/datasets/travel_warnings/data/models/travel_warning_model.dart';
+import 'package:plainsight/features/datasets/vehicle_recalls/presentation/notifiers/vehicle_recalls_notifier.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import 'package:plainsight/features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
 import 'package:plainsight/features/datasets/car_importers/data/models/car_importer_record_model.dart';
 import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
@@ -983,6 +986,8 @@ void main() {
     bankAtmsController;
     late StreamController<QuerySnapshot<Map<String, dynamic>>>
     travelWarningsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    vehicleRecallsController;
 
     setUp(() {
       AppStateNotifier.isTesting = false;
@@ -1011,6 +1016,8 @@ void main() {
       bankAtmsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
       travelWarningsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      vehicleRecallsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
 
       mockFirestore = FakeFirebaseFirestore((path) {
@@ -1069,6 +1076,10 @@ void main() {
           return FakeCollectionReference(
             stream: travelWarningsController.stream,
           );
+        } else if (path == '2c33523f-87aa-44ec-a736-edbb0a82975e') {
+          return FakeCollectionReference(
+            stream: vehicleRecallsController.stream,
+          );
         }
         // Permit collection fallback
         return FakeCollectionReference(stream: permitsController.stream);
@@ -1090,6 +1101,7 @@ void main() {
       telemetryRequestsController.close();
       bankAtmsController.close();
       travelWarningsController.close();
+      vehicleRecallsController.close();
     });
 
     test(
@@ -1232,6 +1244,68 @@ void main() {
         final notifier = LiquidationNotifier(isTesting: false);
         notifier.initLiquidationListener();
         expect(notifier.isLoadingLiquidation, isFalse);
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'VehicleRecallsNotifier handles real Firestore stream and error path',
+      () async {
+        final notifier = VehicleRecallsNotifier(testFirestore: mockFirestore);
+        notifier.initRecallsListener();
+
+        vehicleRecallsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('rec1', {
+              'recallId': 54321,
+              'recallYear': 2026,
+              'manufacturerName': 'Honda',
+              'modelName': 'Civic',
+              'recallType': 'Safety',
+              'defectDescription': 'Airbag issue',
+              'defectCategory': 'Airbags',
+              'buildStartDate': '2025-01-01',
+              'buildEndDate': '2025-12-31',
+              'lastUpdated': '2026-06-01T00:00:00Z',
+              'createdAt': '2026-06-01T00:00:00Z',
+              'scrapedAt': '2026-06-01T00:00:00Z',
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingRecalls, isFalse);
+        expect(notifier.recallRecords.first.recallId, 54321);
+
+        vehicleRecallsController.addError('Vehicle Recalls Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingRecalls, isFalse);
+
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'VehicleRecallsNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = VehicleRecallsNotifier();
+        notifier.initRecallsListener();
+        expect(notifier.isLoadingRecalls, isFalse);
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'VehicleRecallsNotifier handles Firestore snapshots exception',
+      () async {
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Collection snapshots exception');
+        });
+        final notifier = VehicleRecallsNotifier(
+          testFirestore: mockFirestoreThrow,
+        );
+        notifier.initRecallsListener();
+        expect(notifier.isLoadingRecalls, isFalse);
         notifier.dispose();
       },
     );
@@ -1667,6 +1741,132 @@ void main() {
         notifierFirestore.dispose();
         notifier.dispose();
         AppStateNotifier.isTesting = true;
+      },
+    );
+
+    test(
+      'LocalMarketBondsNotifier handles testing mode and Firestore queries',
+      () async {
+        // 1. Test in testing mode
+        AppStateNotifier.isTesting = true;
+        final notifier = LocalMarketBondsNotifier();
+        notifier.initBondsListener();
+        expect(notifier.isLoadingBonds, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(notifier.isLoadingBonds, isFalse);
+        expect(notifier.bondRecords.isNotEmpty, isTrue);
+        expect(notifier.bondRecords.length, MockData.bonds.length);
+
+        notifier.setFilter('Government');
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+
+        notifier.setFilter('CPI-Linked');
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+
+        notifier.setFilter('Floating Rate');
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+
+        notifier.setSearchQuery('1227784');
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+
+        notifier.resetFilters();
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+
+        notifier.cancelBondsListener();
+        expect(notifier.bondRecords.isEmpty, isTrue);
+
+        // 2. Test in non-testing mode with Fake Firestore queries
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference();
+        });
+
+        final notifierFirestore = LocalMarketBondsNotifier(
+          testFirestore: mockFirestore,
+        );
+
+        // Test normal page fetch
+        await notifierFirestore.fetchNextPage(isRefresh: true);
+        expect(notifierFirestore.isLoadingBonds, isFalse);
+
+        // Test filters
+        notifierFirestore.setFilter('Government');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        notifierFirestore.setFilter('CPI-Linked');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        notifierFirestore.setFilter('Floating Rate');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Test search queries (numeric and string)
+        notifierFirestore.setSearchQuery('1227784'); // numeric
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        notifierFirestore.setSearchQuery('Government'); // string
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Test pagination load more
+        await notifierFirestore.fetchNextPage(isRefresh: false);
+
+        // 3. Test exception block in Firestore
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Firestore query exception');
+        });
+        final notifierFirestoreThrow = LocalMarketBondsNotifier(
+          testFirestore: mockFirestoreThrow,
+        );
+        await notifierFirestoreThrow.fetchNextPage(isRefresh: true);
+        expect(notifierFirestoreThrow.isLoadingBonds, isFalse);
+
+        // 4. Test 100% coverage specifics (paging with docs, startAfterDocument, addAll, isFirebaseInitialized try-catch)
+        final singleBondMap = MockData.bonds.first.toMap();
+        final docList = List.generate(
+          20,
+          (i) => FakeQueryDocumentSnapshot('doc-$i', singleBondMap),
+        );
+        final fakeCollectionDocs = FakeCollectionReferenceWithDocs(docList);
+        final mockFirestoreWithDocs = FakeFirebaseFirestore((path) {
+          return fakeCollectionDocs;
+        });
+
+        final notifierFirestoreDocs = LocalMarketBondsNotifier(
+          testFirestore: mockFirestoreWithDocs,
+        );
+
+        // Fetch page 1 (returns 20 docs -> hasMore = true, lastDocument set)
+        await notifierFirestoreDocs.fetchNextPage(isRefresh: true);
+        expect(notifierFirestoreDocs.bondRecords.length, 20);
+        expect(notifierFirestoreDocs.hasMoreBonds, isTrue);
+
+        // Fetch page 2 (calls startAfterDocument, appends via addAll)
+        await notifierFirestoreDocs.fetchNextPage(isRefresh: false);
+        expect(notifierFirestoreDocs.bondRecords.length, 20);
+
+        // Test when isFirebaseInitialized is false
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifierNoFirebase = LocalMarketBondsNotifier(
+          testFirestore: mockFirestore,
+        );
+        await notifierNoFirebase.fetchNextPage(isRefresh: true);
+        expect(notifierNoFirebase.isLoadingBonds, isFalse);
+
+        // Test isFirebaseInitialized try-catch path
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        final notifierNullFirebase = LocalMarketBondsNotifier(
+          testFirestore: mockFirestore,
+        );
+        final isInit = notifierNullFirebase.isFirebaseInitialized;
+        expect(isInit, isFalse);
+
+        // Cleanup
+        notifierFirestore.dispose();
+        notifierFirestoreThrow.dispose();
+        notifierFirestoreDocs.dispose();
+        notifierNoFirebase.dispose();
+        notifierNullFirebase.dispose();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+        AppStateNotifier.testIsFirebaseInitialized = null;
       },
     );
 
@@ -2191,6 +2391,9 @@ class FakeCollectionReference
     if (invocation.memberName == #snapshots) {
       return stream ?? const Stream.empty();
     }
+    if (invocation.memberName == #where) {
+      return this;
+    }
     if (invocation.memberName == #orderBy) {
       return this;
     }
@@ -2207,6 +2410,26 @@ class FakeCollectionReference
     if (invocation.memberName == #get) {
       if (stream != null) {
         return stream!.first;
+      }
+      return Future.value(FakeQuerySnapshot([]));
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
+
+// ignore: must_be_immutable
+class FakeCollectionReferenceWithDocs extends FakeCollectionReference {
+  int getCallCount = 0;
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+
+  FakeCollectionReferenceWithDocs(this.docs);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #get) {
+      getCallCount++;
+      if (getCallCount == 1) {
+        return Future.value(FakeQuerySnapshot(docs));
       }
       return Future.value(FakeQuerySnapshot([]));
     }

@@ -13,6 +13,7 @@ import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scrape
 import { scrapeAndSyncBankAtms } from "./scrapers/bank_atms_scraper";
 import { scrapeAndSyncPatentClassifications } from "./scrapers/patent_classifications_scraper";
 import { scrapeAndSyncTravelWarnings } from "./scrapers/travel_warnings_scraper";
+import { scrapeAndSyncVehicleRecalls } from "./scrapers/vehicle_recalls_scraper";
 import { scrapeAndSyncCarImporters } from "./scrapers/car_importers_scraper";
 import { scrapeAndSyncLocalMarketBonds } from "./scrapers/local_market_bonds_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
@@ -37,6 +38,8 @@ const scraperRegistry: Record<
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) => scrapeAndSyncPatentClassifications(db),
   [DATASET_IDS.TRAVEL_WARNINGS]: (db, opts) =>
     scrapeAndSyncTravelWarnings(db, DATASET_IDS.TRAVEL_WARNINGS, opts),
+  [DATASET_IDS.VEHICLE_RECALLS]: (db, opts) =>
+    scrapeAndSyncVehicleRecalls(db, DATASET_IDS.VEHICLE_RECALLS, opts),
   [DATASET_IDS.CAR_IMPORTERS]: (db, opts) =>
     scrapeAndSyncCarImporters(db, DATASET_IDS.CAR_IMPORTERS, opts),
   [DATASET_IDS.LOCAL_MARKET_BONDS]: (db) => scrapeAndSyncLocalMarketBonds(db),
@@ -51,6 +54,7 @@ const defaultIntervals: Record<string, number> = {
   [DATASET_IDS.BANK_ATMS]: 168, // Bank ATMs (weekly)
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: 24, // Patent Classifications (daily)
   [DATASET_IDS.TRAVEL_WARNINGS]: 24, // Travel Warnings (daily)
+  [DATASET_IDS.VEHICLE_RECALLS]: 168, // Vehicle Recalls (weekly)
   [DATASET_IDS.CAR_IMPORTERS]: 168, // Car Importers (weekly)
   [DATASET_IDS.LOCAL_MARKET_BONDS]: 24, // Local Market Bonds (daily)
   datasets_metadata: 168, // Dataset Metadata (weekly)
@@ -575,6 +579,10 @@ export const manualSyncPatentClassifications = functions
 export const manualSyncTravelWarnings = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .https.onRequest(createManualSyncHandler(DATASET_IDS.TRAVEL_WARNINGS));
+
+export const manualSyncVehicleRecalls = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.VEHICLE_RECALLS));
 
 export const manualSyncCarImporters = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
