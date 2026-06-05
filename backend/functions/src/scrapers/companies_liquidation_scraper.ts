@@ -129,6 +129,7 @@ export function parseLiquidationRecord(
 export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.COMPANIES_LIQUIDATION,
+  options?: { forceFullSync?: boolean },
 ): Promise<{ success: boolean; count: number }> {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -137,8 +138,9 @@ export async function scrapeAndSyncCompaniesLiquidation(
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
-    const limit = isEmulator ? 10 : 1000;
+    const limit = isEmulator ? 100 : 1000;
     let hasMore = true;
     let processedCount = 0;
 
@@ -150,31 +152,31 @@ export async function scrapeAndSyncCompaniesLiquidation(
       logger.info(`Fetching data from: ${url}`);
 
       let records: HebrewLiquidationRecord[] = [];
-      if (isEmulator) {
+      if (isEmulator && !forceFullSync) {
         records = [
           {
             "מזהה תיק פירוק חברה": 11111,
-            "שם החברה": 'בשן פרסום ויחסי צבור בע~מ',
+            "שם החברה": "בשן פרסום ויחסי צבור בע~מ",
             "מספר זיהוי של החברה": 510000001,
-            "סטטוס תיק": 'פירוק פעיל',
-            "תאריך הגשת הבקשה": '2024-05-12T00:00:00',
-            "תאריך קבלת צו פירוק": '2024-06-15T00:00:00',
-            "בית משפט מחוזי בו מתנהל התיק": 'מחוזי תל אביב',
-            "עיר פעילות חברה": 'תל אביב - יפו'
+            "סטטוס תיק": "פירוק פעיל",
+            "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
+            "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
+            "בית משפט מחוזי בו מתנהל התיק": "מחוזי תל אביב",
+            "עיר פעילות חברה": "תל אביב - יפו",
           },
           {
             "מזהה תיק פירוק חברה": 22222,
-            "שם החברה": 'מלון הגליל בע~מ',
+            "שם החברה": "מלון הגליל בע~מ",
             "מספר זיהוי של החברה": 510000002,
-            "סטטוס תיק": 'פירוק פעיל',
-            "תאריך הגשת הבקשה": '2024-05-12T00:00:00',
-            "תאריך קבלת צו פירוק": '2024-06-15T00:00:00',
-            "בית משפט מחוזי בו מתנהל התיק": 'מחוזי נצרת',
-            "עיר פעילות חברה": 'טבריה'
-          }
+            "סטטוס תיק": "פירוק פעיל",
+            "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
+            "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
+            "בית משפט מחוזי בו מתנהל התיק": "מחוזי נצרת",
+            "עיר פעילות חברה": "טבריה",
+          },
         ];
       } else {
-        const response = await axios.get(url);
+        const response = await axios.get(url, { timeout: 15000 });
         records = response.data?.result?.records ?? [];
       }
 
@@ -235,7 +237,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
         }
       }
 
-      if (isEmulator) {
+      if (isEmulator && !forceFullSync) {
         hasMore = false;
         break;
       }

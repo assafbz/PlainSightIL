@@ -136,12 +136,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify manual sync buttons exist on the screen (5 supported + 1 directory = 6 buttons)
+    // Verify manual sync buttons exist on the screen (6 supported + 1 directory = 7 buttons)
     final syncButtonsFinder = find.byType(ElevatedButton);
-    expect(syncButtonsFinder, findsNWidgets(6));
+    expect(syncButtonsFinder, findsNWidgets(7));
 
     // By default, all buttons show 'Trigger Sync'
-    expect(find.text('Trigger Sync'), findsNWidgets(6));
+    expect(find.text('Trigger Sync'), findsNWidgets(7));
 
     // Tap the first button to trigger manual sync (which is the primary Dataset Directory card)
     await tester.tap(syncButtonsFinder.at(0));
@@ -159,7 +159,7 @@ void main() {
 
     // The mock sync should complete and return to idle with a success SnackBar
     expect(find.text('Syncing...'), findsNothing);
-    expect(find.text('Trigger Sync'), findsNWidgets(6));
+    expect(find.text('Trigger Sync'), findsNWidgets(7));
     expect(
       find.text('Sync completed successfully! Updated 10000 records.'),
       findsOneWidget,

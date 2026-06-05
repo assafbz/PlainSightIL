@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/directory/presentation/widgets/dataset_card.dart';
-import 'package:plainsight/main.dart';
+import 'package:plainsight/app.dart';
+import 'package:plainsight/core/widgets/navigation_drawer.dart';
 
 void main() {
   setUp(() {
@@ -112,7 +113,7 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0.0, -500.0));
     await tester.pumpAndSettle();
 
-    final cardFinder = find.text('מאגר הכונס הרשמי');
+    final cardFinder = find.text('חברות בפירוק');
     final buttonFinder = find.descendant(
       of: find.ancestor(of: cardFinder, matching: find.byType(DatasetCard)),
       matching: find.text('Open Visualizer'),

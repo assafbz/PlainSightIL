@@ -3,6 +3,7 @@ import 'dataset_ids.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
+import '../../features/datasets/patent_classifications/data/models/patent_classification_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 
 /// Central repository of mock data loaded during offline or testing modes.
@@ -142,7 +143,7 @@ class MockData {
       id: DatasetIds.companiesLiquidation,
       datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
       name: 'pr2018',
-      title: 'מאגר הכונס הרשמי',
+      title: 'חברות בפירוק',
       notes:
           'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
       publisher: 'רשות התאגידים',
@@ -161,6 +162,18 @@ class MockData {
       resourceCount: 1,
       lastUpdated: DateTime(2026, 6, 2),
       tags: const ['רופאים', 'רישיון', 'בריאות', 'התמחות'],
+      isSupported: true,
+    ),
+    DatasetMetadataModel(
+      id: DatasetIds.patentClassifications,
+      datasetId: DatasetIds.patentClassifications,
+      name: 'patent_classifications',
+      title: 'סיווגי CPC לפטנטים',
+      notes: 'מאגר סיווגי CPC (סיווג פטנטים משותף) לבקשות פטנט של רשם הפטנטים.',
+      publisher: 'רשות הפטנטים',
+      resourceCount: 1,
+      lastUpdated: DateTime(2026, 6, 3),
+      tags: const ['פטנטים', 'סיווג', 'חדשנות', 'CPC'],
       isSupported: true,
     ),
     DatasetMetadataModel(
@@ -279,6 +292,12 @@ class MockData {
       'lastUpdated': '2026-06-02T17:00:00Z',
       'status': 'idle',
     },
+    DatasetIds.patentClassifications: {
+      'id': DatasetIds.patentClassifications,
+      'recordCount': 200,
+      'lastUpdated': '2026-06-03T18:00:00Z',
+      'status': 'idle',
+    },
   };
 
   /// Mock API health telemetry.
@@ -375,5 +394,42 @@ class MockData {
       'errorStack':
           'Error: 502 Bad Gateway\n    at scrapeAndSyncAntennas (/src/scrapers/antennas.ts:269:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)',
     },
+  ];
+
+  /// Mock patent classifications records.
+  static final List<PatentClassificationRecordModel> patents = [
+    PatentClassificationRecordModel(
+      id: '741210',
+      idNum: 741210,
+      applicationNumber: 327015,
+      titleHebrew: 'שילוב תרופות הכולל תצמיד נוגדן',
+      titleEnglish: 'DRUG COMBINATION COMPRISING ANTIBODY',
+      cpcClassification: 'A61P35/00',
+      isPrimary: true,
+      lastUpdated: '2026-06-03T18:00:00Z',
+      createdAt: '2026-06-03T18:00:00Z',
+    ),
+    PatentClassificationRecordModel(
+      id: '741209',
+      idNum: 741209,
+      applicationNumber: 326672,
+      titleHebrew: 'תכשירים לטיפול בדלקת מפרקים',
+      titleEnglish: 'COMPOSITIONS FOR THE TREATMENT OF ARTHRITIS',
+      cpcClassification: 'C22C19/05',
+      isPrimary: false,
+      lastUpdated: '2026-06-03T18:00:00Z',
+      createdAt: '2026-06-03T18:00:00Z',
+    ),
+    PatentClassificationRecordModel(
+      id: '741208',
+      idNum: 741208,
+      applicationNumber: 325432,
+      titleHebrew: 'מערכת חיישנים אופטיים',
+      titleEnglish: 'OPTICAL SENSOR SYSTEM',
+      cpcClassification: 'G01N21/00',
+      isPrimary: true,
+      lastUpdated: '2026-06-03T18:00:00Z',
+      createdAt: '2026-06-03T18:00:00Z',
+    ),
   ];
 }

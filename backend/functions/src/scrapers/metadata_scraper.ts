@@ -36,6 +36,7 @@ const SUPPORTED_DATASET_IDS = new Set<string>([
   DATASET_IDS.CELLULAR_PERMITS, // Cellular Antennas Under Construction Permits
   DATASET_IDS.COMPANIES_LIQUIDATION, // Companies in Liquidation
   DATASET_IDS.DOCTORS_LICENSES, // Doctors Licenses
+  DATASET_IDS.PATENT_CLASSIFICATIONS, // Patent Applications CPC Classifications
   "21fde05f-62e3-401b-81cf-5c385862026d", // Bank ATMs
 ]);
 
@@ -99,7 +100,10 @@ export async function scrapeAndSyncDatasetMetadata(
       }
 
       const name = (pkg.name ?? "").trim();
-      const title = pkg.title.trim();
+      let title = pkg.title.trim();
+      if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
+        title = "חברות בפירוק";
+      }
       const notes = sanitizeNotes(pkg.notes);
       const publisher = (pkg.organization?.title ?? "לא ידוע").trim();
       const resourceCount = pkg.num_resources ?? 0;

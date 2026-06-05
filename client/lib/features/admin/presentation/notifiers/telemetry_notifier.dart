@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:plainsight/core/utils/app_logger.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles system telemetry stats, scraper execution logs,
@@ -161,6 +162,12 @@ class TelemetryNotifier extends ChangeNotifier {
           'id': '21fde05f-62e3-401b-81cf-5c385862026d',
           'recordCount': 3019,
           'lastUpdated': '2026-06-02T09:00:00Z',
+          'status': 'idle',
+        },
+        DatasetIds.patentClassifications: {
+          'id': DatasetIds.patentClassifications,
+          'recordCount': 10,
+          'lastUpdated': '2026-06-03T10:00:00Z',
           'status': 'idle',
         },
         'datasets_metadata': {
@@ -437,7 +444,7 @@ class TelemetryNotifier extends ChangeNotifier {
           id: 'd8715392-287f-49b7-9ae3-f21ec5bf55f3',
           datasetId: '6d8bf87d-bd13-4df6-9846-d449f407b318',
           name: 'pr2018',
-          title: 'מאגר הכונס הרשמי',
+          title: 'חברות בפירוק',
           notes:
               'רשימת חברות הנמצאות בהליכי פירוק ופירוק שיתוף בבתי המשפט המחוזיים.',
           publisher: 'רשות התאגידים',
@@ -468,6 +475,19 @@ class TelemetryNotifier extends ChangeNotifier {
           resourceCount: 1,
           lastUpdated: DateTime(2026, 6, 2),
           tags: ['כספומטים', 'בנקים', 'ATM'],
+          isSupported: true,
+        ),
+        DatasetMetadataModel(
+          id: DatasetIds.patentClassifications,
+          datasetId: DatasetIds.patentClassifications,
+          name: 'patent_classifications',
+          title: 'סיווגי CPC לפטנטים',
+          notes:
+              'מאגר סיווגי CPC (סיווג פטנטים משותף) לבקשות פטנט של רשם הפטנטים.',
+          publisher: 'רשות הפטנטים',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 3),
+          tags: const ['פטנטים', 'סיווג', 'חדשנות', 'CPC'],
           isSupported: true,
         ),
       ];
@@ -679,6 +699,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncBankAtms';
       } else if (datasetId == 'datasets_metadata') {
         functionName = 'manualSyncMetadata';
+      } else if (datasetId == DatasetIds.patentClassifications) {
+        functionName = 'manualSyncPatentClassifications';
       } else {
         throw Exception('Unknown dataset ID: $datasetId');
       }
@@ -723,6 +745,75 @@ class TelemetryNotifier extends ChangeNotifier {
       _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
       notifyListeners();
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  /// Update the scraper scheduler configuration for a dataset.
+  Future<void> updateDatasetScheduler(
+    String datasetId, {
+    required bool enabled,
+    required int updateIntervalHours,
+  }) async {
+    AppLogger.info(
+      'Updating scheduler for dataset: $datasetId (enabled: $enabled, interval: $updateIntervalHours)',
+    );
+
+    if (_isTesting) {
+      final Map<String, dynamic> localMeta =
+          _datasetMetadataMap[datasetId] ?? {};
+      final scheduler = Map<String, dynamic>.from(
+        localMeta['scheduler'] as Map? ?? {},
+      );
+      scheduler['enabled'] = enabled;
+      scheduler['updateIntervalHours'] = updateIntervalHours;
+
+      // Compute a fake nextRun locally for testing
+      final nextRunDate = DateTime.now().add(
+        Duration(hours: updateIntervalHours),
+      );
+      scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
+
+      _datasetMetadataMap[datasetId] = {...localMeta, 'scheduler': scheduler};
+      notifyListeners();
+      return;
+    }
+
+    if (!isFirebaseInitialized) return;
+
+    try {
+      final metadataRef = (testFirestore ?? FirebaseFirestore.instance)
+          .collection('dataset_metadata')
+          .doc(datasetId);
+
+      // Read current nextRun, or calculate a new one if it's currently missing or the interval changes
+      final doc = await metadataRef.get();
+      String nextRun = '';
+      if (doc.exists) {
+        final data = doc.data();
+        final existingScheduler = data?['scheduler'] as Map<String, dynamic>?;
+        nextRun = existingScheduler?['nextRun'] as String? ?? '';
+      }
+
+      // If nextRun is empty or scheduler was disabled and now enabled, calculate nextRun starting from now
+      if (nextRun.isEmpty || enabled) {
+        nextRun = DateTime.now()
+            .add(Duration(hours: updateIntervalHours))
+            .toUtc()
+            .toIso8601String();
+      }
+
+      await metadataRef.set({
+        'scheduler': {
+          'enabled': enabled,
+          'updateIntervalHours': updateIntervalHours,
+          'nextRun': nextRun,
+        },
+      }, SetOptions(merge: true));
+
+      AppLogger.info('Successfully updated Firestore scheduler for $datasetId');
+    } catch (e) {
+      AppLogger.error('Failed to update dataset scheduler', e);
+      rethrow;
     }
   }
 

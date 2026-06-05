@@ -20,7 +20,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.BASE_URL || `http://localhost:${process.env.CLIENT_PORT || 8080}`,
+    baseURL: process.env.BASE_URL || `http://127.0.0.1:${process.env.CLIENT_PORT || 8080}`,
 
 
     /* Timeout for each action like click() or fill() */

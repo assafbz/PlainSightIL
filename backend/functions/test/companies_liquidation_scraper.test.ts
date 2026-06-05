@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import axios from "axios";
 import {
   getTranslatedStatus,
@@ -109,6 +109,8 @@ describe("Companies Liquidation Scraper Ingestion", () => {
   let mockGetAll: any;
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-04T12:00:00.000Z"));
     vi.clearAllMocks();
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
@@ -155,6 +157,10 @@ describe("Companies Liquidation Scraper Ingestion", () => {
       batch: vi.fn().mockReturnValue(mockBatch),
       getAll: mockGetAll,
     };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should scrape companies in liquidation, check existence and sync to Firestore", async () => {
@@ -249,6 +255,8 @@ describe("Companies Liquidation Scraper Ingestion", () => {
       "שם החברה": 'אלברט לוי הנדסה בע"מ',
       "מספר זיהוי של החברה": 512345678,
       "סטטוס תיק": "פירוק פעיל",
+      "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
+      "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
     };
 
     const parsed = parseLiquidationRecord(rawRecord)!;

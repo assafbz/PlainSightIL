@@ -20,7 +20,8 @@ class _AdminPageState extends State<AdminPage> {
   String _statusFilter = 'all'; // 'all', 'idle', 'syncing', 'error'
   int _activeSubTab = 0; // 0 for Datasets, 1 for Telemetry
   final Set<String> _expandedRuns = {}; // Tracks expanded log IDs
-  final Set<String> _expandedSchedulers = {}; // Tracks expanded scheduler card IDs
+  final Set<String> _expandedSchedulers =
+      {}; // Tracks expanded scheduler card IDs
 
   @override
   void initState() {
@@ -138,7 +139,7 @@ class _AdminPageState extends State<AdminPage> {
       {
         'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies in Liquidation',
-        'titleHe': 'מאגר הכונס הרשמי',
+        'titleHe': 'חברות בפירוק',
         'resourceId': DatasetIds.companiesLiquidation,
         'agencyEn': 'Ministry of Justice - Corporations Authority',
         'agencyHe': 'משרד המשפטים - רשות התאגידים',
@@ -158,6 +159,14 @@ class _AdminPageState extends State<AdminPage> {
         'resourceId': '21fde05f-62e3-401b-81cf-5c385862026d',
         'agencyEn': 'Bank of Israel',
         'agencyHe': 'בנק ישראל',
+      },
+      {
+        'id': DatasetIds.patentClassifications,
+        'titleEn': 'Patent Classifications',
+        'titleHe': 'סיווגי CPC לפטנטים',
+        'resourceId': DatasetIds.patentClassifications,
+        'agencyEn': 'Israel Patent Office',
+        'agencyHe': 'רשות הפטנטים',
       },
     ];
 
@@ -506,7 +515,8 @@ class _AdminPageState extends State<AdminPage> {
     final liveData = dataset['liveData'] as Map<String, dynamic>? ?? {};
     final scheduler = liveData['scheduler'] as Map<String, dynamic>? ?? {};
     final bool schedulerEnabled = scheduler['enabled'] as bool? ?? false;
-    final int schedulerInterval = (scheduler['updateIntervalHours'] as num? ?? 24).toInt();
+    final int schedulerInterval =
+        (scheduler['updateIntervalHours'] as num? ?? 24).toInt();
     final String schedulerNextRun = scheduler['nextRun'] as String? ?? '';
     final bool isSchedulerExpanded = _expandedSchedulers.contains(datasetId);
 
@@ -647,7 +657,13 @@ class _AdminPageState extends State<AdminPage> {
               _buildSchedulerHeader(context, datasetId, schedulerEnabled),
               if (isSchedulerExpanded) ...[
                 const SizedBox(height: 12),
-                _buildSchedulerPanel(context, datasetId, schedulerEnabled, schedulerInterval, schedulerNextRun),
+                _buildSchedulerPanel(
+                  context,
+                  datasetId,
+                  schedulerEnabled,
+                  schedulerInterval,
+                  schedulerNextRun,
+                ),
               ],
               const Divider(color: Color(0x14FFFFFF), height: 20),
 
@@ -663,7 +679,11 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  Widget _buildSchedulerHeader(BuildContext context, String datasetId, bool enabled) {
+  Widget _buildSchedulerHeader(
+    BuildContext context,
+    String datasetId,
+    bool enabled,
+  ) {
     final isHeb = widget.appState.locale == 'he';
     final isExpanded = _expandedSchedulers.contains(datasetId);
 
@@ -693,17 +713,25 @@ class _AdminPageState extends State<AdminPage> {
                 const SizedBox(width: 8),
                 Text(
                   widget.appState.translate('scheduler_title'),
-                  style: AppTypography.bodySm(context, color: AppColors.textPrimary)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: AppTypography.bodySm(
+                    context,
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: (enabled ? AppColors.success : AppColors.surfaceHigh).withAlpha(30),
+                    color: (enabled ? AppColors.success : AppColors.surfaceHigh)
+                        .withAlpha(30),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: (enabled ? AppColors.success : AppColors.glassBorder).withAlpha(50),
+                      color:
+                          (enabled ? AppColors.success : AppColors.glassBorder)
+                              .withAlpha(50),
                     ),
                   ),
                   child: Text(
@@ -713,7 +741,9 @@ class _AdminPageState extends State<AdminPage> {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
-                      color: enabled ? AppColors.success : AppColors.textSecondary,
+                      color: enabled
+                          ? AppColors.success
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -744,7 +774,11 @@ class _AdminPageState extends State<AdminPage> {
       {'val': 12, 'labelEn': '12 Hours', 'labelHe': '12 שעות'},
       {'val': 24, 'labelEn': '24 Hours (Daily)', 'labelHe': '24 שעות (יומי)'},
       {'val': 48, 'labelEn': '48 Hours', 'labelHe': '48 שעות'},
-      {'val': 168, 'labelEn': '168 Hours (Weekly)', 'labelHe': '168 שעות (שבועי)'},
+      {
+        'val': 168,
+        'labelEn': '168 Hours (Weekly)',
+        'labelHe': '168 שעות (שבועי)',
+      },
     ];
 
     if (!intervals.any((item) => item['val'] == interval)) {
@@ -770,15 +804,19 @@ class _AdminPageState extends State<AdminPage> {
             children: [
               Text(
                 widget.appState.translate('scheduler_enabled'),
-                style: AppTypography.bodySm(context, color: AppColors.textSecondary),
+                style: AppTypography.bodySm(
+                  context,
+                  color: AppColors.textSecondary,
+                ),
               ),
               Switch(
                 value: enabled,
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
                 activeTrackColor: AppColors.primary.withAlpha(100),
                 inactiveThumbColor: AppColors.textTertiary,
                 inactiveTrackColor: AppColors.surfaceHigh,
-                onChanged: (bool value) => _handleSaveScheduler(datasetId, value, interval),
+                onChanged: (bool value) =>
+                    _handleSaveScheduler(datasetId, value, interval),
               ),
             ],
           ),
@@ -790,16 +828,23 @@ class _AdminPageState extends State<AdminPage> {
                 widget.appState.translate('scheduler_interval'),
                 style: AppTypography.bodySm(
                   context,
-                  color: enabled ? AppColors.textSecondary : AppColors.textTertiary,
+                  color: enabled
+                      ? AppColors.textSecondary
+                      : AppColors.textTertiary,
                 ),
               ),
               DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
                   value: interval,
                   dropdownColor: AppColors.surfaceHigh,
-                  style: AppTypography.bodySm(context, color: AppColors.textPrimary)
-                      .copyWith(fontWeight: FontWeight.bold),
-                  icon: Icon(Icons.arrow_drop_down, color: enabled ? AppColors.primary : AppColors.textTertiary),
+                  style: AppTypography.bodySm(
+                    context,
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: enabled ? AppColors.primary : AppColors.textTertiary,
+                  ),
                   onChanged: enabled
                       ? (int? newValue) {
                           if (newValue != null) {
@@ -814,7 +859,9 @@ class _AdminPageState extends State<AdminPage> {
                       child: Text(
                         label.toString(),
                         style: TextStyle(
-                          color: enabled ? AppColors.textPrimary : AppColors.textTertiary,
+                          color: enabled
+                              ? AppColors.textPrimary
+                              : AppColors.textTertiary,
                         ),
                       ),
                     );
@@ -829,16 +876,25 @@ class _AdminPageState extends State<AdminPage> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.update_outlined, color: AppColors.textTertiary, size: 14),
+                Icon(
+                  Icons.update_outlined,
+                  color: AppColors.textTertiary,
+                  size: 14,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   widget.appState.translate('scheduler_next_run'),
-                  style: AppTypography.labelXs(context, color: AppColors.textTertiary),
+                  style: AppTypography.labelXs(
+                    context,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
                 Text(
                   _formatTimestamp(nextRun),
-                  style: AppTypography.labelXs(context, color: AppColors.primary)
-                      .copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.labelXs(
+                    context,
+                    color: AppColors.primary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -848,9 +904,17 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  Future<void> _handleSaveScheduler(String datasetId, bool enabled, int interval) async {
+  Future<void> _handleSaveScheduler(
+    String datasetId,
+    bool enabled,
+    int interval,
+  ) async {
     try {
-      await widget.appState.updateDatasetScheduler(datasetId, enabled: enabled, updateIntervalHours: interval);
+      await widget.appState.updateDatasetScheduler(
+        datasetId,
+        enabled: enabled,
+        updateIntervalHours: interval,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1097,7 +1161,7 @@ class _AdminPageState extends State<AdminPage> {
       {
         'id': DatasetIds.companiesLiquidation,
         'titleEn': 'Companies Liquidation',
-        'titleHe': 'מאגר הכונס הרשמי',
+        'titleHe': 'חברות בפירוק',
       },
       {
         'id': DatasetIds.doctorsLicenses,
@@ -1108,6 +1172,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': '21fde05f-62e3-401b-81cf-5c385862026d',
         'titleEn': 'Bank ATMs',
         'titleHe': 'כספומטים',
+      },
+      {
+        'id': DatasetIds.patentClassifications,
+        'titleEn': 'Patent Classifications',
+        'titleHe': 'סיווגי CPC לפטנטים',
       },
       {
         'id': 'datasets_metadata',
