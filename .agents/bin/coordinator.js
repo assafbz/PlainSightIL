@@ -70,18 +70,60 @@ function serializeMarkdownState(metadata, body) {
   return yamlText + body;
 }
 
+// Helper to extract a YAML block by indentation (more robust than regex lookahead)
+function extractYamlBlock(content, blockName) {
+  const lines = content.split(/\r?\n/);
+  const blockLines = [];
+  let inBlock = false;
+  let blockIndent = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!inBlock) {
+      const headerMatch = line.match(new RegExp(`^\\s*${blockName}:\\s*`));
+      if (headerMatch) {
+        inBlock = true;
+      }
+    } else {
+      if (trimmed === '' || trimmed.startsWith('#')) {
+        continue;
+      }
+      
+      const currentIndent = line.search(/\S/);
+      if (blockIndent === -1) {
+        blockIndent = currentIndent;
+      }
+      
+      // Stop if indentation drops below the block indentation or we hit a separator/new section
+      if (currentIndent < blockIndent || trimmed.startsWith('---') || (trimmed.endsWith(':') && currentIndent === 0)) {
+        break;
+      }
+      
+      blockLines.push(line);
+    }
+  }
+
+  if (blockLines.length === 0) {
+    return null;
+  }
+  return blockLines.join('\n');
+}
+
 // Simple parser to extract lifecycle_paths YAML block from AGENTS.md
 function parseAgentsConfig() {
   if (!fs.existsSync(CONFIG_FILE)) {
     throw new Error(`Config file not found at ${CONFIG_FILE}`);
   }
   const content = fs.readFileSync(CONFIG_FILE, 'utf8');
-  const yamlMatch = content.match(/lifecycle_paths:\s*\n([\s\S]*?)(?=\n\n\w|\n#|\n---|\n```)/);
-  if (!yamlMatch) {
+  const yamlBlock = extractYamlBlock(content, 'lifecycle_paths');
+  if (!yamlBlock) {
+    console.warn("⚠️ Warning: Could not parse lifecycle_paths from AGENTS.md, using static default.");
     throw new Error("Could not find lifecycle_paths in AGENTS.md");
   }
   
-  const yamlLines = yamlMatch[1].split('\n');
+  const yamlLines = yamlBlock.split('\n');
   const workflows = {};
   let currentType = null;
   let currentPhase = null;
@@ -134,12 +176,13 @@ function parsePersonasConfig() {
     return {};
   }
   const content = fs.readFileSync(CONFIG_FILE, 'utf8');
-  const yamlMatch = content.match(/personas:\s*\n([\s\S]*?)(?=\n\n\w|\n#|\n---|\n```)/);
-  if (!yamlMatch) {
+  const yamlBlock = extractYamlBlock(content, 'personas');
+  if (!yamlBlock) {
+    console.warn("⚠️ Warning: Could not parse personas from AGENTS.md, using empty registry.");
     return {};
   }
   
-  const yamlLines = yamlMatch[1].split('\n');
+  const yamlLines = yamlBlock.split('\n');
   const personas = {};
   let currentPersona = null;
   
@@ -263,16 +306,52 @@ function printStatus() {
   console.log('===========================\n');
 }
 
-// Get list of changed files relative to base branch
+// Get list of changed files relative to base branch (resilient for subagent sandboxes)
 function getChangedFiles() {
+  const filesSet = new Set();
+  
+  // 1. Capture uncommitted (modified, added, renamed) files in the working tree
+  try {
+    const statusOutput = execSync('git status --porcelain', { encoding: 'utf8' });
+    statusOutput.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      // git status --porcelain output: "XY path/to/file"
+      const filePath = trimmed.substring(3).split(' -> ').pop().trim();
+      if (filePath) {
+        filesSet.add(filePath);
+      }
+    });
+  } catch (e) {
+    // Ignore git status errors
+  }
+  
+  // 2. Capture committed files comparing against base branches
   try {
     const baseBranch = execSync('git show-ref --verify --quiet refs/heads/dev && echo dev || echo main', { encoding: 'utf8' }).trim();
-    const diffCommand = `git diff --name-only origin/${baseBranch} 2>/dev/null || git diff --name-only ${baseBranch} 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null`;
-    const files = execSync(diffCommand, { encoding: 'utf8' }).split('\n').map(f => f.trim()).filter(Boolean);
-    return files;
+    const diffCommands = [
+      `git diff --name-only origin/${baseBranch} 2>/dev/null`,
+      `git diff --name-only ${baseBranch} 2>/dev/null`,
+      `git diff --name-only HEAD~1 2>/dev/null`
+    ];
+    
+    for (const cmd of diffCommands) {
+      try {
+        const diffOutput = execSync(cmd, { encoding: 'utf8' });
+        diffOutput.split('\n').forEach(f => {
+          const file = f.trim();
+          if (file) filesSet.add(file);
+        });
+        if (diffOutput) break;
+      } catch (err) {
+        // Try next fallback command
+      }
+    }
   } catch (e) {
-    return [];
+    // Ignore git diff errors
   }
+
+  return Array.from(filesSet);
 }
 
 // Utility: run a shell validation command in cwd and capture output
@@ -311,11 +390,6 @@ function verifyDeliverable(issueId, filename) {
 
 // Validate Quality Gates for the transitioning phase
 function validateQualityGate(issueId, currentPhase) {
-  if (process.env.SKIP_SDLC === '1' || process.env.SKIP_SDLC === 'true') {
-    console.log('⚠️  Bypassing Quality Gates checks (SKIP_SDLC=1). Note: Skipping SDLC requires HITL approval.');
-    return { success: true, failureLogs: '' };
-  }
-
   console.log(`🛡️  Enforcing Quality Gates for transition from '${currentPhase}'...`);
   let result;
 
@@ -350,7 +424,13 @@ function validateQualityGate(issueId, currentPhase) {
         if (!result.success) return { success: false, failureLogs: result.logs };
         result = runCheck('flutter analyze', clientDir, 'Client static analysis');
         if (!result.success) return { success: false, failureLogs: result.logs };
-        result = runCheck('flutter test', clientDir, 'Client unit tests');
+        result = runCheck('flutter test --coverage', clientDir, 'Client unit tests with coverage');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        
+        // Quality gates static validation
+        result = runCheck('node scripts/check-test-existence.js', repoRoot, 'Client test existence check');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('node scripts/check-coverage-thresholds.js --client', repoRoot, 'Client test coverage validation');
         if (!result.success) return { success: false, failureLogs: result.logs };
       }
 
@@ -365,9 +445,15 @@ function validateQualityGate(issueId, currentPhase) {
         if (!result.success) return { success: false, failureLogs: result.logs };
         result = runCheck('npm run lint', backendDir, 'Backend linting');
         if (!result.success) return { success: false, failureLogs: result.logs };
-        result = runCheck('npm run test', backendDir, 'Backend unit tests');
+        result = runCheck('npm run test:coverage', backendDir, 'Backend unit tests with coverage');
         if (!result.success) return { success: false, failureLogs: result.logs };
         result = runCheck('npm run build', backendDir, 'Backend TypeScript compilation');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        
+        // Quality gates static validation
+        result = runCheck('node scripts/check-test-existence.js', repoRoot, 'Backend test existence check');
+        if (!result.success) return { success: false, failureLogs: result.logs };
+        result = runCheck('node scripts/check-coverage-thresholds.js --backend', repoRoot, 'Backend test coverage validation');
         if (!result.success) return { success: false, failureLogs: result.logs };
       }
       return { success: true, failureLogs: '' };
