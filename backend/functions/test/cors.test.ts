@@ -81,23 +81,33 @@ describe("CORS Handling Security Policy", () => {
   it("should allow production web.app and firebaseapp domains", () => {
     const mockReq1 = {
       headers: {
-        origin: "https://plainsight-il.web.app",
+        origin: "https://plainsightil.web.app",
       },
       method: "GET",
     } as any;
 
     handleCors(mockReq1, mockRes);
-    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsight-il.web.app");
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsightil.web.app");
 
     const mockReq2 = {
       headers: {
-        origin: "https://plainsight-il.firebaseapp.com",
+        origin: "https://plainsightil.firebaseapp.com",
       },
       method: "GET",
     } as any;
 
     handleCors(mockReq2, mockRes);
-    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsight-il.firebaseapp.com");
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsightil.firebaseapp.com");
+
+    const mockReq3 = {
+      headers: {
+        origin: "https://plainsight-il.web.app",
+      },
+      method: "GET",
+    } as any;
+
+    handleCors(mockReq3, mockRes);
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsight-il.web.app");
   });
 
   it("should block non-whitelisted domains by fallback to production domain", () => {
@@ -109,7 +119,7 @@ describe("CORS Handling Security Policy", () => {
     } as any;
 
     handleCors(mockReq, mockRes);
-    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsight-il.web.app");
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://plainsightil.web.app");
   });
 
   it("should handle OPTIONS pre-flight requests correctly", () => {

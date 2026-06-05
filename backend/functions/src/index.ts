@@ -70,6 +70,8 @@ function handleCors(req: functions.https.Request, res: functions.Response): bool
     const isLocalhost =
       origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
     const isProduction =
+      origin === "https://plainsightil.web.app" ||
+      origin === "https://plainsightil.firebaseapp.com" ||
       origin === "https://plainsight-il.web.app" ||
       origin === "https://plainsight-il.firebaseapp.com";
 
@@ -78,7 +80,7 @@ function handleCors(req: functions.https.Request, res: functions.Response): bool
       // Vary header tells caching layers to cache responses differently based on origin
       res.set("Vary", "Origin");
     } else {
-      res.set("Access-Control-Allow-Origin", "https://plainsight-il.web.app");
+      res.set("Access-Control-Allow-Origin", "https://plainsightil.web.app");
     }
   }
 

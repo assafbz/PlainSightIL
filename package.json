@@ -8,6 +8,8 @@
     "backend:start": "PATH=\"/opt/homebrew/opt/openjdk/bin:$PATH\" npx firebase-tools emulators:start --project demo-plainsightil --only firestore,auth,functions",
     "client:start": "flutter run -d chrome --web-port 8080",
     "client:start:dev": "[ -f .env ] && export $(grep -v '^#' .env | xargs); cd client && flutter run -d chrome --web-port 8080 --dart-define=USE_EMULATOR=false --dart-define=ENVIRONMENT=dev --dart-define=FIREBASE_DEV_API_KEY=$FIREBASE_DEV_API_KEY",
+    "client:build:dev": "[ -f .env ] && export $(grep -v '^#' .env | xargs); cd client && flutter build web --dart-define=USE_EMULATOR=false --dart-define=ENVIRONMENT=dev --dart-define=FIREBASE_DEV_API_KEY=$FIREBASE_DEV_API_KEY",
+    "client:deploy:dev": "npm run client:build:dev && mkdir -p backend/build && rm -rf backend/build/web && cp -R client/build/web backend/build/web && cd backend && npx firebase-tools deploy --only hosting --project plainsightil",
     "start": "node scripts/run.js",
     "kill": "node scripts/kill.js",
     "prepare": "bash .agents/bin/install-hooks.sh",
