@@ -31,6 +31,72 @@
 
   <title>PlainSightIL</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Polyfill for Intl.v8BreakIterator to silence Chrome's deprecation warning
+    (function() {
+      if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+        Object.defineProperty(Intl, 'v8BreakIterator', {
+          value: function(locales, options) {
+            this.locales = locales;
+            this.options = options || {};
+            this.text = '';
+            this.boundaries = [];
+            this.currentIndex = 0;
+            
+            let granularity = 'word';
+            if (this.options.type === 'character') granularity = 'grapheme';
+            else if (this.options.type === 'word') granularity = 'word';
+            else if (this.options.type === 'sentence') granularity = 'sentence';
+            else if (this.options.type === 'line') granularity = 'word';
+            
+            this.segmenter = new Intl.Segmenter(locales, { granularity: granularity });
+          },
+          writable: true,
+          configurable: true,
+          enumerable: false
+        });
+        
+        Intl.v8BreakIterator.prototype.adoptText = function(text) {
+          this.text = text;
+          this.currentIndex = 0;
+          this.boundaries = [0];
+          
+          const segments = this.segmenter.segment(text);
+          for (const segment of segments) {
+            const end = segment.index + segment.segment.length;
+            if (end > 0 && end <= text.length && this.boundaries[this.boundaries.length - 1] !== end) {
+              this.boundaries.push(end);
+            }
+          }
+          
+          if (this.boundaries[this.boundaries.length - 1] !== text.length) {
+            this.boundaries.push(text.length);
+          }
+        };
+        
+        Intl.v8BreakIterator.prototype.first = function() {
+          this.currentIndex = 0;
+          return this.boundaries[0] || 0;
+        };
+        
+        Intl.v8BreakIterator.prototype.next = function() {
+          if (this.currentIndex < this.boundaries.length - 1) {
+            this.currentIndex++;
+            return this.boundaries[this.currentIndex];
+          }
+          return -1;
+        };
+        
+        Intl.v8BreakIterator.prototype.current = function() {
+          return this.boundaries[this.currentIndex] !== undefined ? this.boundaries[this.currentIndex] : -1;
+        };
+        
+        Intl.v8BreakIterator.prototype.breakType = function() {
+          return 'none';
+        };
+      }
+    })();
+  </script>
 </head>
 <body>
   <!--

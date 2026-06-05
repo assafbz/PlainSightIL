@@ -125,24 +125,9 @@ Tests must run in a predictable environment isolated from external network calls
 
 ## 3. E2E Test Execution Matrix
 
-The following test matrix must be evaluated for all pull requests:
+All E2E test execution scenarios and verification steps (e.g. Guest Access, Bilingual & RTL, Maps, and Offline support) are documented in detail under [e2e_test_specification.md](file:///Users/abenzaken/Dev/PlainSightIL/docs/e2e_test_specification.md). 
 
-| Ref ID | Category | Test Condition / Scenario | Expected Outcome | Geometry / Visual Target |
-| :--- | :--- | :--- | :--- | :--- |
-| **TC-01** | Guest Access | Tap "Continue as Guest" on the `LoginPage`. | Bypasses auth checks, redirects to Dashboard, sets `AppState` testing flag. | Login layout bounds, Google button alignments. |
-| **TC-02** | Bilingual Support | Tap language switcher toggle button (`HE`/`EN`). | Translates all hardcoded UI text, swaps locale context, swaps labels. | Mirror all layout directions (LTR to RTL). |
-| **TC-03** | RTL Swap | Switch to Hebrew (`HE`) on Compact and Tablet viewports. | Text aligns right, sidebar slider animates from right, icons mirror. | Layout width limits, no overlapping text. |
-| **TC-04** | Map Painter | Load map page with zero coordinate records (empty). | Renders map with Tel Aviv fallback center, shows no markers, no crashes. | Cluster bounds, map controls visibility. |
-| **TC-05** | Painter Deltas | Load map with all markers mapped to a single coordinate. | Cluster displays count correctly without visual overlapping artifacts. | Stacked marker overlay, single count indicator. |
-| **TC-06** | Bad Coordinates | Pass null or string coordinates for dataset items. | Ignores invalid records safely, does not break Map or Radar CustomPaint. | Skips drawing invalid markers, lists rest. |
-| **TC-07** | Custom Repaint | Scroll or pan map view repeatedly. | Repaints markers efficiently without high CPU utilization or dropped frames. | Frame rendering rate (60/120fps). |
-| **TC-08** | Search & Filter | Enter Hebrew search term into liquidation view. | Correctly filters database items, shows highlighted results. | Input field focus, matching highlight bounds. |
-| **TC-09** | Caching & Offline | Trigger offline state, attempt fetching directory. | Banner shows offline notice, previously cached local/Firestore data remains visible. | Alert banner padding, layout alignment. |
-| **TC-10** | Accessibility | Audit app layout with screen readers and contrast tools. | All image elements have semantic labels, touch targets >= 48dp, contrast >= 4.5:1. | Focus ring visibility, target sizes. |
-| **TC-11** | Scraper Controls | Adjust scheduler interval dropdown/slider and tap sync. | Updates scheduling configuration document in Firestore, dispatches Pub/Sub, updates ticker UI. | Scraper controls layout, log output panel. |
-| **TC-12** | Infinite Scroll | Scroll directory listing list view down to the end of the viewport. | Triggers next cursor load, displays a bottom loading spinner, appends next records correctly. | ListView bottom edge, loading indicator spinner. |
-| **TC-13** | Cache Reload | Disconnect emulator network, refresh/reload page. | Displays top offline banner, retrieves database collection data from local Firestore cache. | Top offline status banner, cached cards display. |
-| **TC-14** | Responsive Geometry | Rescale browser viewport from 375x667 to 820x1180. | Layout shifts cleanly, handles sidebar drawers, wraps text labels, no visual overflow errors. | Mobile hamburger drawer, adaptive grid items. |
+QA Agents MUST reference that document as the ground-truth verification matrix to evaluate pull requests, rather than duplicating configurations locally.
 
 ---
 

@@ -3,11 +3,6 @@
 # Antigravity SDLC pre-push hook
 # Performs automated validation (format, lint, tests) for modified modules before pushing.
 
-# Enable bypass via environment variable (requires HITL approval)
-if [ "$SKIP_SDLC" = "1" ] || [ "$SKIP_SDLC" = "true" ]; then
-  echo "⚠️  Bypassing SDLC validation (SKIP_SDLC=1). Note: Skipping SDLC requires HITL approval."
-  exit 0
-fi
 
 echo "🛡️  PlainSightIL SDLC Pre-Push Enforcement..."
 

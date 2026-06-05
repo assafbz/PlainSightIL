@@ -3,11 +3,6 @@
 # Antigravity SDLC pre-commit hook
 # Validates branch naming and active issue tracking.
 
-# Enable bypass via environment variable (requires HITL approval)
-if [ "$SKIP_SDLC" = "1" ] || [ "$SKIP_SDLC" = "true" ]; then
-  echo "⚠️  Bypassing SDLC validation (SKIP_SDLC=1). Note: Skipping SDLC requires HITL approval."
-  exit 0
-fi
 
 # ----------------- CREDENTIAL EXPOSURE GUARDRAIL -----------------
 # Scan all staged files for exposed Google API keys (AIzaSy followed by 33 characters)
@@ -46,7 +41,6 @@ fi
 if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "dev" ]; then
   echo "🛑 ERROR: Direct commits to '$BRANCH_NAME' branch are prohibited by PlainSightIL SDLC rules!"
   echo "Please create a branch using: agents/<issue_id>-<description> or dev/<issue_id>-<description>"
-  echo "If you absolutely must commit directly, set SKIP_SDLC=1 (requires HITL approval)"
   exit 1
 fi
 
@@ -59,7 +53,6 @@ else
   echo "🛑 ERROR: Branch name '$BRANCH_NAME' does not follow SDLC conventions!"
   echo "Branch name must match the pattern: agents/<issue_id>-<description> or dev/<issue_id>-<description>"
   echo "Example: agents/42-setup-login-page"
-  echo "To bypass SDLC validation, set SKIP_SDLC=1 (requires HITL approval)"
   exit 1
 fi
 
@@ -71,7 +64,6 @@ if [ ! -f "$ISSUE_FILE" ]; then
   echo "🛑 ERROR: Active issue file not found for Issue #$ISSUE_ID!"
   echo "Expected file: $ISSUE_FILE"
   echo "Every task must be tracked with an active issue file before starting development."
-  echo "To bypass, set SKIP_SDLC=1 (requires HITL approval)"
   exit 1
 fi
 
@@ -89,7 +81,6 @@ fi
 if [ "$STATUS" != "in-progress" ] && [ "$STATUS" != "blueprint-revision" ]; then
   echo "🛑 ERROR: Issue #$ISSUE_ID status is '$STATUS', not 'in-progress' or 'blueprint-revision'!"
   echo "You cannot commit to an issue that is not active."
-  echo "To bypass, set SKIP_SDLC=1 (requires HITL approval)"
   exit 1
 fi
 
