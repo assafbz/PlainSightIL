@@ -67,6 +67,9 @@ if [ "$RUN_CLIENT" = true ]; then
   echo "📱 Detected changes in 'client/'. Executing quality checks..."
   cd "$PROJECT_ROOT/client" || exit 1
   
+  # Unset Git variables to allow Flutter tool to determine its own version correctly
+  unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+  
   echo "   [1/3] Checking Dart code formatting..."
   if ! dart format --set-exit-if-changed .; then
     echo "🛑 ERROR: Dart formatting violations found. Run 'dart format .' to fix."
