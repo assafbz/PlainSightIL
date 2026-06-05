@@ -60,7 +60,7 @@ export interface LocalMarketBondRecord {
 }
 
 const BOND_TYPE_TRANSLATIONS: Record<string, string> = {
-  "ממשלתית": "Government",
+  ממשלתית: "Government",
   "ממשלתית צמודה": "CPI-Linked Government",
   "ממשלתית בריבית משתנה": "Floating Rate Government",
 };
@@ -281,7 +281,9 @@ export async function scrapeAndSyncLocalMarketBonds(
       }
     }
 
-    logger.info(`Ingestion complete. Processed: ${processedCount}, Wrote: ${newWritesCount} records.`);
+    logger.info(
+      `Ingestion complete. Processed: ${processedCount}, Wrote: ${newWritesCount} records.`,
+    );
 
     const countSnapshot = await targetRef.count().get();
     const totalRecords = countSnapshot.data().count;
