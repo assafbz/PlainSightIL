@@ -129,7 +129,6 @@ function checkExistence() {
       console.error(`    ↳ Expected Test: ${expectedTest}\n`);
     });
     
-    console.error('To bypass SDLC validation (requires approval), set SKIP_SDLC=1.');
     process.exit(1);
   }
   
