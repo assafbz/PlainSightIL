@@ -170,6 +170,12 @@ class TelemetryNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-03T10:00:00Z',
           'status': 'idle',
         },
+        DatasetIds.carImporters: {
+          'id': DatasetIds.carImporters,
+          'recordCount': 99489,
+          'lastUpdated': '2026-06-05T12:00:00Z',
+          'status': 'idle',
+        },
         'datasets_metadata': {
           'id': 'datasets_metadata',
           'recordCount': 1245,
@@ -490,6 +496,18 @@ class TelemetryNotifier extends ChangeNotifier {
           tags: const ['פטנטים', 'סיווג', 'חדשנות', 'CPC'],
           isSupported: true,
         ),
+        DatasetMetadataModel(
+          id: DatasetIds.carImporters,
+          datasetId: DatasetIds.carImporters,
+          name: 'car_importers',
+          title: 'מחירוני רכב חדש',
+          notes: 'מחירוני רכב חדש ויבואנים רשמיים של משרד התחבורה בישראל.',
+          publisher: 'משרד התחבורה',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 5),
+          tags: const ['רכב', 'מחירון', 'יבואנים', 'משרד התחבורה'],
+          isSupported: true,
+        ),
       ];
       _datasetRequestCounts = {'government-budget-dataset-id': 18};
       _isLoadingDirectory = false;
@@ -701,6 +719,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncMetadata';
       } else if (datasetId == DatasetIds.patentClassifications) {
         functionName = 'manualSyncPatentClassifications';
+      } else if (datasetId == DatasetIds.carImporters) {
+        functionName = 'manualSyncCarImporters';
       } else {
         throw Exception('Unknown dataset ID: $datasetId');
       }

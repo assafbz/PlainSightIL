@@ -21,7 +21,10 @@ vi.mock("firebase-functions", () => ({
 describe("Local Market Bonds Date and Type Parsers", () => {
   it("should translate bond types correctly", () => {
     expect(getBondTypeTranslation("ממשלתית")).toEqual({ he: "ממשלתית", en: "Government" });
-    expect(getBondTypeTranslation("ממשלתית צמודה")).toEqual({ he: "ממשלתית צמודה", en: "CPI-Linked Government" });
+    expect(getBondTypeTranslation("ממשלתית צמודה")).toEqual({
+      he: "ממשלתית צמודה",
+      en: "CPI-Linked Government",
+    });
     expect(getBondTypeTranslation("ממשלתית בריבית משתנה")).toEqual({
       he: "ממשלתית בריבית משתנה",
       en: "Floating Rate Government",

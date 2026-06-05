@@ -20,6 +20,8 @@ import 'package:plainsight/features/datasets/companies_liquidation/presentation/
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
+import 'package:plainsight/features/datasets/car_importers/data/models/car_importer_record_model.dart';
 import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
@@ -539,6 +541,67 @@ void main() {
         final notifier = DoctorsNotifier(isTesting: false);
         notifier.initDoctorsListener();
         expect(notifier.isLoadingDoctors, isFalse);
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
+  });
+
+  group('CarImportersNotifier Tests', () {
+    test('initCarImportersListener updates car importer records', () async {
+      final streamController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+
+      AppStateNotifier.isTesting = false;
+      final notifier = CarImportersNotifier(
+        isTesting: false,
+        testFirestoreStream: streamController.stream,
+      );
+
+      notifier.initCarImportersListener();
+      expect(notifier.isLoadingCarImporters, isTrue);
+
+      final record = {
+        'id': '1',
+        '_id': 101,
+        'importerCode': 10,
+        'importerName': 'קרסו',
+        'modelType': 'P',
+        'makerCode': 928,
+        'makerName': 'רנו',
+        'modelCode': 1000,
+        'modelName': 'Twingo',
+        'productionYear': 1996,
+        'price': 54950,
+        'commercialName': 'Twingo 2.1',
+      };
+      final fakeDoc = FakeQueryDocumentSnapshot('1', record);
+      final fakeSnapshot = FakeQuerySnapshot([fakeDoc]);
+
+      streamController.add(fakeSnapshot);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(notifier.isLoadingCarImporters, isFalse);
+      expect(notifier.carImporterRecords.length, 1);
+      expect(notifier.carImporterRecords.first.price, 54950);
+
+      // Emit error
+      streamController.addError('Error');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(notifier.isLoadingCarImporters, isFalse);
+
+      await streamController.close();
+      notifier.dispose();
+      AppStateNotifier.isTesting = true;
+    });
+
+    test(
+      'initCarImportersListener fallback when stream is null and firebase is not initialized',
+      () {
+        AppStateNotifier.isTesting = false;
+        final notifier = CarImportersNotifier(isTesting: false);
+        notifier.initCarImportersListener();
+        expect(notifier.isLoadingCarImporters, isFalse);
         notifier.dispose();
         AppStateNotifier.isTesting = true;
       },
