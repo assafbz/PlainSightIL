@@ -347,3 +347,25 @@ const child = spawn('npx', ['firebase-tools', ...], {
   }
 });
 ```
+
+---
+
+## 18. Pitfall: SharedPreferences Test State Pollution
+
+### Symptoms
+AppStateNotifier unit tests fail with unexpected locale states (e.g., expecting `'en'` but getting `'he'`), or other settings tests fail in a timing-dependent or execution-order-dependent manner.
+
+### Root Cause
+`SharedPreferences` in Flutter testing preserves state across different `test()` blocks within the same file unless it is cleared/mock initial values are reset. Notifiers that perform asynchronous loading on startup will read values written by previous tests, corrupting the test environment.
+
+### Corrective Action & Best Practice
+Always reset mock initial values in the `setUp` function of the test suite before creating the test subject:
+```dart
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      AppStateNotifier.isTesting = false;
+      appState = AppStateNotifier();
+    });
+```
+This guarantees that each test starts with a clean, isolated database.
+

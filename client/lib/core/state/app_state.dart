@@ -2,9 +2,7 @@ import 'dart:ui';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
@@ -20,6 +18,7 @@ import '../../features/datasets/patent_classifications/presentation/notifiers/pa
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
+import 'local_storage.dart';
 
 /// Central state coordinator that acts as a Facade for the underlying scoped
 /// feature notifiers to maintain full backward compatibility across the app UI.
@@ -148,6 +147,23 @@ class AppStateNotifier extends ChangeNotifier {
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
     _initPackageInfo();
+    _loadLocale();
+  }
+
+  /// Load the user's saved locale preference from local storage asynchronously.
+  Future<void> _loadLocale() async {
+    try {
+      await LocalStorage.init();
+      final savedLocale = LocalStorage.getLocale();
+      if (savedLocale == 'en' || savedLocale == 'he') {
+        if (_locale != savedLocale) {
+          _locale = savedLocale;
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      AppLogger.error('Error loading locale from LocalStorage', e);
+    }
   }
 
   Future<void> _initPackageInfo() async {
@@ -260,12 +276,14 @@ class AppStateNotifier extends ChangeNotifier {
     if (newLocale == 'en' || newLocale == 'he') {
       _locale = newLocale;
       notifyListeners();
+      LocalStorage.saveLocale(newLocale);
     }
   }
 
   void toggleLocale() {
     _locale = _locale == 'en' ? 'he' : 'en';
     notifyListeners();
+    LocalStorage.saveLocale(_locale);
   }
 
   void setActiveTab(int index) {

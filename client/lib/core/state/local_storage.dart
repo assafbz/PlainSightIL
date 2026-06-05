@@ -44,4 +44,10 @@ class LocalStorage {
   /// Persists the active branch name to separate cache states.
   static Future<void> saveLastSavedBranch(String branch) =>
       _impl.saveLastSavedBranch(branch);
+
+  /// Retrieve the saved locale code.
+  static String getLocale() => _impl.getLocale();
+
+  /// Save the active locale code.
+  static Future<void> saveLocale(String locale) => _impl.saveLocale(locale);
 }

@@ -23,6 +23,7 @@ void main() {
     late AppStateNotifier appState;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       AppStateNotifier.isTesting = false;
       appState = AppStateNotifier();
     });
@@ -429,6 +430,36 @@ void main() {
       expect(appState.hasMorePatents, isTrue);
 
       appState.dispose();
+    });
+
+    test('locale selection is persisted and loaded correctly', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      final state1 = AppStateNotifier();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(state1.locale, 'en');
+
+      state1.setLocale('he');
+      expect(state1.locale, 'he');
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final state2 = AppStateNotifier();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(state2.locale, 'he');
+
+      state2.toggleLocale();
+      expect(state2.locale, 'en');
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final state3 = AppStateNotifier();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(state3.locale, 'en');
+
+      state1.dispose();
+      state2.dispose();
+      state3.dispose();
     });
   });
 }

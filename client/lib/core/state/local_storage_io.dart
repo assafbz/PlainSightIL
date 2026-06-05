@@ -67,6 +67,18 @@ class LocalStorageIO implements LocalStorageImpl {
   Future<void> saveLastSavedBranch(String branch) async {
     await _prefs?.setString('last_git_branch', branch);
   }
+
+  /// Retrieves the saved locale code, defaulting to 'en' if not set.
+  @override
+  String getLocale() {
+    return _prefs?.getString('locale') ?? 'en';
+  }
+
+  /// Saves the active locale code to SharedPreferences.
+  @override
+  Future<void> saveLocale(String locale) async {
+    await _prefs?.setString('locale', locale);
+  }
 }
 
 /// Native factory method returning a new [LocalStorageIO] instance.
