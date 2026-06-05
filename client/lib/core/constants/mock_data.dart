@@ -4,6 +4,7 @@ import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/datasets/patent_classifications/data/models/patent_classification_model.dart';
+import '../../features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 
 /// Central repository of mock data loaded during offline or testing modes.
@@ -177,6 +178,19 @@ class MockData {
       isSupported: true,
     ),
     DatasetMetadataModel(
+      id: DatasetIds.localMarketBonds,
+      datasetId: DatasetIds.localMarketBonds,
+      name: 'local_market_bonds',
+      title: 'הנפקת אג"ח סחירות בשוק המקומי',
+      notes:
+          'פירוט הנפקות החוב המקומי – מכרזים רגילים לציבור ולעושי השוק הראשיים, כולל הקצאות יתר.',
+      publisher: 'משרד האוצר - החשב הכללי',
+      resourceCount: 1,
+      lastUpdated: DateTime(2026, 6, 4),
+      tags: const ['אג"ח', 'הנפקות', 'חוב ממשלתי', 'שוק מקומי', 'מכרזים'],
+      isSupported: true,
+    ),
+    DatasetMetadataModel(
       id: 'government-budget-dataset-id',
       datasetId: 'government-budget-dataset-id',
       name: 'government_budget',
@@ -296,6 +310,12 @@ class MockData {
       'id': DatasetIds.patentClassifications,
       'recordCount': 200,
       'lastUpdated': '2026-06-03T18:00:00Z',
+      'status': 'idle',
+    },
+    DatasetIds.localMarketBonds: {
+      'id': DatasetIds.localMarketBonds,
+      'recordCount': 2,
+      'lastUpdated': '2026-06-04T12:00:00Z',
       'status': 'idle',
     },
   };
@@ -430,6 +450,56 @@ class MockData {
       isPrimary: true,
       lastUpdated: '2026-06-03T18:00:00Z',
       createdAt: '2026-06-03T18:00:00Z',
+    ),
+  ];
+
+  /// Mock local market bonds records.
+  static final List<LocalMarketBondRecordModel> bonds = [
+    LocalMarketBondRecordModel(
+      id: '1',
+      idNum: 1,
+      issuanceDate: '2026-06-02T00:00:00.000Z',
+      bondType: const {'he': 'ממשלתית', 'en': 'Government'},
+      series: 1227784,
+      actualTermToMaturity: 9.4,
+      originalTermToMaturity: 10.0,
+      redemptionDate: '2035-10-31T00:00:00.000Z',
+      coupon: 4.15,
+      offeredQuantity: 106.0,
+      purchasedQuantity: 105.8,
+      additionalPurchased: -0.1,
+      averagePrice: 105.73,
+      cutoffPrice: 105.73,
+      totalFunding: 111.9,
+      demandedAmount: 105.8,
+      coverRatio: 1.0,
+      grossAvgYield: 3.73,
+      grossCutoffYield: 3.73,
+      lastUpdated: '2026-06-04T12:00:00Z',
+      createdAt: '2026-06-04T12:00:00Z',
+    ),
+    LocalMarketBondRecordModel(
+      id: '2',
+      idNum: 2,
+      issuanceDate: '2026-06-02T00:00:00.000Z',
+      bondType: const {'he': 'ממשלתית צמודה', 'en': 'CPI-Linked Government'},
+      series: 1220722,
+      actualTermToMaturity: 4.9,
+      originalTermToMaturity: 6.0,
+      redemptionDate: '2031-04-30T00:00:00.000Z',
+      coupon: 2.00,
+      offeredQuantity: 150.0,
+      purchasedQuantity: 73.5,
+      additionalPurchased: -76.5,
+      averagePrice: 103.65,
+      cutoffPrice: 103.65,
+      totalFunding: 76.18,
+      demandedAmount: 73.5,
+      coverRatio: 0.5,
+      grossAvgYield: 1.91,
+      grossCutoffYield: 1.91,
+      lastUpdated: '2026-06-04T12:00:00Z',
+      createdAt: '2026-06-04T12:00:00Z',
     ),
   ];
 }

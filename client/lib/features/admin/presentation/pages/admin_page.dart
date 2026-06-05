@@ -168,6 +168,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyEn': 'Israel Patent Office',
         'agencyHe': 'רשות הפטנטים',
       },
+      {
+        'id': DatasetIds.localMarketBonds,
+        'titleEn': 'Local Market Bonds',
+        'titleHe': 'הנפקת אג"ח סחירות בשוק המקומי',
+        'resourceId': DatasetIds.localMarketBonds,
+        'agencyEn': 'Ministry of Finance - Accountant General',
+        'agencyHe': 'משרד האוצר - החשב הכללי',
+      },
     ];
 
     return ListenableBuilder(

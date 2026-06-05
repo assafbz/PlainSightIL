@@ -474,6 +474,128 @@
         "updatedAt",
         "lastUpdated"
       ]
+    },
+    "local_market_bonds": {
+      "description": "List of tradable government bonds issued in the domestic market.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the record (matches doc ID)."
+        },
+        "_id": {
+          "type": "integer",
+          "description": "Numeric primary key from the government datastore."
+        },
+        "issuanceDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of bond issuance."
+        },
+        "bondType": {
+          "$ref": "#/definitions/localizedString"
+        },
+        "series": {
+          "type": "integer",
+          "description": "Series number of the bond."
+        },
+        "actualTermToMaturity": {
+          "type": "number",
+          "description": "Actual term to maturity in years."
+        },
+        "originalTermToMaturity": {
+          "type": "number",
+          "description": "Original term to maturity in years."
+        },
+        "redemptionDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of bond redemption."
+        },
+        "coupon": {
+          "type": "number",
+          "description": "Coupon rate percentage."
+        },
+        "offeredQuantity": {
+          "type": "number",
+          "description": "Offered quantity in millions."
+        },
+        "purchasedQuantity": {
+          "type": "number",
+          "description": "Purchased quantity in millions."
+        },
+        "additionalPurchased": {
+          "type": "number",
+          "description": "Additional purchased quantity in millions."
+        },
+        "averagePrice": {
+          "type": "number",
+          "description": "Average auction price."
+        },
+        "cutoffPrice": {
+          "type": "number",
+          "description": "Cutoff auction price."
+        },
+        "totalFunding": {
+          "type": "number",
+          "description": "Total funding in millions."
+        },
+        "demandedAmount": {
+          "type": "number",
+          "description": "Demanded amount in millions."
+        },
+        "coverRatio": {
+          "type": "number",
+          "description": "Auction cover ratio."
+        },
+        "grossAvgYield": {
+          "type": "number",
+          "description": "Gross average yield percentage."
+        },
+        "grossCutoffYield": {
+          "type": "number",
+          "description": "Gross cutoff yield percentage."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of document ingestion."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of database document modification."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of source metadata last modification."
+        }
+      },
+      "required": [
+        "id",
+        "_id",
+        "issuanceDate",
+        "bondType",
+        "series",
+        "actualTermToMaturity",
+        "originalTermToMaturity",
+        "redemptionDate",
+        "coupon",
+        "offeredQuantity",
+        "purchasedQuantity",
+        "additionalPurchased",
+        "averagePrice",
+        "cutoffPrice",
+        "totalFunding",
+        "demandedAmount",
+        "coverRatio",
+        "grossAvgYield",
+        "grossCutoffYield",
+        "createdAt",
+        "updatedAt",
+        "lastUpdated"
+      ]
     }
   }
 }
