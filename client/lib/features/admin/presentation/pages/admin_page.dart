@@ -168,6 +168,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyEn': 'Israel Patent Office',
         'agencyHe': 'רשות הפטנטים',
       },
+      {
+        'id': DatasetIds.vehicleRecalls,
+        'titleEn': 'Vehicle Recalls',
+        'titleHe': 'קריאות חוזרות (Recall) לרכב',
+        'resourceId': DatasetIds.vehicleRecalls,
+        'agencyEn': 'Ministry of Transport',
+        'agencyHe': 'משרד התחבורה והבטיחות בדרכים',
+      },
     ];
 
     return ListenableBuilder(

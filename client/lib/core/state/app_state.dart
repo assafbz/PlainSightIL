@@ -15,6 +15,8 @@ import '../../features/datasets/companies_liquidation/presentation/notifiers/liq
 import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import '../../features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import '../../features/datasets/vehicle_recalls/data/models/vehicle_recall_model.dart';
+import '../../features/datasets/vehicle_recalls/presentation/notifiers/vehicle_recalls_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
@@ -51,6 +53,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final DoctorsNotifier doctorsNotifier;
   late final BankAtmsNotifier bankAtmsNotifier;
   late final PatentClassificationsNotifier patentClassificationsNotifier;
+  late final VehicleRecallsNotifier vehicleRecallsNotifier;
   late final TelemetryNotifier telemetryNotifier;
 
   // Configuration Getters
@@ -105,6 +108,11 @@ class AppStateNotifier extends ChangeNotifier {
       patentClassificationsNotifier.isLoadingMorePatents;
   bool get hasMorePatents => patentClassificationsNotifier.hasMorePatents;
 
+  // Delegated Getters for VehicleRecallsNotifier
+  List<VehicleRecallRecordModel> get recallRecords =>
+      vehicleRecallsNotifier.recallRecords;
+  bool get isLoadingRecalls => vehicleRecallsNotifier.isLoadingRecalls;
+
   // Delegated Getters for TelemetryNotifier
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>
       telemetryNotifier.datasetMetadataMap;
@@ -131,6 +139,7 @@ class AppStateNotifier extends ChangeNotifier {
     patentClassificationsNotifier = PatentClassificationsNotifier(
       isTesting: isTesting,
     );
+    vehicleRecallsNotifier = VehicleRecallsNotifier(isTesting: isTesting);
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
       functionsPort: functionsPort,
@@ -144,6 +153,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.addListener(_onSubNotifierChanged);
     bankAtmsNotifier.addListener(_onSubNotifierChanged);
     patentClassificationsNotifier.addListener(_onSubNotifierChanged);
+    vehicleRecallsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
     _initPackageInfo();
@@ -193,6 +203,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.initDoctorsListener();
     bankAtmsNotifier.initBankAtmsListener();
     patentClassificationsNotifier.initPatentClassificationsListener();
+    vehicleRecallsNotifier.initRecallsListener();
   }
 
   void initAdminMetadataListener() {
@@ -222,6 +233,9 @@ class AppStateNotifier extends ChangeNotifier {
       patentClassificationsNotifier.initPatentClassificationsListener();
   void cancelPatentClassificationsListener() =>
       patentClassificationsNotifier.cancelPatentClassificationsListener();
+  void initRecallsListener() => vehicleRecallsNotifier.initRecallsListener();
+  void cancelRecallsListener() =>
+      vehicleRecallsNotifier.cancelRecallsListener();
   void setPatentSearchQuery(String query) =>
       patentClassificationsNotifier.setSearchQuery(query);
   void setPatentPrimaryFilter(String filter) =>
@@ -307,6 +321,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.removeListener(_onSubNotifierChanged);
     bankAtmsNotifier.removeListener(_onSubNotifierChanged);
     patentClassificationsNotifier.removeListener(_onSubNotifierChanged);
+    vehicleRecallsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
 
     authNotifier.dispose();
@@ -316,6 +331,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.dispose();
     bankAtmsNotifier.dispose();
     patentClassificationsNotifier.dispose();
+    vehicleRecallsNotifier.dispose();
     telemetryNotifier.dispose();
     super.dispose();
   }
@@ -504,6 +520,21 @@ class AppStateNotifier extends ChangeNotifier {
       'scheduler_next_run': 'Next Scheduled Run: ',
       'scheduler_save_success': 'Schedule settings updated successfully',
       'scheduler_save_error': 'Failed to update schedule settings',
+      'recalls_title': 'Vehicle Recalls',
+      'recalls_desc': 'Manufacturer recalls and safety warnings database.',
+      'recalls_count': '2 records',
+      'nav_recalls': 'Vehicle Recalls',
+      'recalls_search_placeholder': 'Search by Manufacturer, Model, or ID',
+      'recall_id_label': 'Recall ID: #',
+      'recall_year_label': 'Recall Year: ',
+      'recall_type_label': 'Recall Type: ',
+      'recall_defect_label': 'Defect/Fault Category: ',
+      'recall_fix_label': 'Repair Action: ',
+      'recall_eu_category_label': 'EU Classification: ',
+      'recall_importer_label': 'Importer: ',
+      'recall_phone_label': 'Importer Telephone: ',
+      'recall_website_label': 'Importer Website: ',
+      'recalls_publisher': 'Ministry of Transport - Vehicle Licensing Division',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -684,6 +715,21 @@ class AppStateNotifier extends ChangeNotifier {
       'scheduler_next_run': 'ריצה הבאה מתוזמנת: ',
       'scheduler_save_success': 'הגדרות התזמון עודכנו בהצלחה',
       'scheduler_save_error': 'עדכון הגדרות התזמון נכשל',
+      'recalls_title': 'קריאות חוזרות (Recall)',
+      'recalls_desc': 'מאגר קריאות תיקון וקמפיינים בטיחותיים של יצרני הרכב.',
+      'recalls_count': '2 רשומות',
+      'nav_recalls': 'קריאות חוזרות',
+      'recalls_search_placeholder': 'חפש לפי יצרן, דגם או מזהה קריאה',
+      'recall_id_label': 'מזהה קריאה: ',
+      'recall_year_label': 'שנת קריאה: ',
+      'recall_type_label': 'סוג קריאה: ',
+      'recall_defect_label': 'קטגוריית תקלה: ',
+      'recall_fix_label': 'אופן תיקון: ',
+      'recall_eu_category_label': 'תקינה אירופאית: ',
+      'recall_importer_label': 'יבואן: ',
+      'recall_phone_label': 'טלפון יבואן: ',
+      'recall_website_label': 'אתר יבואן: ',
+      'recalls_publisher': 'משרד התחבורה והבטיחות בדרכים - אגף הרישוי',
     },
   };
 

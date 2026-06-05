@@ -4,6 +4,7 @@ import '../../features/directory/data/models/dataset_metadata_model.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/datasets/patent_classifications/data/models/patent_classification_model.dart';
+import '../../features/datasets/vehicle_recalls/data/models/vehicle_recall_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 
 /// Central repository of mock data loaded during offline or testing modes.
@@ -177,6 +178,18 @@ class MockData {
       isSupported: true,
     ),
     DatasetMetadataModel(
+      id: DatasetIds.vehicleRecalls,
+      datasetId: DatasetIds.vehicleRecalls,
+      name: 'vehicle_recalls',
+      title: 'קריאות חוזרות לרכב',
+      notes: 'מאגר קריאות חוזרות (Recall) לבטיחות ותקינות רכבים בישראל.',
+      publisher: 'משרד התחבורה',
+      resourceCount: 1,
+      lastUpdated: DateTime(2026, 6, 4),
+      tags: const ['רכבים', 'בטיחות', 'קריאות חוזרות', 'Recall'],
+      isSupported: true,
+    ),
+    DatasetMetadataModel(
       id: 'government-budget-dataset-id',
       datasetId: 'government-budget-dataset-id',
       name: 'government_budget',
@@ -296,6 +309,12 @@ class MockData {
       'id': DatasetIds.patentClassifications,
       'recordCount': 200,
       'lastUpdated': '2026-06-03T18:00:00Z',
+      'status': 'idle',
+    },
+    DatasetIds.vehicleRecalls: {
+      'id': DatasetIds.vehicleRecalls,
+      'recordCount': 2,
+      'lastUpdated': '2026-06-04T12:00:00Z',
       'status': 'idle',
     },
   };
@@ -430,6 +449,57 @@ class MockData {
       isPrimary: true,
       lastUpdated: '2026-06-03T18:00:00Z',
       createdAt: '2026-06-03T18:00:00Z',
+    ),
+  ];
+
+  /// Mock vehicle recalls records.
+  static final List<VehicleRecallRecordModel> recalls = [
+    VehicleRecallRecordModel(
+      id: '11020',
+      idNum: 1,
+      recallId: 11020,
+      manufacturerCode: 1,
+      manufacturerName: 'TOYOTA',
+      modelName: 'AVENSIS',
+      recallYear: 2011,
+      buildStartDate: '2000-01-02T00:00:00.000Z',
+      buildEndDate: '2008-12-31T00:00:00.000Z',
+      recallType: const {'he': 'תקלה סידרתית בטיחותית', 'en': 'Safety Recall'},
+      defectCategory: 'מנוע ומערכותיו',
+      defectDescription: 'שסתום צינור דלק אוונסיס',
+      repairAction: 'החלפה',
+      euCategory: 'M1',
+      importerName: 'יוניון מוטורס בעמ',
+      importerPhone: '1-800-22-1514',
+      importerWebsite: 'WWW.TOYOTA.CO.IL/SERVICE-AND-ACCESSORIES/RECALL',
+      createdAt: '2026-06-04T12:00:00.000Z',
+      updatedAt: '2026-06-04T12:00:00.000Z',
+      lastUpdated: '2026-06-04T12:00:00.000Z',
+    ),
+    VehicleRecallRecordModel(
+      id: '11029',
+      idNum: 3,
+      recallId: 11029,
+      manufacturerCode: 105,
+      manufacturerName: 'SUZUKI MOTORCYCLES',
+      modelName: 'EXEL  SUZUK',
+      recallYear: 2011,
+      buildStartDate: '2010-01-03T00:00:00.000Z',
+      buildEndDate: '2010-12-31T00:00:00.000Z',
+      recallType: const {
+        'he': 'קמפיין שרות טכני',
+        'en': 'Technical Service Campaign',
+      },
+      defectCategory: 'מנוע ומערכותיו',
+      defectDescription: 'וסת מתח',
+      repairAction: 'החלפה',
+      euCategory: 'L1',
+      importerName: 'אבניר חברה לרכב בעמ',
+      importerPhone: '03-5158856/7',
+      importerWebsite: 'WWW.OFERAVNIR.CO.IL/RECALLS',
+      createdAt: '2026-06-04T12:00:00.000Z',
+      updatedAt: '2026-06-04T12:00:00.000Z',
+      lastUpdated: '2026-06-04T12:00:00.000Z',
     ),
   ];
 }
