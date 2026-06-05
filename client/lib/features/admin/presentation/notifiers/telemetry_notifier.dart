@@ -176,6 +176,12 @@ class TelemetryNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-05T12:00:00Z',
           'status': 'idle',
         },
+        DatasetIds.localMarketBonds: {
+          'id': DatasetIds.localMarketBonds,
+          'recordCount': 500,
+          'lastUpdated': '2026-06-05T15:00:00Z',
+          'status': 'idle',
+        },
         'datasets_metadata': {
           'id': 'datasets_metadata',
           'recordCount': 1245,
@@ -508,6 +514,18 @@ class TelemetryNotifier extends ChangeNotifier {
           tags: const ['רכב', 'מחירון', 'יבואנים', 'משרד התחבורה'],
           isSupported: true,
         ),
+        DatasetMetadataModel(
+          id: DatasetIds.localMarketBonds,
+          datasetId: DatasetIds.localMarketBonds,
+          name: 'local_market_bonds',
+          title: 'אגרות חוב מקומיות',
+          notes: 'נתוני אגרות חוב בשוק המקומי הישראלי.',
+          publisher: 'רשות ניירות ערך',
+          resourceCount: 1,
+          lastUpdated: DateTime(2026, 6, 5),
+          tags: const ['אגרות חוב', 'שוק הון', 'ניירות ערך'],
+          isSupported: true,
+        ),
       ];
       _datasetRequestCounts = {'government-budget-dataset-id': 18};
       _isLoadingDirectory = false;
@@ -721,6 +739,8 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncPatentClassifications';
       } else if (datasetId == DatasetIds.carImporters) {
         functionName = 'manualSyncCarImporters';
+      } else if (datasetId == DatasetIds.localMarketBonds) {
+        functionName = 'manualSyncLocalMarketBonds';
       } else {
         throw Exception('Unknown dataset ID: $datasetId');
       }
