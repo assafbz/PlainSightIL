@@ -164,5 +164,50 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'Opens with Construction Permits when initialFilterIndex is 1',
+      (WidgetTester tester) async {
+        final appState = AppStateNotifier();
+        appState.initPermitMetadataListener();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: CellularAntennasScreen(
+                appState: appState,
+                initialFilterIndex: 1,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final activeTowersContainer = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Active Towers'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        expect(activeTowersContainer.decoration, isNull);
+
+        final permitsContainer = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Construction Permits'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        expect(permitsContainer.decoration, isNotNull);
+
+        expect(
+          appState.recents.contains('ff398c7e-c522-4ee8-a53a-312b188a573d'),
+          isTrue,
+        );
+      },
+    );
   });
 }

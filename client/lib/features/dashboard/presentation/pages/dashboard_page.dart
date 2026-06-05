@@ -58,7 +58,10 @@ class DashboardScreen extends StatelessWidget {
     if (id == DatasetIds.cellularAntennas || id == DatasetIds.cellularPermits) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => CellularAntennasScreen(appState: appState),
+          builder: (context) => CellularAntennasScreen(
+            appState: appState,
+            initialFilterIndex: id == DatasetIds.cellularPermits ? 1 : 0,
+          ),
         ),
       );
     } else if (id == DatasetIds.companiesLiquidation) {
