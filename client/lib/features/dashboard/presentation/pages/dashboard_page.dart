@@ -181,7 +181,7 @@ class DashboardScreen extends StatelessWidget {
                                     ? Icons.warning_amber_outlined
                                     : (isCar
                                           ? Icons.directions_car
-                                    : Icons.cell_tower))));
+                                          : Icons.cell_tower)))));
         final accentColor = isAtm
             ? const Color(0xFF2E7D32)
             : (isLiquidation
@@ -192,7 +192,7 @@ class DashboardScreen extends StatelessWidget {
                               ? const Color(0xFFD32F2F)
                               : (isCar
                                     ? const Color(0xFF00ACC1)
-                              : AppColors.primary)));
+                                    : AppColors.primary))));
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
@@ -246,7 +246,7 @@ class DashboardScreen extends StatelessWidget {
                                 ? const Color(0xFFD32F2F)
                                 : (isCar
                                       ? const Color(0xFF00ACC1)
-                                : AppColors.primary)));
+                                      : AppColors.primary))));
           final icon = isAtm
               ? Icons.atm
               : (isDoctors
@@ -259,7 +259,7 @@ class DashboardScreen extends StatelessWidget {
                                       ? Icons.warning_amber_outlined
                                       : (isCar
                                             ? Icons.directions_car
-                                      : Icons.cell_tower))));
+                                            : Icons.cell_tower)))));
           return Container(
             width: 200,
             margin: const EdgeInsetsDirectional.only(end: 12.0),
@@ -340,7 +340,7 @@ class DashboardScreen extends StatelessWidget {
                                     ? Icons.warning_amber_outlined
                                     : (isCar
                                           ? Icons.directions_car
-                                    : Icons.cell_tower))));
+                                          : Icons.cell_tower)))));
         final accentColor = isAtm
             ? const Color(0xFF2E7D32)
             : (isLiquidation
@@ -351,7 +351,7 @@ class DashboardScreen extends StatelessWidget {
                               ? const Color(0xFFD32F2F)
                               : (isCar
                                     ? const Color(0xFF00ACC1)
-                              : AppColors.primary)));
+                                    : AppColors.primary))));
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: _buildDatasetCard(
