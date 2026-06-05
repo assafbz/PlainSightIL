@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.72% </span>
+                <span class="strong">92.79% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>102/110</span>
+                <span class='fraction'>103/111</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80.95% </span>
+                <span class="strong">79.54% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>68/84</span>
+                <span class='fraction'>70/88</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.45% </span>
+                <span class="strong">92.52% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>98/106</span>
+                <span class='fraction'>99/107</span>
             </div>
         
             
@@ -332,14 +332,16 @@
 <a name='L267'></a><a href='#L267'>267</a>
 <a name='L268'></a><a href='#L268'>268</a>
 <a name='L269'></a><a href='#L269'>269</a>
-<a name='L270'></a><a href='#L270'>270</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -464,12 +466,14 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
@@ -732,6 +736,7 @@ export function parseLiquidationRecord(
 export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.COMPANIES_LIQUIDATION,
+  options?: { forceFullSync?: boolean },
 ): Promise&lt;{ success: boolean; count: number }&gt; {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
@@ -740,6 +745,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
     logger.info(`Starting sync. Target collection: ${targetCollection}`);
 &nbsp;
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
     const limit = isEmulator ? <span class="branch-0 cbranch-no" title="branch not covered" >100 : 1</span>000;
     let hasMore = true;
@@ -753,7 +759,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
       logger.info(`Fetching data from: ${url}`);
 &nbsp;
       let records: HebrewLiquidationRecord[] = [];
-      <span class="missing-if-branch" title="if path not taken" >I</span>if (isEmulator) {
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (isEmulator &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >!forceFullSync) {</span>
 <span class="cstat-no" title="statement not covered" >        records = [</span>
           {
             "מזהה תיק פירוק חברה": 11111,
@@ -838,7 +844,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
         }
       }
 &nbsp;
-      <span class="missing-if-branch" title="if path not taken" >I</span>if (isEmulator) {
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (isEmulator &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >!forceFullSync) {</span>
 <span class="cstat-no" title="statement not covered" >        hasMore = false;</span>
 <span class="cstat-no" title="statement not covered" >        break;</span>
       }
@@ -877,7 +883,7 @@ export async function scrapeAndSyncCompaniesLiquidation(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-04T07:06:29.107Z
+                at 2026-06-05T14:01:14.639Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
