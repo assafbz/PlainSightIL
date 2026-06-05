@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
@@ -31,6 +32,12 @@ class AppStateNotifier extends ChangeNotifier {
 
   /// Global custom functions emulator port value.
   static int functionsPort = 5002;
+
+  /// Global indicator if we are using the Firebase local emulators.
+  static bool useEmulator = true;
+
+  /// Global indicator of the active environment name.
+  static String environment = 'local';
 
   // Global layout configuration variables
   String _locale = 'en';
