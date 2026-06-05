@@ -1,25 +1,70 @@
+/// Data model representing a vehicle recall record from the Israeli
+/// Ministry of Transport's vehicle recalls dataset.
+///
+/// Maps to Firestore documents in the `2c33523f-87aa-44ec-a736-edbb0a82975e`
+/// collection, containing manufacturer info, defect details, and repair actions.
 class VehicleRecallRecordModel {
+  /// Unique document identifier in Firestore.
   final String id;
+
+  /// Numeric identifier from the source CKAN dataset (`_id` field).
   final int idNum;
+
+  /// Ministry-assigned recall campaign identifier.
   final int recallId;
+
+  /// Numeric code identifying the vehicle manufacturer.
   final int manufacturerCode;
+
+  /// Display name of the vehicle manufacturer (Hebrew).
   final String manufacturerName;
+
+  /// Vehicle model name affected by this recall.
   final String modelName;
+
+  /// Model year of vehicles affected by this recall.
   final int recallYear;
+
+  /// Start date of the affected vehicle build range (ISO 8601 string).
   final String buildStartDate;
+
+  /// End date of the affected vehicle build range (ISO 8601 string).
   final String buildEndDate;
+
+  /// Bilingual recall type label (`{'he': '...', 'en': '...'}`).
   final Map<String, String> recallType;
+
+  /// Category of the defect (e.g., brakes, engine, electrical).
   final String defectCategory;
+
+  /// Detailed description of the safety defect (Hebrew).
   final String defectDescription;
+
+  /// Description of the required repair action (Hebrew).
   final String repairAction;
+
+  /// EU vehicle category classification (e.g., M1, N1).
   final String euCategory;
+
+  /// Name of the authorized importer responsible for the recall.
   final String importerName;
+
+  /// Contact phone number for the importer.
   final String importerPhone;
+
+  /// Website URL of the importer.
   final String importerWebsite;
+
+  /// ISO 8601 timestamp of when the record was first created in Firestore.
   final String? createdAt;
+
+  /// ISO 8601 timestamp of when the record was last modified by the scraper.
   final String? updatedAt;
+
+  /// ISO 8601 timestamp of the last successful sync operation.
   final String? lastUpdated;
 
+  /// Creates a [VehicleRecallRecordModel] with all required recall fields.
   VehicleRecallRecordModel({
     required this.id,
     required this.idNum,
@@ -43,6 +88,9 @@ class VehicleRecallRecordModel {
     this.lastUpdated,
   });
 
+  /// Deserializes a Firestore document map into a [VehicleRecallRecordModel].
+  ///
+  /// Safely handles null, missing, and mistyped fields with sensible defaults.
   factory VehicleRecallRecordModel.fromMap(Map<String, dynamic> map) {
     Map<String, String> typeMap = {
       'he': 'תקלה סידרתית בטיחותית',
@@ -80,6 +128,7 @@ class VehicleRecallRecordModel {
     );
   }
 
+  /// Serializes this model back into a Firestore-compatible map.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
