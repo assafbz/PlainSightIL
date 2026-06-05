@@ -185,23 +185,23 @@ class _SignupPageState extends State<SignupPage>
                             width: 80,
                             height: 80,
                             decoration: BoxDecoration(
-                              color: AppColors.glassBg,
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: AppColors.glassBorder),
                               boxShadow: [
                                 BoxShadow(
                                   color: AppColors.secondary.withValues(
-                                    alpha: 0.15,
+                                    alpha: 0.25,
                                   ),
-                                  blurRadius: 20,
+                                  blurRadius: 24,
                                   spreadRadius: 2,
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              Icons.visibility,
-                              color: AppColors.secondary,
-                              size: 40,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: Image.asset(
+                                'assets/images/plainsight_logo.png',
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),

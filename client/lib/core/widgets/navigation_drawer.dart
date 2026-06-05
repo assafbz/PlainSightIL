@@ -376,6 +376,17 @@ class NavigationDrawerWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Logo image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/plainsight_logo.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: 10),
           // Logo text
           Expanded(
             child: Text(
