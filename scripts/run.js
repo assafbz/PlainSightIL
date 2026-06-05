@@ -150,6 +150,7 @@ function startServices() {
       '/demo-plainsightil/us-central1/manualSyncPermitApps',
       '/demo-plainsightil/us-central1/manualSyncAntennas',
       '/demo-plainsightil/us-central1/manualSyncCompaniesLiquidation',
+      '/demo-plainsightil/us-central1/manualSyncVehicleRecalls',
       '/demo-plainsightil/us-central1/manualApiHealthCheck'
     ];
 

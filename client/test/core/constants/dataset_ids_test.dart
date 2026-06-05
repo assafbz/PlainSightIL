@@ -30,13 +30,15 @@ void main() {
         'b2c59e21-c345-4b02-b071-2890a3d431d6',
       );
       expect(DatasetIds.carImporters, '39f455bf-6db0-4926-859d-017f34eacbcb');
+      expect(DatasetIds.vehicleRecalls, '2c33523f-87aa-44ec-a736-edbb0a82975e');
 
       // Verify the all getter list
       final allIds = DatasetIds.all;
-      expect(allIds.length, 7);
+      expect(allIds.length, 8);
       expect(allIds.contains(DatasetIds.carImporters), isTrue);
       expect(allIds.contains(DatasetIds.cellularAntennas), isTrue);
       expect(allIds.contains(DatasetIds.localMarketBonds), isTrue);
+      expect(allIds.contains(DatasetIds.vehicleRecalls), isTrue);
     });
 
     test('should contain local market bonds', () {
