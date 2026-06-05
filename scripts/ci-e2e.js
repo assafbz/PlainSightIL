@@ -188,12 +188,29 @@ function startServer() {
   });
 
   serveProc.stdout.on('data', (data) => {
-    const text = data.toString();
-    process.stdout.write(`\x1b[36m[Serve]\x1b[0m ${text}`);
-    if (text.includes('Accepting connections') || text.includes('Accepting connections')) {
-      runPlaywright();
-    }
+    process.stdout.write(`\x1b[36m[Serve]\x1b[0m ${data.toString()}`);
   });
+
+  // Poll static server port until it responds
+  const http = require('http');
+  let isReady = false;
+  const pollServer = () => {
+    if (isReady) return;
+    const req = http.get({
+      hostname: '127.0.0.1',
+      port: ports.client,
+      path: '/',
+      timeout: 1000
+    }, (res) => {
+      console.log(`🌐 [CI-E2E] Static HTTP server is responding on port ${ports.client}!`);
+      isReady = true;
+      runPlaywright();
+    });
+    req.on('error', () => {
+      setTimeout(pollServer, 200);
+    });
+  };
+  pollServer();
 
   serveProc.stderr.on('data', (data) => {
     process.stderr.write(`\x1b[31m[Serve-Err]\x1b[0m ${data.toString()}`);
