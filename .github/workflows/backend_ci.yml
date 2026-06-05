@@ -80,5 +80,5 @@ jobs:
         working-directory: backend/functions
 
       - name: Validate Firestore Rules
-        run: npx firebase-tools emulators:exec --project demo-plainsightil --only firestore "echo 'Firestore rules verified successfully'"
-        working-directory: backend
+        run: npx firebase-tools emulators:exec --project demo-plainsightil --config ../firebase.json --only firestore "echo 'Firestore rules verified successfully'"
+        working-directory: backend/functions
