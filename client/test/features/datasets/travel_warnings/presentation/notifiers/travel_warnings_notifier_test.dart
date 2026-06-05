@@ -1,3 +1,4 @@
+// ignore_for_file: subtype_of_sealed_class
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

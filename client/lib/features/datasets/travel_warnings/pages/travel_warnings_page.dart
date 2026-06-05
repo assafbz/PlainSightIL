@@ -182,7 +182,6 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = widget.appState.locale == 'he';
     final list = _getFilteredRecords();
     final continents = _getUniqueContinents();
 

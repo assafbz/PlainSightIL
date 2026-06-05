@@ -92,10 +92,14 @@ class TravelWarningDetailDrawer extends StatelessWidget {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        _showErrorSnackBar(context, 'Could not launch URL');
+        if (context.mounted) {
+          _showErrorSnackBar(context, 'Could not launch URL');
+        }
       }
     } catch (e) {
-      _showErrorSnackBar(context, 'Error launching URL: $e');
+      if (context.mounted) {
+        _showErrorSnackBar(context, 'Error launching URL: $e');
+      }
     }
   }
 

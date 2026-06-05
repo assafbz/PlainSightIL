@@ -55,11 +55,7 @@ class TravelWarningsNotifier extends ChangeNotifier {
       _warningsSubscription = testFirestoreStream!.listen(
         (snapshot) {
           _warningRecords = snapshot.docs
-              .map(
-                (doc) => TravelWarningRecordModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                ),
-              )
+              .map((doc) => TravelWarningRecordModel.fromMap(doc.data()))
               .toList();
           _isLoadingWarnings = false;
           notifyListeners();
