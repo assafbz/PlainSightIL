@@ -49,6 +49,13 @@ You are the Senior Developer Agent. Your mission is to implement code changes th
 - Ensure that widgets using non-constant variables or properties (like dynamic theme colors from `AppColors`) are not marked as `const`.
 - Explicitly parameterize generic type methods and constructors (like `MaterialPageRoute<void>` or `showModalBottomSheet<void>`) to avoid type inference warnings.
 - Make sure local execution passes without runtime crashes.
+- **Pre-Push Validation Checklist** (mandatory before every push or PR creation):
+  - Client: `dart format . && flutter analyze && flutter test --coverage && dart run tool/check_coverage.dart`
+  - Backend: `cd backend/functions && npx prettier --check "src/**/*.ts" && npm run lint && npm run build && npm test`
+  - This prevents CI-only failures for formatting, lint, and coverage issues.
+- **Notifier Test Coverage (Dual-File Pattern)**: Achieving 100% notifier coverage requires tests in TWO locations:
+  1. **Feature-specific test file** (e.g., `vehicle_recalls_notifier_test.dart`): covers mock data path, `testFirestoreStream` path, and basic lifecycle.
+  2. **Shared `notifiers_unit_test.dart`**: covers the production Firestore path using `FakeFirebaseFirestore`, `FakeQuerySnapshot`, and `FakeQueryDocumentSnapshot`. Add a stream controller, a collection route in `mockFirestore`, and test cases for data/error/exception paths.
 
 ### 4. Updating Blueprint and State
 - Mark task items in the `BLUEPRINT.md` checklist as completed (`[x]`).

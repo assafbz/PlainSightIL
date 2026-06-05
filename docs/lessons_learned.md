@@ -444,4 +444,67 @@ Using typography or styling tokens that are not registered in the shared design 
 ### Corrective Action & Best Practice
 Ensure all UI layouts use exactly the active typography tokens defined in the design system (e.g., `AppTypography.bodySm` or `AppTypography.bodyLg`). Do not assume standard sizing names (like `bodyMd`) exist unless verified in the styling tokens declaration.
 
+---
+
+## 23. Pitfall: Concurrent Dataset Integration Merge Conflicts
+
+### Symptoms
+PR merge is blocked by GitHub reporting merge conflicts. Multiple rounds of local conflict resolution are needed as new PRs continue to merge into `main` during CI wait windows.
+
+### Root Cause
+Multiple dataset integrations (e.g., Vehicle Recalls #128, Car Importers #125, Local Market Bonds #126) run in parallel across separate worktrees, all modifying the same shared registration files: `index.ts`, `constants.ts`, `firestore.rules`, `app_state.dart`, `dashboard_page.dart`, `directory_page.dart`, `mock_data.dart`, `dataset_ids.dart`, `admin_page.dart`, `telemetry_notifier.dart`, and `notifiers_unit_test.dart`. Each integration adds entries to the same lists, enums, and registration points.
+
+### Corrective Action & Best Practice
+1. **Budget for conflict resolution**: When multiple integrations run concurrently, expect 2-3 rounds of merge conflict resolution per PR and factor this into cycle time estimates.
+2. **Merge quickly after CI passes**: Minimize the window between CI pass and merge to reduce the chance of new conflicts appearing.
+3. **Consider merge queues**: For high-throughput periods, use GitHub merge queues or sequence integrations to avoid the conflict-resolve-push-wait-conflict loop.
+4. **Use additive-only patterns**: Ensure shared registration files follow purely additive patterns (append to lists, add new `else if` branches) to make conflicts mechanical to resolve.
+
+---
+
+## 24. Pitfall: Automated Conflict Resolution Introduces Syntax Corruption
+
+### Symptoms
+After automated (subagent) merge conflict resolution, CI fails with parse errors like `Expected to find ')'` in files containing deeply nested expressions.
+
+### Root Cause
+Automated conflict resolvers that merge both sides of a conflict in complex nested code (e.g., 6-level nested ternary expressions) can drop closing delimiters (parentheses, brackets, braces) because the resolver focuses on content lines rather than structural integrity. In Issue #128, a conflict resolver dropped 6 closing `)` characters from nested ternary expressions in `dashboard_page.dart`.
+
+### Corrective Action & Best Practice
+1. **Always validate after automated conflict resolution**: Run `dart analyze` (or equivalent linter/compiler) immediately after resolving conflicts and before committing. Never trust automated resolution of complex expressions.
+2. **Refactor fragile patterns**: Deeply nested ternary expressions (4+ levels) should be refactored into lookup maps or helper methods:
+   ```dart
+   // Instead of nested ternaries:
+   static const _datasetIcons = {
+     DatasetIds.bankAtms: Icons.atm,
+     DatasetIds.doctorsLicenses: Icons.badge_outlined,
+     DatasetIds.vehicleRecalls: Icons.warning_amber_outlined,
+     // ...
+   };
+   final icon = _datasetIcons[item.id] ?? Icons.cell_tower;
+   ```
+3. **Keep conflict zones small**: Structure shared registration code so each dataset's addition is a self-contained block (e.g., a map entry) rather than a branch in a chain.
+
+---
+
+## 25. Pitfall: Hardcoded Collection Counts in Shared Constant Tests
+
+### Symptoms
+After merging a branch that adds a new dataset, a previously-passing test fails with: `Expected: <7> Actual: <8>` in `dataset_ids_test.dart`.
+
+### Root Cause
+The test hardcoded `expect(DatasetIds.all.length, 7)` which is fragile against any concurrent PR that also adds a dataset to the `all` list. When our PR's merge brought in the new dataset, the count became 8 but the test still expected 7.
+
+### Corrective Action & Best Practice
+1. **Avoid hardcoded counts for extensible collections**: Use dynamic assertions that verify membership rather than exact size:
+   ```dart
+   expect(allIds.contains(DatasetIds.vehicleRecalls), isTrue);
+   expect(allIds.contains(DatasetIds.carImporters), isTrue);
+   // Verify no duplicates instead of exact count:
+   expect(allIds.toSet().length, allIds.length);
+   ```
+2. **When count assertions are necessary**: Use `greaterThanOrEqualTo` to be resilient against concurrent additions:
+   ```dart
+   expect(allIds.length, greaterThanOrEqualTo(8));
+   ```
 

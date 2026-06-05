@@ -15,7 +15,7 @@ class VehicleRecallsNotifier extends ChangeNotifier {
 
   List<VehicleRecallRecordModel> _recallRecords = [];
   bool _isLoadingRecalls = true;
-  StreamSubscription<QuerySnapshot>? _recallsSubscription;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _recallsSubscription;
 
   @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
