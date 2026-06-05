@@ -369,3 +369,79 @@ Always reset mock initial values in the `setUp` function of the test suite befor
 ```
 This guarantees that each test starts with a clean, isolated database.
 
+---
+
+## 19. Pitfall: Missing Telemetry & Manual Sync Mapping for New Datasets
+
+### Symptoms
+When attempting to trigger a manual sync for a newly integrated dataset from the Admin Dashboard, the operation fails at runtime with an `Unknown dataset ID` exception.
+
+### Root Cause
+The `triggerManualSync` method in `TelemetryNotifier` maps dataset IDs to their respective Cloud Function triggers. If a new dataset is added, but its ID mapping is omitted in `TelemetryNotifier`, the method falls through to the default exception branch. Furthermore, missing entries in admin metadata and directory records mock data setups can cause null-reference issues.
+
+### Corrective Action & Best Practice
+When integrating a new dataset, always ensure the dataset ID constant is registered in the client-side telemetry notifier (`telemetry_notifier.dart`) and mapped to the corresponding Cloud Function trigger in `triggerManualSync`. Additionally, register the dataset in the admin metadata mock data listener (`initAdminMetadataListener`) and directory listener (`initDirectoryListener`) to prevent null reference issues during local testing/mock execution.
+
+---
+
+## 20. Pitfall: Reactive Notifier State Read Outside of ListenableBuilder Builder Callback
+
+### Symptoms
+A dataset visualizer screen (or list page) displays blank states or does not dynamically update when new records are loaded, even though the state notifier successfully retrieves and stores the records.
+
+### Root Cause
+If reactive notifier fields (such as `appState.bondRecords`) are assigned to local variables outside the builder callback of a `ListenableBuilder` (e.g., in the outer build method block), Flutter does not register a dependency on that notifier for that specific data. When the notifier calls `notifyListeners()`, the widget does not rebuild with the fresh data.
+
+### Corrective Action & Best Practice
+Always access and read reactive state attributes *inside* the builder callback of a `ListenableBuilder` or other reactive widget:
+```dart
+// Avoid:
+final list = widget.appState.bondRecords;
+return ListenableBuilder(
+  listenable: widget.appState,
+  builder: (context, _) {
+    return ListView.builder(itemCount: list.length, ...);
+  },
+);
+
+// Recommended:
+return ListenableBuilder(
+  listenable: widget.appState,
+  builder: (context, _) {
+    final list = widget.appState.bondRecords;
+    return ListView.builder(itemCount: list.length, ...);
+  },
+);
+```
+
+---
+
+## 21. Pitfall: Asynchronous Timing and Mock Delays in Widget/Unit Testing
+
+### Symptoms
+Unit or widget tests fail on state assertions (e.g. expecting loading indicators to dismiss or records to display), but the same code works fine when running manually.
+
+### Root Cause
+Test assertions run synchronously and may execute before asynchronous mock databases or async state notifier updates (which use delayed futures or microtasks) resolve. For instance, if a mock notifier has a 50ms simulation delay, a widget test asserting immediately will read the state *before* the delay completes.
+
+### Corrective Action & Best Practice
+In unit tests, use `Future.delayed` or advance clocks using fake async zones. In widget tests, use explicit timer advances to allow the async operations to settle:
+```dart
+// Allow mock asynchronous operations to resolve
+await tester.pump(const Duration(milliseconds: 100));
+```
+
+---
+
+## 22. Pitfall: Invalid Typography Reference in Design System Integration
+
+### Symptoms
+Compilation fails on a newly introduced UI screen with an error stating that a typography member does not exist (e.g., `AppTypography.bodyMd`).
+
+### Root Cause
+Using typography or styling tokens that are not registered in the shared design system (`AppTypography` or `AppColors`).
+
+### Corrective Action & Best Practice
+Ensure all UI layouts use exactly the active typography tokens defined in the design system (e.g., `AppTypography.bodySm` or `AppTypography.bodyLg`). Do not assume standard sizing names (like `bodyMd`) exist unless verified in the styling tokens declaration.
+
+
