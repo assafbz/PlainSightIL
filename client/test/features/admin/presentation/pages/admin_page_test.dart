@@ -11,7 +11,7 @@ void main() {
   testWidgets(
     'AdminPage renders supported datasets list and filters correct records',
     (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1200, 1200);
+      tester.view.physicalSize = const Size(1200, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.resetPhysicalSize();
@@ -34,17 +34,24 @@ void main() {
       expect(find.text('Admin Dashboard'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
 
-      // Verify all four supported datasets cards exist initially
+      // Verify section headers and primary directory card exist
+      expect(find.text('Primary Dataset Directory'), findsOneWidget);
+      expect(find.text('Dataset Directory'), findsOneWidget);
+      expect(find.text('Supported Datasets'), findsOneWidget);
+
+      // Verify all supported datasets cards exist initially
       expect(find.text('Cellular Antennas'), findsOneWidget);
       expect(find.text('Cellular Permit Applications'), findsOneWidget);
       expect(find.text('Companies in Liquidation'), findsOneWidget);
       expect(find.text('Doctors Licenses'), findsOneWidget);
+      expect(find.text('Bank ATMs'), findsOneWidget);
 
       // Type query "Permit" in Search Field
       await tester.enterText(find.byType(TextField), 'Permit');
       await tester.pumpAndSettle();
 
       // Verify list is filtered
+      expect(find.text('Dataset Directory'), findsNothing);
       expect(find.text('Cellular Antennas'), findsNothing);
       expect(find.text('Cellular Permit Applications'), findsOneWidget);
       expect(find.text('Companies in Liquidation'), findsNothing);
@@ -54,6 +61,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify list goes back to showing all datasets
+      expect(find.text('Dataset Directory'), findsOneWidget);
       expect(find.text('Cellular Antennas'), findsOneWidget);
       expect(find.text('Companies in Liquidation'), findsOneWidget);
 
@@ -62,6 +70,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify no datasets match the "Error" status filter
+      expect(find.text('Dataset Directory'), findsNothing);
       expect(find.text('Cellular Antennas'), findsNothing);
       expect(find.text('Companies in Liquidation'), findsNothing);
       expect(find.text('No records found'), findsOneWidget);
@@ -71,7 +80,7 @@ void main() {
   testWidgets('AdminPage renders Access Denied when user is not admin', (
     WidgetTester tester,
   ) async {
-    tester.view.physicalSize = const Size(1200, 1200);
+    tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -108,7 +117,7 @@ void main() {
   testWidgets('AdminPage manual sync trigger works and changes state', (
     WidgetTester tester,
   ) async {
-    tester.view.physicalSize = const Size(1200, 1200);
+    tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -127,14 +136,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify manual sync buttons exist on the screen
+    // Verify manual sync buttons exist on the screen (5 supported + 1 directory = 6 buttons)
     final syncButtonsFinder = find.byType(ElevatedButton);
-    expect(syncButtonsFinder, findsNWidgets(4));
+    expect(syncButtonsFinder, findsNWidgets(6));
 
     // By default, all buttons show 'Trigger Sync'
-    expect(find.text('Trigger Sync'), findsNWidgets(4));
+    expect(find.text('Trigger Sync'), findsNWidgets(6));
 
-    // Tap the first button to trigger manual sync
+    // Tap the first button to trigger manual sync (which is the primary Dataset Directory card)
     await tester.tap(syncButtonsFinder.at(0));
 
     // Pump to initiate state change and verify immediate syncing visual feedback
@@ -150,7 +159,7 @@ void main() {
 
     // The mock sync should complete and return to idle with a success SnackBar
     expect(find.text('Syncing...'), findsNothing);
-    expect(find.text('Trigger Sync'), findsNWidgets(4));
+    expect(find.text('Trigger Sync'), findsNWidgets(6));
     expect(
       find.text('Sync completed successfully! Updated 10000 records.'),
       findsOneWidget,

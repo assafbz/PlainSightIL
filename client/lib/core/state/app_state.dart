@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/directory/data/models/dataset_metadata_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/datasets/companies_liquidation/data/models/liquidation_record_model.dart';
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
@@ -97,6 +98,7 @@ class AppStateNotifier extends ChangeNotifier {
       telemetryNotifier.directoryRecords;
   bool get isLoadingDirectory => telemetryNotifier.isLoadingDirectory;
   bool get isCheckingApiHealth => telemetryNotifier.isCheckingApiHealth;
+  bool get isFirebaseInitialized => telemetryNotifier.isFirebaseInitialized;
 
   bool _isDisposed = false;
 
@@ -215,7 +217,7 @@ class AppStateNotifier extends ChangeNotifier {
     );
 
     if (isTesting) {
-      final Map<String, dynamic> localMeta = _datasetMetadataMap[datasetId] ?? {};
+      final Map<String, dynamic> localMeta = datasetMetadataMap[datasetId] ?? {};
       final scheduler = Map<String, dynamic>.from(localMeta['scheduler'] as Map? ?? {});
       scheduler['enabled'] = enabled;
       scheduler['updateIntervalHours'] = updateIntervalHours;
@@ -224,7 +226,7 @@ class AppStateNotifier extends ChangeNotifier {
       final nextRunDate = DateTime.now().add(Duration(hours: updateIntervalHours));
       scheduler['nextRun'] = nextRunDate.toUtc().toIso8601String();
 
-      _datasetMetadataMap[datasetId] = {
+      datasetMetadataMap[datasetId] = {
         ...localMeta,
         'scheduler': scheduler,
       };
