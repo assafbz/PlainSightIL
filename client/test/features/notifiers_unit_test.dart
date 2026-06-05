@@ -2115,6 +2115,7 @@ class FakeCollectionReference
   }
 }
 
+// ignore: must_be_immutable
 class FakeCollectionReferenceWithDocs extends FakeCollectionReference {
   int getCallCount = 0;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
