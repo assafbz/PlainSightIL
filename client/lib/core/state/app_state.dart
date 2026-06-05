@@ -7,6 +7,7 @@ import '../../features/datasets/companies_liquidation/data/models/liquidation_re
 import '../../features/datasets/doctors_licenses/data/models/doctor_license_model.dart';
 import '../../features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import '../../features/datasets/patent_classifications/data/models/patent_classification_model.dart';
+import '../../features/datasets/car_importers/data/models/car_importer_record_model.dart';
 import '../../features/profile/domain/entities/user_profile.dart';
 import '../../features/auth/presentation/notifiers/auth_notifier.dart';
 import '../../features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
@@ -15,6 +16,7 @@ import '../../features/datasets/companies_liquidation/presentation/notifiers/liq
 import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import '../../features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import '../../features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
 import '../../features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import '../../features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
@@ -53,6 +55,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final DoctorsNotifier doctorsNotifier;
   late final BankAtmsNotifier bankAtmsNotifier;
   late final PatentClassificationsNotifier patentClassificationsNotifier;
+  late final CarImportersNotifier carImportersNotifier;
   late final LocalMarketBondsNotifier bondsNotifier;
   late final TelemetryNotifier telemetryNotifier;
 
@@ -95,6 +98,11 @@ class AppStateNotifier extends ChangeNotifier {
   List<DoctorLicenseRecordModel> get doctorRecords =>
       doctorsNotifier.doctorRecords;
   bool get isLoadingDoctors => doctorsNotifier.isLoadingDoctors;
+
+  // Delegated Getters for CarImportersNotifier
+  List<CarImporterRecordModel> get carImporterRecords =>
+      carImportersNotifier.carImporterRecords;
+  bool get isLoadingCarImporters => carImportersNotifier.isLoadingCarImporters;
 
   // Delegated Getters for BankAtmsNotifier
   List<BankAtmRecordModel> get atmRecords => bankAtmsNotifier.atmRecords;
@@ -140,6 +148,7 @@ class AppStateNotifier extends ChangeNotifier {
     patentClassificationsNotifier = PatentClassificationsNotifier(
       isTesting: isTesting,
     );
+    carImportersNotifier = CarImportersNotifier(isTesting: isTesting);
     bondsNotifier = LocalMarketBondsNotifier(isTesting: isTesting);
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
@@ -154,6 +163,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.addListener(_onSubNotifierChanged);
     bankAtmsNotifier.addListener(_onSubNotifierChanged);
     patentClassificationsNotifier.addListener(_onSubNotifierChanged);
+    carImportersNotifier.addListener(_onSubNotifierChanged);
     bondsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
@@ -204,6 +214,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.initDoctorsListener();
     bankAtmsNotifier.initBankAtmsListener();
     patentClassificationsNotifier.initPatentClassificationsListener();
+    carImportersNotifier.initCarImportersListener();
     bondsNotifier.initBondsListener();
   }
 
@@ -226,6 +237,11 @@ class AppStateNotifier extends ChangeNotifier {
 
   void initDoctorsListener() => doctorsNotifier.initDoctorsListener();
   void cancelDoctorsListener() => doctorsNotifier.cancelDoctorsListener();
+
+  void initCarImportersListener() =>
+      carImportersNotifier.initCarImportersListener();
+  void cancelCarImportersListener() =>
+      carImportersNotifier.cancelCarImportersListener();
 
   void initBankAtmsListener() => bankAtmsNotifier.initBankAtmsListener();
   void cancelBankAtmsListener() => bankAtmsNotifier.cancelBankAtmsListener();
@@ -326,6 +342,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.removeListener(_onSubNotifierChanged);
     bankAtmsNotifier.removeListener(_onSubNotifierChanged);
     patentClassificationsNotifier.removeListener(_onSubNotifierChanged);
+    carImportersNotifier.removeListener(_onSubNotifierChanged);
     bondsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
 
@@ -336,6 +353,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.dispose();
     bankAtmsNotifier.dispose();
     patentClassificationsNotifier.dispose();
+    carImportersNotifier.dispose();
     bondsNotifier.dispose();
     telemetryNotifier.dispose();
     super.dispose();
@@ -407,6 +425,9 @@ class AppStateNotifier extends ChangeNotifier {
       'doctors_title': 'Doctors Licenses',
       'doctors_desc':
           'Israeli medical practitioner licenses and specialties registry.',
+      'car_importers_title': 'Car Price Lists',
+      'car_importers_desc':
+          'New vehicle price lists and importer registry by Ministry of Transport.',
       'doctors_count': '3 records',
       'nav_doctors': 'Doctors Licenses',
       'doctors_search_placeholder': 'Search by Name or License Number',
@@ -614,6 +635,9 @@ class AppStateNotifier extends ChangeNotifier {
       'view_court_file': 'צפה בתיק בית המשפט הרשמי',
       'doctors_title': 'רישיונות רופאים',
       'doctors_desc': 'מאגר רישיונות רופאים והתמחויות רפואיות בישראל.',
+      'car_importers_title': 'מחירוני רכב חדש',
+      'car_importers_desc':
+          'מחירוני רכב חדש ויבואנים רשמיים של משרד התחבורה בישראל.',
       'doctors_count': '3 רשומות',
       'nav_doctors': 'רישיונות רופאים',
       'doctors_search_placeholder': 'חפש לפי שם או מספר רישיון',
