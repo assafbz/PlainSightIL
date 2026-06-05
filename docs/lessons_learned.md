@@ -508,3 +508,51 @@ The test hardcoded `expect(DatasetIds.all.length, 7)` which is fragile against a
    expect(allIds.length, greaterThanOrEqualTo(8));
    ```
 
+---
+
+## 26. Pitfall: Multi-Branch Version Auto-Bumping Divergence (Merge Conflicts)
+
+### Symptoms
+Integrating changes from `main` or another active branch into the issue development branch results in version conflicts inside `package.json`, `client/pubspec.yaml`, and `VERSION` files.
+
+### Root Cause
+The repository uses an automated pre-commit version bumping hook. When multiple developers or agents work on separate branches in parallel, each branch commits auto-bumped versions. Merging these branches creates conflicts in version fields.
+
+### Corrective Action & Best Practice
+1. **Resolve Version Conflict:** Resolve the conflict manually by choosing the highest version number (the maximum increment).
+2. **Re-stage Auto-Versioned Files:** The auto-versioning hook runs during `git commit`, which changes the files again. Always run `git status` after a failed commit or automatic run, and re-stage (`git add .`) any files that were modified by hooks before committing again.
+
+---
+
+## 27. Pitfall: Downstream Test Coverage Gate Violations on Merged Code
+
+### Symptoms
+Pushing a verified, fully covered branch fails during pre-push hooks with coverage violations on files that were not modified by the current task (e.g. `local_market_bonds_notifier.dart`).
+
+### Root Cause
+Merging `main` brings in new features and classes implemented by other branches (which might have had mock-only or incomplete test coverage). If the current branch modifies any shared definitions (e.g. `DatasetIds.dart`) that these new classes import, the quality gates will re-evaluate coverage on all related files, triggering coverage failures for the merged, untested files.
+
+### Corrective Action & Best Practice
+Always run the full coverage check suite locally after a merge conflict resolution:
+`flutter test --coverage && dart run tool/check_coverage.dart && node ../scripts/check-coverage-thresholds.js --client`
+If any class has coverage gaps (e.g. untested Firestore streaming paths or filters), implement mock and fake Firestore unit tests using `noSuchMethod` dynamic delegation to raise the coverage to **100%** before pushing.
+
+---
+
+## 28. Pitfall: Static Analysis Failures from Subtyping Sealed Firestore Classes
+
+### Symptoms
+Pushing or compiling code fails with static analysis warnings:
+`warning • The class 'Query' shouldn't be extended, mixed in, or implemented because it's sealed. Try composing instead of inheriting, or refer to the documentation of 'Query' for more information`
+
+### Root Cause
+The cloud firestore package seals classes like `Query`, `QueryDocumentSnapshot`, and `DocumentSnapshot`. Implementing these classes in tests to create fakes or mocks triggers analysis warnings, which are treated as blocker errors on CI/CD.
+
+### Corrective Action & Best Practice
+Always ignore `subtype_of_sealed_class` at the top of test files defining mock Firestore structures:
+```dart
+// ignore_for_file: subtype_of_sealed_class
+import 'package:cloud_firestore/cloud_firestore.dart';
+```
+This allows tests to compile and run using lightweight fakes without triggering static checks failures.
+

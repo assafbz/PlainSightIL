@@ -169,12 +169,12 @@ class _AdminPageState extends State<AdminPage> {
         'agencyHe': 'רשות הפטנטים',
       },
       {
-        'id': DatasetIds.vehicleRecalls,
-        'titleEn': 'Vehicle Recalls',
-        'titleHe': 'קריאות חוזרות (Recall) לרכב',
-        'resourceId': DatasetIds.vehicleRecalls,
+        'id': DatasetIds.carImporters,
+        'titleEn': 'Car Importers and New Car Price Lists',
+        'titleHe': 'יבואני רכב ומחירוני רכב חדש',
+        'resourceId': DatasetIds.carImporters,
         'agencyEn': 'Ministry of Transport',
-        'agencyHe': 'משרד התחבורה והבטיחות בדרכים',
+        'agencyHe': 'משרד התחבורה',
       },
       {
         'id': DatasetIds.localMarketBonds,
@@ -1228,6 +1228,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': DatasetIds.patentClassifications,
         'titleEn': 'Patent Classifications',
         'titleHe': 'סיווגי CPC לפטנטים',
+      },
+      {
+        'id': DatasetIds.carImporters,
+        'titleEn': 'Car Importers',
+        'titleHe': 'יבואני רכב',
       },
       {
         'id': 'datasets_metadata',
