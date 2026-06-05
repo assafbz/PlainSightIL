@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
-import '../../data/models/travel_warning_model.dart';
+import '../data/models/travel_warning_model.dart';
 
 /// Glassmorphic bottom drawer detail panel for a travel warning record.
 class TravelWarningDetailDrawer extends StatelessWidget {
