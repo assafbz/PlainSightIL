@@ -292,8 +292,8 @@ class _LoginPageState extends State<LoginPage>
                                                 mainAxisAlignment:
                                                     MainAxisAlignment.center,
                                                 children: [
-                                                  Image.network(
-                                                    'https://www.gstatic.com/images/branding/product/1x/glogo_32dp.png',
+                                                  Image.asset(
+                                                    'assets/images/google_logo.png',
                                                     height: 24,
                                                     width: 24,
                                                     errorBuilder:
