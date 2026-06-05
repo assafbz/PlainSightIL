@@ -57,7 +57,9 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            backend/functions/package-lock.json
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -79,12 +81,39 @@ jobs:
       - name: Build Backend Functions
         run: npm run backend:build
 
+      - name: Cache Flutter Build Artifacts
+        uses: actions/cache@v4
+        with:
+          path: client/.dart_tool
+          key: ${{ runner.os }}-flutter-build-${{ hashFiles('client/pubspec.lock') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-build-${{ hashFiles('client/pubspec.lock') }}-
+            ${{ runner.os }}-flutter-build-
+
       - name: Build Flutter Client (Release)
         run: flutter build web --release
         working-directory: client
 
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').devDependencies['@playwright/test'])")" >> $GITHUB_ENV
+
+      - name: Cache Playwright Browser
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright Chromium Browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright OS Dependencies Only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Run E2E Test Suite
         run: npm run test:e2e:ci

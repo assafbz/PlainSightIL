@@ -38,17 +38,20 @@ jobs:
           fi
           echo "✅ Branch name '$BRANCH_NAME' is valid."
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
+
+      - name: Cache Flutter Build Artifacts
+        uses: actions/cache@v4
+        with:
+          path: client/.dart_tool
+          key: ${{ runner.os }}-flutter-build-${{ hashFiles('client/pubspec.lock') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-build-${{ hashFiles('client/pubspec.lock') }}-
+            ${{ runner.os }}-flutter-build-
 
       - name: Install Dependencies
         run: flutter pub get
