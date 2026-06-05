@@ -100,7 +100,7 @@ export function parseRecallRecord(record: HebrewVehicleRecallRecord): VehicleRec
   const manufacturerName = cleanString(record.TOZAR_TEUR ?? "לא ידוע");
   const modelName = cleanString(record.DEGEM ?? "לא ידוע");
   const recallYear = Number(record.SHNAT_RECALL) || 0;
-  
+
   const buildStartDate = parseDateString(record.BUILD_BEGIN_A) || new Date().toISOString();
   const buildEndDate = parseDateString(record.BUILD_END_A) || new Date().toISOString();
 
@@ -182,7 +182,7 @@ export async function scrapeAndSyncVehicleRecalls(
             TKINA_EU: "M1",
             YEVUAN_TEUR: "יוניון מוטורס בעמ",
             TELEPHONE: "1-800-22-1514",
-            WEBSITE: "WWW.TOYOTA.CO.IL/SERVICE-AND-ACCESSORIES/RECALL"
+            WEBSITE: "WWW.TOYOTA.CO.IL/SERVICE-AND-ACCESSORIES/RECALL",
           },
           {
             _id: 3,
@@ -200,8 +200,8 @@ export async function scrapeAndSyncVehicleRecalls(
             TKINA_EU: "L1",
             YEVUAN_TEUR: "אבניר חברה לרכב בעמ",
             TELEPHONE: "03-5158856/7",
-            WEBSITE: "WWW.OFERAVNIR.CO.IL/RECALLS"
-          }
+            WEBSITE: "WWW.OFERAVNIR.CO.IL/RECALLS",
+          },
         ];
       } else {
         const response = await axios.get(url, { timeout: 15000 });

@@ -156,7 +156,6 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = widget.appState.locale == 'he';
     final list = _getFilteredRecords();
     final manufacturers = _getUniqueManufacturers();
 
