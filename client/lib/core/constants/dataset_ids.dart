@@ -16,4 +16,7 @@ class DatasetIds {
   /// Patent Applications CPC Classifications dataset ID.
   static const String patentClassifications =
       'b2c59e21-c345-4b02-b071-2890a3d431d6';
+
+  /// Travel Warnings dataset ID.
+  static const String travelWarnings = '2a01d234-b2b0-4d46-baa0-cec05c401e7d';
 }

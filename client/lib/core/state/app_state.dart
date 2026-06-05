@@ -15,6 +15,8 @@ import '../../features/datasets/companies_liquidation/presentation/notifiers/liq
 import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import '../../features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import '../../features/datasets/travel_warnings/data/models/travel_warning_model.dart';
+import '../../features/datasets/travel_warnings/presentation/notifiers/travel_warnings_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
@@ -51,6 +53,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final DoctorsNotifier doctorsNotifier;
   late final BankAtmsNotifier bankAtmsNotifier;
   late final PatentClassificationsNotifier patentClassificationsNotifier;
+  late final TravelWarningsNotifier travelWarningsNotifier;
   late final TelemetryNotifier telemetryNotifier;
 
   // Configuration Getters
@@ -105,6 +108,11 @@ class AppStateNotifier extends ChangeNotifier {
       patentClassificationsNotifier.isLoadingMorePatents;
   bool get hasMorePatents => patentClassificationsNotifier.hasMorePatents;
 
+  // Delegated Getters for TravelWarningsNotifier
+  List<TravelWarningRecordModel> get warningRecords =>
+      travelWarningsNotifier.warningRecords;
+  bool get isLoadingWarnings => travelWarningsNotifier.isLoadingWarnings;
+
   // Delegated Getters for TelemetryNotifier
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>
       telemetryNotifier.datasetMetadataMap;
@@ -131,6 +139,7 @@ class AppStateNotifier extends ChangeNotifier {
     patentClassificationsNotifier = PatentClassificationsNotifier(
       isTesting: isTesting,
     );
+    travelWarningsNotifier = TravelWarningsNotifier(isTesting: isTesting);
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
       functionsPort: functionsPort,
@@ -144,6 +153,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.addListener(_onSubNotifierChanged);
     bankAtmsNotifier.addListener(_onSubNotifierChanged);
     patentClassificationsNotifier.addListener(_onSubNotifierChanged);
+    travelWarningsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
     _initPackageInfo();
@@ -193,6 +203,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.initDoctorsListener();
     bankAtmsNotifier.initBankAtmsListener();
     patentClassificationsNotifier.initPatentClassificationsListener();
+    travelWarningsNotifier.initTravelWarningsListener();
   }
 
   void initAdminMetadataListener() {
@@ -222,6 +233,11 @@ class AppStateNotifier extends ChangeNotifier {
       patentClassificationsNotifier.initPatentClassificationsListener();
   void cancelPatentClassificationsListener() =>
       patentClassificationsNotifier.cancelPatentClassificationsListener();
+
+  void initTravelWarningsListener() =>
+      travelWarningsNotifier.initTravelWarningsListener();
+  void cancelTravelWarningsListener() =>
+      travelWarningsNotifier.cancelTravelWarningsListener();
   void setPatentSearchQuery(String query) =>
       patentClassificationsNotifier.setSearchQuery(query);
   void setPatentPrimaryFilter(String filter) =>
@@ -307,6 +323,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.removeListener(_onSubNotifierChanged);
     bankAtmsNotifier.removeListener(_onSubNotifierChanged);
     patentClassificationsNotifier.removeListener(_onSubNotifierChanged);
+    travelWarningsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
 
     authNotifier.dispose();
@@ -316,6 +333,7 @@ class AppStateNotifier extends ChangeNotifier {
     doctorsNotifier.dispose();
     bankAtmsNotifier.dispose();
     patentClassificationsNotifier.dispose();
+    travelWarningsNotifier.dispose();
     telemetryNotifier.dispose();
     super.dispose();
   }
@@ -403,6 +421,16 @@ class AppStateNotifier extends ChangeNotifier {
       'patent_classifications_search_placeholder':
           'Search by Application Number or Classification',
       'patent_classifications_publisher': 'Israel Patent Office',
+      'travel_warnings_title': 'Travel Warnings',
+      'travel_warnings_desc': 'Global travel warnings and safety advisories.',
+      'travel_warnings_count': 'records',
+      'nav_travel_warnings': 'Travel Warnings',
+      'travel_warnings_search_placeholder': 'Search by country or continent...',
+      'continent_label': 'Continent: ',
+      'office_label': 'Office: ',
+      'date_label': 'Date: ',
+      'travel_warnings_publisher':
+          'National Security Council & Ministry of Foreign Affairs',
       'patent_app_num_label': 'Application: #',
       'patent_class_label': 'CPC Classification: ',
       'patent_is_primary': 'Primary Classification',
@@ -583,6 +611,15 @@ class AppStateNotifier extends ChangeNotifier {
       'patent_classifications_count': '~741,000+ רשומות',
       'patent_classifications_search_placeholder': 'חפש לפי מספר בקשה או סיווג',
       'patent_classifications_publisher': 'רשות הפטנטים',
+      'travel_warnings_title': 'אזהרות מסע',
+      'travel_warnings_desc': 'אזהרות מסע והנחיות בטיחות ברחבי העולם.',
+      'travel_warnings_count': 'רשומות',
+      'nav_travel_warnings': 'אזהרות מסע',
+      'travel_warnings_search_placeholder': 'חפש לפי מדינה או יבשת...',
+      'continent_label': 'יבשת: ',
+      'office_label': 'גוף מפרסם: ',
+      'date_label': 'תאריך: ',
+      'travel_warnings_publisher': 'המטה לביטחון לאומי ומשרד החוץ',
       'patent_app_num_label': 'מספר בקשה: ',
       'patent_class_label': 'סיווג CPC: ',
       'patent_is_primary': 'סיווג ראשי',

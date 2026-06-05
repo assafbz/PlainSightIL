@@ -12,6 +12,7 @@ import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidat
 import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
 import { scrapeAndSyncBankAtms } from "./scrapers/bank_atms_scraper";
 import { scrapeAndSyncPatentClassifications } from "./scrapers/patent_classifications_scraper";
+import { scrapeAndSyncTravelWarnings } from "./scrapers/travel_warnings_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 
@@ -32,6 +33,8 @@ const scraperRegistry: Record<
     scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, opts),
   [DATASET_IDS.BANK_ATMS]: (db, opts) => scrapeAndSyncBankAtms(db, DATASET_IDS.BANK_ATMS, opts),
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) => scrapeAndSyncPatentClassifications(db),
+  [DATASET_IDS.TRAVEL_WARNINGS]: (db, opts) =>
+    scrapeAndSyncTravelWarnings(db, DATASET_IDS.TRAVEL_WARNINGS, opts),
   datasets_metadata: (db) => scrapeAndSyncDatasetMetadata(db),
 };
 
@@ -42,6 +45,7 @@ const defaultIntervals: Record<string, number> = {
   [DATASET_IDS.DOCTORS_LICENSES]: 168, // Doctors Licenses (weekly)
   [DATASET_IDS.BANK_ATMS]: 168, // Bank ATMs (weekly)
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: 24, // Patent Classifications (daily)
+  [DATASET_IDS.TRAVEL_WARNINGS]: 24, // Travel Warnings (daily)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
 
@@ -534,6 +538,10 @@ export const manualSyncBankAtms = functions
 export const manualSyncPatentClassifications = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
   .https.onRequest(createManualSyncHandler(DATASET_IDS.PATENT_CLASSIFICATIONS));
+
+export const manualSyncTravelWarnings = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB", serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(createManualSyncHandler(DATASET_IDS.TRAVEL_WARNINGS));
 
 /**
  * Cloud Function trigger running on user registration.

@@ -8,6 +8,7 @@ import 'package:plainsight/features/datasets/cellular_antennas/presentation/noti
 import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/permits_notifier.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/presentation/notifiers/liquidation_notifier.dart';
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
+import 'package:plainsight/features/datasets/travel_warnings/presentation/notifiers/travel_warnings_notifier.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/core/widgets/app_shell.dart';
 
@@ -52,6 +53,9 @@ class _MyAppState extends State<MyApp> {
         ),
         ChangeNotifierProvider<DoctorsNotifier>.value(
           value: _appState.doctorsNotifier,
+        ),
+        ChangeNotifierProvider<TravelWarningsNotifier>.value(
+          value: _appState.travelWarningsNotifier,
         ),
         ChangeNotifierProvider<TelemetryNotifier>.value(
           value: _appState.telemetryNotifier,

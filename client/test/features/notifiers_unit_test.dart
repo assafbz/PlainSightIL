@@ -20,6 +20,7 @@ import 'package:plainsight/features/datasets/companies_liquidation/presentation/
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/travel_warnings/presentation/notifiers/travel_warnings_notifier.dart';
 import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
@@ -545,6 +546,67 @@ void main() {
     );
   });
 
+  group('TravelWarningsNotifier Basic Tests', () {
+    test(
+      'initTravelWarningsListener updates records in offline mock mode',
+      () async {
+        AppStateNotifier.isTesting = true;
+        final notifier = TravelWarningsNotifier();
+        notifier.initTravelWarningsListener();
+        expect(notifier.isLoadingWarnings, isFalse);
+        expect(notifier.warningRecords.isNotEmpty, isTrue);
+        expect(notifier.warningRecords.first.country, 'אוגנדה');
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'initTravelWarningsListener with custom testFirestoreStream',
+      () async {
+        final streamController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        AppStateNotifier.isTesting = false;
+        final notifier = TravelWarningsNotifier(
+          isTesting: false,
+          testFirestoreStream: streamController.stream,
+        );
+
+        notifier.initTravelWarningsListener();
+        expect(notifier.isLoadingWarnings, isTrue);
+
+        final record = {
+          'id': '1',
+          '_id': 1,
+          'continent': 'אפריקה',
+          'country': 'אוגנדה',
+          'recommendations': 'רמה 2/ איום מזדמן',
+          'details': 'פרטים',
+          'logo': 'לוגו',
+          'date': '2026-06-03',
+          'office': 'מל"ל',
+          'warningLevel': 2,
+        };
+        final fakeDoc = FakeQueryDocumentSnapshot('1', record);
+        final fakeSnapshot = FakeQuerySnapshot([fakeDoc]);
+
+        streamController.add(fakeSnapshot);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        expect(notifier.isLoadingWarnings, isFalse);
+        expect(notifier.warningRecords.length, 1);
+        expect(notifier.warningRecords.first.country, 'אוגנדה');
+
+        streamController.addError('Stream Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingWarnings, isFalse);
+
+        await streamController.close();
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
+  });
+
   group('BankAtmsNotifier Tests', () {
     test('initBankAtmsListener updates bank ATM records', () async {
       final streamController =
@@ -855,6 +917,8 @@ void main() {
     telemetryRequestsController;
     late StreamController<QuerySnapshot<Map<String, dynamic>>>
     bankAtmsController;
+    late StreamController<QuerySnapshot<Map<String, dynamic>>>
+    travelWarningsController;
 
     setUp(() {
       AppStateNotifier.isTesting = false;
@@ -881,6 +945,8 @@ void main() {
       telemetryRequestsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
       bankAtmsController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
+      travelWarningsController =
           StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
 
       mockFirestore = FakeFirebaseFirestore((path) {
@@ -935,6 +1001,10 @@ void main() {
           return FakeCollectionReference(stream: doctorsController.stream);
         } else if (path == '21fde05f-62e3-401b-81cf-5c385862026d') {
           return FakeCollectionReference(stream: bankAtmsController.stream);
+        } else if (path == '2a01d234-b2b0-4d46-baa0-cec05c401e7d') {
+          return FakeCollectionReference(
+            stream: travelWarningsController.stream,
+          );
         }
         // Permit collection fallback
         return FakeCollectionReference(stream: permitsController.stream);
@@ -955,6 +1025,7 @@ void main() {
       telemetryDirectoryController.close();
       telemetryRequestsController.close();
       bankAtmsController.close();
+      travelWarningsController.close();
     });
 
     test(
@@ -1872,6 +1943,76 @@ void main() {
 
         notifier.dispose();
         notifierFail.dispose();
+      },
+    );
+
+    test(
+      'TravelWarningsNotifier handles real Firestore stream and error path',
+      () async {
+        final notifier = TravelWarningsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestore,
+        );
+        notifier.initTravelWarningsListener();
+
+        travelWarningsController.add(
+          FakeQuerySnapshot([
+            FakeQueryDocumentSnapshot('doc1', {
+              'id': '1',
+              '_id': 1,
+              'continent': 'אפריקה',
+              'country': 'אוגנדה',
+              'recommendations': 'רמה 2/ איום מזדמן',
+              'details': 'פרטים',
+              'logo': 'לוגו',
+              'date': '2026-06-03',
+              'office': 'מל"ל',
+              'warningLevel': 2,
+            }),
+          ]),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingWarnings, isFalse);
+        expect(notifier.warningRecords.first.id, '1');
+        expect(notifier.warningRecords.first.country, 'אוגנדה');
+        expect(notifier.warningRecords.first.warningLevel, 2);
+
+        travelWarningsController.addError('Warnings Error');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(notifier.isLoadingWarnings, isFalse);
+
+        notifier.cancelTravelWarningsListener();
+        expect(notifier.warningRecords, isEmpty);
+        expect(notifier.isLoadingWarnings, isTrue);
+
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'TravelWarningsNotifier handles init failure / isFirebaseInitialized false path',
+      () async {
+        AppStateNotifier.testIsFirebaseInitialized = false;
+        final notifier = TravelWarningsNotifier(isTesting: false);
+        notifier.initTravelWarningsListener();
+        expect(notifier.isLoadingWarnings, isFalse);
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'TravelWarningsNotifier handles Firestore snapshots exception',
+      () async {
+        final mockFirestoreThrow = FakeFirebaseFirestore((path) {
+          throw Exception('Collection snapshots exception');
+        });
+        final notifier = TravelWarningsNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreThrow,
+        );
+        notifier.initTravelWarningsListener();
+        expect(notifier.isLoadingWarnings, isFalse);
+        notifier.dispose();
       },
     );
   });

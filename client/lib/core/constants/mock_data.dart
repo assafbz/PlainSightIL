@@ -177,6 +177,18 @@ class MockData {
       isSupported: true,
     ),
     DatasetMetadataModel(
+      id: DatasetIds.travelWarnings,
+      datasetId: DatasetIds.travelWarnings,
+      name: 'travel_warnings',
+      title: 'אזהרות מסע',
+      notes: 'אזהרות מסע והנחיות בטיחות מטעם המל"ל ומשרד החוץ.',
+      publisher: 'המטה לביטחון לאומי',
+      resourceCount: 1,
+      lastUpdated: DateTime(2026, 6, 3),
+      tags: const ['אזהרות', 'בטחון', 'נסיעות', 'חו"ל'],
+      isSupported: true,
+    ),
+    DatasetMetadataModel(
       id: 'government-budget-dataset-id',
       datasetId: 'government-budget-dataset-id',
       name: 'government_budget',
@@ -296,6 +308,12 @@ class MockData {
       'id': DatasetIds.patentClassifications,
       'recordCount': 200,
       'lastUpdated': '2026-06-03T18:00:00Z',
+      'status': 'idle',
+    },
+    DatasetIds.travelWarnings: {
+      'id': DatasetIds.travelWarnings,
+      'recordCount': 197,
+      'lastUpdated': '2026-06-03T19:00:00Z',
       'status': 'idle',
     },
   };
