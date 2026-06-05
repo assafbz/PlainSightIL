@@ -16,16 +16,35 @@ describe("scrapeAndSyncDatasetMetadata", () => {
   let mockBatch: any;
   let mockCollection: any;
   let mockDoc: any;
+  let mockDocSet: any;
+  let mockCountGet: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockDoc = vi.fn().mockReturnValue({
-      id: "mock-doc-id",
+    mockDocSet = vi.fn().mockResolvedValue(true);
+
+    mockDoc = vi.fn().mockImplementation((docId) => {
+      if (docId === "datasets_metadata") {
+        return {
+          id: "mock-doc-id",
+          set: mockDocSet,
+        };
+      }
+      return {
+        id: "mock-doc-id",
+      };
+    });
+
+    mockCountGet = vi.fn().mockResolvedValue({
+      data: () => ({ count: 3 }),
     });
 
     mockCollection = vi.fn().mockReturnValue({
       doc: mockDoc,
+      count: vi.fn().mockReturnValue({
+        get: mockCountGet,
+      }),
     });
 
     mockBatch = {
@@ -128,5 +147,18 @@ describe("scrapeAndSyncDatasetMetadata", () => {
     expect(thirdSetCall[1].isSupported).toBe(false);
 
     expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+
+    // Verify metadata document updates
+    expect(mockCollection).toHaveBeenCalledWith("dataset_metadata");
+    expect(mockDoc).toHaveBeenCalledWith("datasets_metadata");
+    expect(mockDocSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "datasets_metadata",
+        activeCollection: "datasets_metadata",
+        recordCount: 3,
+        status: "idle",
+      }),
+      { merge: true },
+    );
   });
 });
