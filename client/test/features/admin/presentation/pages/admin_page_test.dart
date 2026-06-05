@@ -46,6 +46,18 @@ void main() {
       expect(find.text('Doctors Licenses'), findsOneWidget);
       expect(find.text('Bank ATMs'), findsOneWidget);
 
+      // Scroll down to find Car Importers card
+      final carImportersFinder = find.text(
+        'Car Importers and New Car Price Lists',
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -600.0));
+      await tester.pumpAndSettle();
+      expect(carImportersFinder, findsOneWidget);
+
+      // Scroll back up for remaining test actions
+      await tester.drag(find.byType(ListView), const Offset(0, 1000.0));
+      await tester.pumpAndSettle();
+
       // Type query "Permit" in Search Field
       await tester.enterText(find.byType(TextField), 'Permit');
       await tester.pumpAndSettle();
@@ -135,7 +147,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
     // Verify manual sync buttons exist on the screen (6 supported + 1 directory = 7 buttons)
     final syncButtonsFinder = find.byType(ElevatedButton);
     expect(syncButtonsFinder, findsNWidgets(7));

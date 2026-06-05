@@ -169,6 +169,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyHe': 'רשות הפטנטים',
       },
       {
+        'id': DatasetIds.carImporters,
+        'titleEn': 'Car Importers and New Car Price Lists',
+        'titleHe': 'יבואני רכב ומחירוני רכב חדש',
+        'resourceId': DatasetIds.carImporters,
+        'agencyEn': 'Ministry of Transport',
+        'agencyHe': 'משרד התחבורה',
+      },
+      {
         'id': DatasetIds.localMarketBonds,
         'titleEn': 'Local Market Bonds',
         'titleHe': 'הנפקת אג"ח סחירות בשוק המקומי',
@@ -1220,6 +1228,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': DatasetIds.patentClassifications,
         'titleEn': 'Patent Classifications',
         'titleHe': 'סיווגי CPC לפטנטים',
+      },
+      {
+        'id': DatasetIds.carImporters,
+        'titleEn': 'Car Importers',
+        'titleHe': 'יבואני רכב',
       },
       {
         'id': 'datasets_metadata',
