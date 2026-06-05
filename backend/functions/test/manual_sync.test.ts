@@ -155,7 +155,10 @@ describe("Manual Sync Cloud Functions Factory", () => {
 
     await manualSyncAntennas(req, res);
 
-    expect(mockDbSet).toHaveBeenCalledWith({ status: "syncing" }, { merge: true });
+    expect(mockDbSet).toHaveBeenCalledWith(
+      { status: "syncing", syncStartedAt: expect.any(String) },
+      { merge: true },
+    );
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
@@ -205,7 +208,10 @@ describe("Manual Sync Cloud Functions Factory", () => {
 
     await manualSyncAntennas(req, res);
 
-    expect(mockDbSet).toHaveBeenCalledWith({ status: "syncing" }, { merge: true });
+    expect(mockDbSet).toHaveBeenCalledWith(
+      { status: "syncing", syncStartedAt: expect.any(String) },
+      { merge: true },
+    );
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",

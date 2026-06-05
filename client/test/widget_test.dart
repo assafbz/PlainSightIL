@@ -4,6 +4,7 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/directory/presentation/widgets/dataset_card.dart';
 import 'package:plainsight/app.dart';
 import 'package:plainsight/core/widgets/navigation_drawer.dart';
+import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
 
 void main() {
   setUp(() {
@@ -204,4 +205,58 @@ void main() {
     // Verify it transitions to Dashboard
     expect(find.text('Democratizing Civic Data'), findsOneWidget);
   });
+
+  testWidgets(
+    'Tapping permits card in directory navigates to CellularAntennasScreen with Construction Permits selected',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MyApp());
+      await tester.pumpAndSettle();
+
+      // Tap the Directory navigation tab
+      await tester.tap(find.text('Directory'));
+      await tester.pumpAndSettle();
+
+      // Scroll the list down slightly to reveal the card
+      await tester.drag(find.byType(ListView), const Offset(0.0, -200.0));
+      await tester.pumpAndSettle();
+
+      // Find the permits card (its title is 'בקשות להיתרי הקמה של אנטנות')
+      final cardFinder = find.text('בקשות להיתרי הקמה של אנטנות');
+      expect(cardFinder, findsOneWidget);
+
+      final buttonFinder = find.descendant(
+        of: find.ancestor(of: cardFinder, matching: find.byType(DatasetCard)),
+        matching: find.text('Open Visualizer'),
+      );
+      expect(buttonFinder, findsOneWidget);
+      await tester.ensureVisible(buttonFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(buttonFinder);
+      await tester.pumpAndSettle();
+
+      // Verify it navigates to CellularAntennasScreen
+      expect(find.byType(CellularAntennasScreen), findsOneWidget);
+
+      // Verify Permits tab is selected
+      final activeTowersContainer = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.text('Active Towers'),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(activeTowersContainer.decoration, isNull);
+
+      final permitsContainer = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.text('Construction Permits'),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(permitsContainer.decoration, isNotNull);
+    },
+  );
 }

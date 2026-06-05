@@ -17,6 +17,8 @@ import '../../features/datasets/doctors_licenses/presentation/notifiers/doctors_
 import '../../features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import '../../features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
 import '../../features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
+import '../../features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
+import '../../features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
@@ -54,6 +56,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final BankAtmsNotifier bankAtmsNotifier;
   late final PatentClassificationsNotifier patentClassificationsNotifier;
   late final CarImportersNotifier carImportersNotifier;
+  late final LocalMarketBondsNotifier bondsNotifier;
   late final TelemetryNotifier telemetryNotifier;
 
   // Configuration Getters
@@ -113,6 +116,12 @@ class AppStateNotifier extends ChangeNotifier {
       patentClassificationsNotifier.isLoadingMorePatents;
   bool get hasMorePatents => patentClassificationsNotifier.hasMorePatents;
 
+  // Delegated Getters for LocalMarketBondsNotifier
+  List<LocalMarketBondRecordModel> get bondRecords => bondsNotifier.bondRecords;
+  bool get isLoadingBonds => bondsNotifier.isLoadingBonds;
+  bool get isLoadingMoreBonds => bondsNotifier.isLoadingMoreBonds;
+  bool get hasMoreBonds => bondsNotifier.hasMoreBonds;
+
   // Delegated Getters for TelemetryNotifier
   Map<String, Map<String, dynamic>> get datasetMetadataMap =>
       telemetryNotifier.datasetMetadataMap;
@@ -140,6 +149,7 @@ class AppStateNotifier extends ChangeNotifier {
       isTesting: isTesting,
     );
     carImportersNotifier = CarImportersNotifier(isTesting: isTesting);
+    bondsNotifier = LocalMarketBondsNotifier(isTesting: isTesting);
     telemetryNotifier = TelemetryNotifier(
       isTesting: isTesting,
       functionsPort: functionsPort,
@@ -154,6 +164,7 @@ class AppStateNotifier extends ChangeNotifier {
     bankAtmsNotifier.addListener(_onSubNotifierChanged);
     patentClassificationsNotifier.addListener(_onSubNotifierChanged);
     carImportersNotifier.addListener(_onSubNotifierChanged);
+    bondsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
 
     _initPackageInfo();
@@ -204,6 +215,7 @@ class AppStateNotifier extends ChangeNotifier {
     bankAtmsNotifier.initBankAtmsListener();
     patentClassificationsNotifier.initPatentClassificationsListener();
     carImportersNotifier.initCarImportersListener();
+    bondsNotifier.initBondsListener();
   }
 
   void initAdminMetadataListener() {
@@ -245,6 +257,13 @@ class AppStateNotifier extends ChangeNotifier {
   void resetPatentFilters() => patentClassificationsNotifier.resetFilters();
   Future<void> fetchNextPatentPage() =>
       patentClassificationsNotifier.fetchNextPage();
+
+  void initBondsListener() => bondsNotifier.initBondsListener();
+  void cancelBondsListener() => bondsNotifier.cancelBondsListener();
+  void setBondsSearchQuery(String query) => bondsNotifier.setSearchQuery(query);
+  void setBondsFilter(String filter) => bondsNotifier.setFilter(filter);
+  void resetBondsFilters() => bondsNotifier.resetFilters();
+  Future<void> fetchNextBondsPage() => bondsNotifier.fetchNextPage();
 
   void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
   void cancelAdminMetadataListener() =>
@@ -324,6 +343,7 @@ class AppStateNotifier extends ChangeNotifier {
     bankAtmsNotifier.removeListener(_onSubNotifierChanged);
     patentClassificationsNotifier.removeListener(_onSubNotifierChanged);
     carImportersNotifier.removeListener(_onSubNotifierChanged);
+    bondsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
 
     authNotifier.dispose();
@@ -334,6 +354,7 @@ class AppStateNotifier extends ChangeNotifier {
     bankAtmsNotifier.dispose();
     patentClassificationsNotifier.dispose();
     carImportersNotifier.dispose();
+    bondsNotifier.dispose();
     telemetryNotifier.dispose();
     super.dispose();
   }
@@ -433,6 +454,31 @@ class AppStateNotifier extends ChangeNotifier {
       'patent_primary_chip_all': 'All',
       'patent_primary_chip_primary': 'Primary Only',
       'patent_primary_chip_secondary': 'Secondary Only',
+      'local_market_bonds_title': 'Local Market Bonds',
+      'local_market_bonds_desc':
+          'Domestic government debt issuance and auctions.',
+      'local_market_bonds_count': '1,790+ records',
+      'local_market_bonds_search_placeholder': 'Search by Series or Bond Type',
+      'local_market_bonds_publisher':
+          'Ministry of Finance - Accountant General',
+      'bond_series_label': 'Series: ',
+      'bond_type_label': 'Type: ',
+      'bond_issuance_date': 'Issuance Date: ',
+      'bond_redemption_date': 'Redemption Date: ',
+      'bond_term_to_maturity': 'Term to Maturity: ',
+      'bond_coupon': 'Coupon: ',
+      'bond_offered': 'Offered Vol: ',
+      'bond_purchased': 'Purchased Vol: ',
+      'bond_avg_price': 'Avg Price: ',
+      'bond_avg_yield': 'Avg Yield: ',
+      'bond_total_funding': 'Total Funding: ',
+      'bond_cover_ratio': 'Cover Ratio: ',
+      'bond_demand': 'Demanded Vol: ',
+      'bond_cutoff_price': 'Cutoff Price: ',
+      'bond_cutoff_yield': 'Cutoff Yield: ',
+      'bond_additional_purchased': 'Additional Purchased: ',
+      'bond_years': ' years',
+      'bond_millions_ils': 'M ₪',
       'atm_title': 'Bank ATMs',
       'atm_desc': 'ATM locations across Israel from the Bank of Israel.',
       'atm_search_placeholder': 'Search by city or bank...',
@@ -616,6 +662,29 @@ class AppStateNotifier extends ChangeNotifier {
       'patent_primary_chip_all': 'הכל',
       'patent_primary_chip_primary': 'ראשי בלבד',
       'patent_primary_chip_secondary': 'משני בלבד',
+      'local_market_bonds_title': 'אג"ח בשוק המקומי',
+      'local_market_bonds_desc': 'הנפקות חוב ממשלתי מקומי ומכרזי אג"ח.',
+      'local_market_bonds_count': '1,790+ רשומות',
+      'local_market_bonds_search_placeholder': 'חפש לפי סדרה או סוג נייר',
+      'local_market_bonds_publisher': 'משרד האוצר - החשב הכללי',
+      'bond_series_label': 'סדרה: ',
+      'bond_type_label': 'סוג: ',
+      'bond_issuance_date': 'תאריך הנפקה: ',
+      'bond_redemption_date': 'תאריך פדיון: ',
+      'bond_term_to_maturity': 'תקופה לפדיון: ',
+      'bond_coupon': 'ריבית קופון: ',
+      'bond_offered': 'כמות מוצעת: ',
+      'bond_purchased': 'כמות שנרכשה: ',
+      'bond_avg_price': 'מחיר ממוצע: ',
+      'bond_avg_yield': 'תשואה ממוצעת: ',
+      'bond_total_funding': 'גיוס כולל: ',
+      'bond_cover_ratio': 'יחס כיסוי: ',
+      'bond_demand': 'סך ביקושים: ',
+      'bond_cutoff_price': 'מחיר סגירה: ',
+      'bond_cutoff_yield': 'תשואת סגירה: ',
+      'bond_additional_purchased': 'הקצאת יתר: ',
+      'bond_years': ' שנים',
+      'bond_millions_ils': 'מיליון ₪',
       'atm_title': 'כספומטים',
       'atm_desc': 'מיקומי כספומטים בנקאיים ברחבי ישראל.',
       'atm_search_placeholder': 'חיפוש לפי עיר או בנק...',
