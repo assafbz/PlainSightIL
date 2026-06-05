@@ -19,4 +19,7 @@ class DatasetIds {
 
   /// Travel Warnings dataset ID.
   static const String travelWarnings = '2a01d234-b2b0-4d46-baa0-cec05c401e7d';
+
+  /// Local Market Bonds dataset ID.
+  static const String localMarketBonds = 'c92fdda2-0939-4110-8ebc-edfcf35e8723';
 }
