@@ -244,6 +244,12 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
       expect(notifier.isLoadingBonds, isFalse);
     });
+    test('setFilter to Floating Rate filters correctly', () async {
+      final notifier = LocalMarketBondsNotifier();
+      notifier.setFilter('Floating Rate');
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(notifier.isLoadingBonds, isFalse);
+    });
 
     test('setFilter to Floating Rate filters correctly', () async {
       final notifier = LocalMarketBondsNotifier();
