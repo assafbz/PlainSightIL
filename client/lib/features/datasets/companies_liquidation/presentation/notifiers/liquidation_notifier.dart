@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/liquidation_record_model.dart';
 
 import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/state/dataset_sync_manager.dart';
 
 /// Scoped state notifier that handles companies in liquidation collection streams,
 /// loader flags, and test mode data fallbacks.
@@ -14,9 +14,7 @@ class LiquidationNotifier extends ChangeNotifier {
   /// Local indicator if we are running in unit/widget mock testing mode.
   bool get _isTesting => AppStateNotifier.isTesting;
 
-  List<LiquidationRecordModel> _liquidationRecords = [];
-  bool _isLoadingLiquidation = true;
-  StreamSubscription<QuerySnapshot>? _liquidationSubscription;
+  late final DatasetSyncManager<LiquidationRecordModel> _syncManager;
 
   @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
@@ -25,10 +23,10 @@ class LiquidationNotifier extends ChangeNotifier {
   FirebaseFirestore? testFirestore;
 
   /// Returns companies in liquidation list.
-  List<LiquidationRecordModel> get liquidationRecords => _liquidationRecords;
+  List<LiquidationRecordModel> get liquidationRecords => _syncManager.records;
 
   /// Checks if liquidation records query is loading.
-  bool get isLoadingLiquidation => _isLoadingLiquidation;
+  bool get isLoadingLiquidation => _syncManager.isLoading;
 
   /// Checks if Firebase is initialized.
   bool get isFirebaseInitialized {
@@ -47,120 +45,71 @@ class LiquidationNotifier extends ChangeNotifier {
     bool isTesting = false,
     this.testFirestoreStream,
     this.testFirestore,
-  });
+  }) {
+    _syncManager = DatasetSyncManager<LiquidationRecordModel>(
+      datasetId: DatasetIds.companiesLiquidation,
+      fromMap: LiquidationRecordModel.fromMap,
+      toMap: (r) => r.toMap(),
+      getRecordId: (r) => r.companyId.toString(),
+      getRecordLastUpdated: (r) => r.lastUpdated ?? '',
+      onStateChanged: notifyListeners,
+    );
+  }
 
   /// Initialize real-time streams to companies liquidation collection.
   void initLiquidationListener() {
-    _liquidationSubscription?.cancel();
-    if (testFirestoreStream != null) {
-      _isLoadingLiquidation = true;
-      _liquidationSubscription = testFirestoreStream!.listen(
-        (snapshot) {
-          _liquidationRecords = snapshot.docs
-              .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
-              .toList();
-          _isLoadingLiquidation = false;
-          notifyListeners();
-        },
-        onError: (Object err) {
-          _isLoadingLiquidation = false;
-          notifyListeners();
-          AppLogger.error(
-            'Firestore liquidation collection listener error',
-            err,
-          );
-        },
-      );
-      return;
-    }
-    if (_isTesting) {
-      _liquidationRecords = [
-        LiquidationRecordModel(
-          liquidationCaseId: 12345,
-          cityOfActivity: 'תל אביב - יפו',
-          caseStatus: const {'he': 'פירוק פעיל', 'en': 'Active Winding Up'},
-          submissionDate: '2024-05-12T00:00:00.000Z',
-          liquidationOrderDate: '2024-06-15T00:00:00.000Z',
-          districtCourt: 'מחוזי תל אביב',
-          companyName: 'אלברט לוי הנדסה בע"מ',
-          companyId: 512345678,
-        ),
-        LiquidationRecordModel(
-          liquidationCaseId: 12346,
-          cityOfActivity: 'חיפה',
-          caseStatus: const {'he': 'הקפאת הליכים', 'en': 'Frozen'},
-          submissionDate: '2024-03-10T00:00:00.000Z',
-          liquidationOrderDate: '2024-04-12T00:00:00.000Z',
-          cancellationFreezeDate: '2024-04-20T00:00:00.000Z',
-          districtCourt: 'מחוזי חיפה',
-          companyName: 'משה שירותי בנייה בע"מ',
-          companyId: 512345679,
-        ),
-        LiquidationRecordModel(
-          liquidationCaseId: 12347,
-          cityOfActivity: 'ירושלים',
-          caseStatus: const {'he': 'סגור', 'en': 'Closed'},
-          submissionDate: '2023-08-15T00:00:00.000Z',
-          liquidationOrderDate: '2023-09-20T00:00:00.000Z',
-          closureDate: '2024-01-10T00:00:00.000Z',
-          closureReason: 'הסדר נושים',
-          districtCourt: 'מחוזי ירושלים',
-          companyName: 'ישראל קומפני בע"מ',
-          companyId: 512345680,
-        ),
-      ];
-      _isLoadingLiquidation = false;
-      notifyListeners();
-      return;
-    }
+    final mockList = _isTesting
+        ? [
+            LiquidationRecordModel(
+              liquidationCaseId: 12345,
+              cityOfActivity: 'תל אביב - יפו',
+              caseStatus: const {'he': 'פירוק פעיל', 'en': 'Active Winding Up'},
+              submissionDate: '2024-05-12T00:00:00.000Z',
+              liquidationOrderDate: '2024-06-15T00:00:00.000Z',
+              districtCourt: 'מחוזי תל אביב',
+              companyName: 'אלברט לוי הנדסה בע"מ',
+              companyId: 512345678,
+              lastUpdated: '2024-06-15T00:00:00Z',
+            ),
+            LiquidationRecordModel(
+              liquidationCaseId: 12346,
+              cityOfActivity: 'חיפה',
+              caseStatus: const {'he': 'הקפאת הליכים', 'en': 'Frozen'},
+              submissionDate: '2024-03-10T00:00:00.000Z',
+              liquidationOrderDate: '2024-04-12T00:00:00.000Z',
+              cancellationFreezeDate: '2024-04-20T00:00:00.000Z',
+              districtCourt: 'מחוזי חיפה',
+              companyName: 'משה שירותי בנייה בע"מ',
+              companyId: 512345679,
+              lastUpdated: '2024-04-20T00:00:00Z',
+            ),
+            LiquidationRecordModel(
+              liquidationCaseId: 12347,
+              cityOfActivity: 'ירושלים',
+              caseStatus: const {'he': 'סגור', 'en': 'Closed'},
+              submissionDate: '2023-08-15T00:00:00.000Z',
+              liquidationOrderDate: '2023-09-20T00:00:00.000Z',
+              closureDate: '2024-01-10T00:00:00.000Z',
+              closureReason: 'הסדר נושים',
+              districtCourt: 'מחוזי ירושלים',
+              companyName: 'ישראל קומפני בע"מ',
+              companyId: 512345680,
+              lastUpdated: '2024-01-10T00:00:00Z',
+            ),
+          ]
+        : null;
 
-    if (!isFirebaseInitialized) {
-      _isLoadingLiquidation = false;
-      notifyListeners();
-      return;
-    }
-
-    AppLogger.info(
-      'Initializing companies liquidation listener in LiquidationNotifier',
+    _syncManager.initialize(
+      mockData: mockList,
+      isTesting: _isTesting,
+      testFirestore: testFirestore,
+      testFirestoreStream: testFirestoreStream,
     );
-    _isLoadingLiquidation = true;
-    notifyListeners();
-
-    try {
-      _liquidationSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(DatasetIds.companiesLiquidation)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              _liquidationRecords = snapshot.docs
-                  .map((doc) => LiquidationRecordModel.fromMap(doc.data()))
-                  .toList();
-              _isLoadingLiquidation = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingLiquidation = false;
-              notifyListeners();
-              AppLogger.error(
-                'Firestore liquidation collection listener error',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingLiquidation = false;
-      notifyListeners();
-      AppLogger.error('Failed to initialize liquidation listener', e);
-    }
   }
 
   /// Cancels active liquidation subscriptions and resets paging states.
   void cancelLiquidationListener() {
-    _liquidationSubscription?.cancel();
-    _liquidationSubscription = null;
-    _isLoadingLiquidation = true;
-    _liquidationRecords = [];
-    notifyListeners();
+    _syncManager.cancel();
   }
 
   bool _isDisposed = false;
@@ -179,7 +128,7 @@ class LiquidationNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    _liquidationSubscription?.cancel();
+    _syncManager.dispose();
     super.dispose();
   }
 }
