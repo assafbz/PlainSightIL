@@ -109,9 +109,9 @@ class TelemetryNotifier extends ChangeNotifier {
   });
 
   /// Initialize real-time streams on dataset metadata.
-  void initAdminMetadataListener() {
+  void initAdminMetadataListener({bool isAdmin = false}) {
     _adminMetadataSubscription?.cancel();
-    initTelemetryListeners();
+    initTelemetryListeners(isAdmin: isAdmin);
     if (testMetadataStream != null) {
       _isLoadingAdminMetadata = true;
       _adminMetadataSubscription = testMetadataStream!.listen(
@@ -244,10 +244,15 @@ class TelemetryNotifier extends ChangeNotifier {
     }
   }
 
-  /// Initialize real-time listeners for system health and scraper runs collections.
-  void initTelemetryListeners() {
+  void initTelemetryListeners({bool isAdmin = false}) {
     _apiHealthSubscription?.cancel();
     _scraperRunsSubscription?.cancel();
+
+    if (!isAdmin && !_isTesting) {
+      _isLoadingTelemetry = false;
+      notifyListeners();
+      return;
+    }
 
     if (testHealthStream != null || testScraperRunsStream != null) {
       _isLoadingTelemetry = true;
