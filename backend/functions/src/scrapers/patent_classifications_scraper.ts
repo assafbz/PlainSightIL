@@ -1,8 +1,8 @@
 import * as admin from "firebase-admin";
-import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
+import { AppLogger as logger } from "../utils/logger";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
 /**
  * Interface representing the raw record layout received from data.gov.il CKAN datastore API.
@@ -36,8 +36,8 @@ export interface PatentClassificationRecord {
  * Maps a raw Hebrew database record into the clean, typed PatentClassificationRecord format.
  * Sanitizes input and enforces numeric checks.
  *
- * @param record The raw record from the API
- * @returns Mapped record, or null if key fields are missing or invalid
+ * @param record The raw record from the API.
+ * @returns Mapped record, or null if key fields are missing or invalid.
  */
 export function parsePatentRecord(record: HebrewPatentRecord): PatentClassificationRecord | null {
   const rawId = record._id;
@@ -89,174 +89,118 @@ export function parsePatentRecord(record: HebrewPatentRecord): PatentClassificat
 }
 
 /**
+ * Scraper class for Patent Classifications dataset.
+ * Implements incremental delta synchronization based on maximum processed _id.
+ */
+export class PatentClassificationsScraper extends BaseScraper<
+  HebrewPatentRecord,
+  PatentClassificationRecord
+> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.PATENT_CLASSIFICATIONS;
+  override readonly updateIntervalHours = 24; // daily
+
+  private lastSyncedMaxId = 0;
+  private maxIdInThisRun = 0;
+
+  constructor(resourceId = DATASET_IDS.PATENT_CLASSIFICATIONS) {
+    super();
+    this.datasetId = resourceId;
+  }
+
+  /**
+   * Fetches pages sorted by _id desc to check newest records first.
+   */
+  protected override async fetchPage(
+    offset: number,
+    limit: number,
+    options?: ScraperOptions,
+  ): Promise<HebrewPatentRecord[]> {
+    const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+
+    if (!isEmulator && !baseUrl.startsWith("https://")) {
+      throw new Error(`Insecure base URL protocol: ${baseUrl}. Scrapers must use HTTPS.`);
+    }
+
+    const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${this.datasetId}&limit=${limit}&offset=${offset}&sort=_id desc`;
+    logger.info(`Fetching data for ${this.datasetId} from: ${url}`);
+
+    const response = await this.executeWithRetry(() =>
+      axios.get(url, { timeout: options?.timeout || this.requestTimeout }),
+    );
+    return response.data?.result?.records ?? [];
+  }
+
+  /**
+   * Reads the last processed max ID before sync execution starts.
+   */
+  protected override async beforeScrape(
+    _db: admin.firestore.Firestore,
+    _options?: ScraperOptions,
+  ): Promise<void> {
+    if (this.metadataSnapshot && this.metadataSnapshot.exists) {
+      const data = this.metadataSnapshot.data();
+      if (data && typeof data.lastSyncedMaxId === "number") {
+        this.lastSyncedMaxId = data.lastSyncedMaxId;
+      }
+    }
+    this.maxIdInThisRun = this.lastSyncedMaxId;
+    logger.info(`Delta sync active. Last synced max _id: ${this.lastSyncedMaxId}`);
+  }
+
+  /**
+   * Terminates paging when encountering already-synced records.
+   */
+  protected override shouldStopPaging(raw: HebrewPatentRecord): boolean {
+    if (raw._id !== undefined && raw._id !== null && raw._id <= this.lastSyncedMaxId) {
+      logger.info(
+        `Reached previously synced record (_id: ${raw._id} <= lastSyncedMaxId: ${this.lastSyncedMaxId}). Stopping sync.`,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Parses raw record and tracks the maximum processed ID.
+   */
+  parseRecord(raw: HebrewPatentRecord): PatentClassificationRecord | null {
+    const parsed = parsePatentRecord(raw);
+    if (parsed && parsed._id > this.maxIdInThisRun) {
+      this.maxIdInThisRun = parsed._id;
+    }
+    return parsed;
+  }
+
+  /**
+   * Returns delta sync metadata updates.
+   */
+  protected override async afterScrape(
+    _db: admin.firestore.Firestore,
+    _processedCount: number,
+    _changedCount: number,
+  ): Promise<Record<string, unknown>> {
+    return {
+      lastSyncedMaxId: this.maxIdInThisRun,
+    };
+  }
+}
+
+/**
  * Scrapes patent applications CPC classifications from data.gov.il datastore API and syncs them in-place.
- * Uses a delta sync strategy by querying newer records first (sorting by _id desc) and stopping
- * once we encounter an _id that is already synced.
+ * Backward-compatible wrapper function.
  *
- * @param db The Firestore database reference
- * @param resourceId The resource ID for data.gov.il API (defaults to DATASET_IDS.PATENT_CLASSIFICATIONS)
- * @returns Success status and count of processed records
+ * @param db The Firestore database reference.
+ * @param resourceId The resource ID for data.gov.il API.
+ * @param options Synchronizer options.
+ * @returns Success status and count of processed records.
  */
 export async function scrapeAndSyncPatentClassifications(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.PATENT_CLASSIFICATIONS,
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = DATASET_IDS.PATENT_CLASSIFICATIONS;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
-  try {
-    const targetCollection = DATASET_IDS.PATENT_CLASSIFICATIONS;
-    logger.info(`Starting patent classifications sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    let offset = 0;
-    const limit = isEmulator ? 10 : 10000;
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    // 1. Retrieve the last synced maximum _id to support delta sync
-    const metadataDoc = await metadataRef.get();
-    let lastSyncedMaxId = 0;
-    if (metadataDoc.exists) {
-      const data = metadataDoc.data();
-      if (data && typeof data.lastSyncedMaxId === "number") {
-        lastSyncedMaxId = data.lastSyncedMaxId;
-      }
-    }
-    logger.info(`Delta sync active. Last synced max _id: ${lastSyncedMaxId}`);
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-    let maxIdInThisRun = lastSyncedMaxId;
-
-    // Loop and page through the datastore
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      // Fetch sorted by _id desc so we check newest entries first
-      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}&sort=_id desc`;
-      logger.info(`Fetching patent classifications from: ${url}`);
-
-      const response = await axios.get(url);
-      const records: HebrewPatentRecord[] = response.data?.result?.records ?? [];
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const parsedRecords: PatentClassificationRecord[] = [];
-      let reachedExistingRecords = false;
-
-      for (const rec of records) {
-        // Delta sync termination check: if we see an _id we've already synced, we can stop
-        if (rec._id <= lastSyncedMaxId) {
-          logger.info(
-            `Reached previously synced record (_id: ${rec._id} <= lastSyncedMaxId: ${lastSyncedMaxId}). Stopping sync.`,
-          );
-          reachedExistingRecords = true;
-          hasMore = false;
-          break;
-        }
-
-        const parsed = parsePatentRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-          if (parsed._id > maxIdInThisRun) {
-            maxIdInThisRun = parsed._id;
-          }
-        }
-      }
-
-      // If we got new records, batch write them in chunks of 500
-      if (parsedRecords.length > 0) {
-        for (let i = 0; i < parsedRecords.length; i += 500) {
-          const chunk = parsedRecords.slice(i, i + 500);
-          const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-          // Look up existing docs to maintain createdAt field if they exist
-          const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-          const existingMap = new Map<string, admin.firestore.DocumentData>();
-          for (const snap of snapshots) {
-            const data = snap.data();
-            if (snap.exists && data) {
-              existingMap.set(snap.id, data);
-            }
-          }
-
-          const batch = db.batch();
-          let hasWrites = false;
-          for (const r of chunk) {
-            const docRef = targetRef.doc(r.id);
-            const existingData = existingMap.get(r.id);
-
-            r.lastUpdated = now;
-            if (existingData) {
-              const isIdentical = areRecordsEqual(existingData, r);
-              if (isIdentical) {
-                processedCount++;
-                continue;
-              }
-              r.createdAt = existingData.createdAt || now;
-              r.updatedAt = now;
-            } else {
-              r.createdAt = now;
-              r.updatedAt = now;
-            }
-
-            batch.set(docRef, r);
-            hasWrites = true;
-            processedCount++;
-            changedCount++;
-          }
-
-          if (hasWrites) {
-            await batch.commit();
-          }
-        }
-      } else {
-        // No new records parsed in this batch (e.g. all filtered out or empty)
-        if (reachedExistingRecords) {
-          hasMore = false;
-        }
-      }
-
-      if (isEmulator) {
-        hasMore = false;
-        break;
-      }
-
-      if (hasMore) {
-        offset += limit;
-      }
-    }
-
-    logger.info(
-      `Ingestion complete. Processed: ${processedCount}, Wrote: ${changedCount} records.`,
-    );
-
-    // Retrieve total count of documents in the collection
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    // Update metadata document
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-        lastSyncedMaxId: maxIdInThisRun,
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated patent classifications metadata.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Patent classifications scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new PatentClassificationsScraper(resourceId);
+  return scraper.scrape(db, options);
 }

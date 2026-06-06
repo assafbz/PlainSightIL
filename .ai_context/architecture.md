@@ -271,7 +271,7 @@ stateDiagram-v2
     Initial --> Loading : Fetching Firestore Snapshots
     Loading --> Loaded : Snapshot emitted / Data populated in-memory
     Loading --> Failure : Firestore error triggered
-    Loaded --> Loading : Refresh / Active Collection swaps
+    Loaded --> Loading : Refresh / Query new data
     Failure --> Loading : Retry
 ```
 

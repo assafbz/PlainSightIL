@@ -1,10 +1,13 @@
 import * as admin from "firebase-admin";
-import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
+import { AppLogger as logger } from "../utils/logger";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 import { broadcastAlert } from "../utils/alerts";
 
+/**
+ * Interface representing the raw package data format from data.gov.il CKAN API.
+ */
 export interface CKANPackage {
   id: string;
   name: string;
@@ -19,6 +22,9 @@ export interface CKANPackage {
   resources?: Array<{ id: string; name?: string }>;
 }
 
+/**
+ * Interface representing the normalized dataset metadata written to Firestore.
+ */
 export interface DatasetMetadata {
   id: string;
   datasetId: string;
@@ -30,6 +36,8 @@ export interface DatasetMetadata {
   lastUpdated: string;
   tags: string[];
   isSupported: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Central list of dataset IDs that are currently visualized/supported in PlainSightIL (resource IDs)
@@ -47,208 +55,187 @@ const SUPPORTED_DATASET_IDS = new Set<string>([
 
 /**
  * Sanitizes and strips HTML tags from notes/descriptions to prevent injection.
+ *
+ * @param rawNotes The raw description notes.
+ * @returns Cleaned text string.
  */
-function sanitizeNotes(rawNotes?: string): string {
+export function sanitizeNotes(rawNotes?: string): string {
   if (!rawNotes) return "";
   // Simple regex to strip HTML tags
   return rawNotes.replace(/<[^>]*>/g, "").trim();
 }
 
-export async function scrapeAndSyncDatasetMetadata(
-  db: admin.firestore.Firestore,
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const collectionName = "datasets_metadata";
-  logger.info(`Starting dataset metadata sync. Target collection: ${collectionName}`);
+/**
+ * Scraper class for Datasets Metadata.
+ * Queries CKAN package API to fetch metadata for all Israeli government datasets.
+ */
+export class MetadataScraper extends BaseScraper<CKANPackage, DatasetMetadata> {
+  readonly datasetId = "datasets_metadata";
+  readonly targetCollection = "datasets_metadata";
+  override readonly updateIntervalHours = 168; // weekly
 
-  try {
-    const targetRef = db.collection(collectionName);
-    const now = new Date().toISOString();
+  /**
+   * Overridden fetchPage to query CKAN package_search directly.
+   */
+  protected override async fetchPage(
+    offset: number,
+    limit: number,
+    options?: ScraperOptions,
+  ): Promise<CKANPackage[]> {
+    if (offset > 0) {
+      return []; // Return empty to stop pagination loop after page 1
+    }
 
-    const metadataRef = db.collection("dataset_metadata").doc(collectionName);
-    const existingMetaDoc = await metadataRef.get();
-    const isFirstSync = !existingMetaDoc.exists || !existingMetaDoc.data()?.lastUpdated;
-
-    // Query CKAN package_search to fetch all packages.
-    // Since there are ~1200 datasets, fetching rows=1500 in one request is efficient and avoids rate limit issues.
     const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+
+    if (!isEmulator && !baseUrl.startsWith("https://")) {
+      throw new Error(`Insecure base URL protocol: ${baseUrl}. Scrapers must use HTTPS.`);
+    }
+
     const url = `${baseUrl}/api/3/action/package_search?rows=1500`;
     logger.info(`Fetching CKAN package list from: ${url}`);
 
-    const response = await axios.get(url);
-    const packages: CKANPackage[] = response.data?.result?.results ?? [];
-
-    if (packages.length === 0) {
-      logger.warn("No packages returned from CKAN API.");
-      return { success: true, count: 0, changedCount: 0 };
-    }
-
-    logger.info(`Fetched ${packages.length} packages from CKAN. Processing updates...`);
-
-    const parsedDatasets: DatasetMetadata[] = [];
-
-    for (const pkg of packages) {
-      if (!pkg.id || !pkg.title) {
-        continue;
-      }
-
-      let id = pkg.id.trim();
-      let isSupported = false;
-
-      // Check if the package ID itself is one of the supported dataset IDs
-      if (SUPPORTED_DATASET_IDS.has(id)) {
-        isSupported = true;
-      } else {
-        // Find if any resource ID in the package is in the supported dataset list
-        const matchedResource = (pkg.resources ?? []).find(
-          (r) => r.id && SUPPORTED_DATASET_IDS.has(r.id.trim()),
-        );
-        if (matchedResource) {
-          id = matchedResource.id.trim();
-          isSupported = true;
-        }
-      }
-
-      const name = (pkg.name ?? "").trim();
-      let title = pkg.title.trim();
-      if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
-        title = "חברות בפירוק";
-      }
-      const notes = sanitizeNotes(pkg.notes);
-      const publisher = (pkg.organization?.title ?? "לא ידוע").trim();
-      const resourceCount = pkg.num_resources ?? 0;
-      const lastUpdated = pkg.metadata_modified ?? now;
-      const tags = (pkg.tags ?? []).map((t) => (t.name ?? "").trim()).filter(Boolean);
-
-      parsedDatasets.push({
-        id,
-        datasetId: pkg.id.trim(),
-        name,
-        title,
-        notes,
-        publisher,
-        resourceCount,
-        lastUpdated,
-        tags,
-        isSupported,
-      });
-    }
-
-    // Process parsed datasets in chunks of 500 for Firestore batched writes
-    let processedCount = 0;
-    let changedCount = 0;
-
-    for (let i = 0; i < parsedDatasets.length; i += 500) {
-      const chunk = parsedDatasets.slice(i, i + 500);
-      const docRefs = chunk.map((d) => targetRef.doc(d.id));
-
-      const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-      const existingMap = new Map<string, admin.firestore.DocumentData>();
-      for (const snap of snapshots) {
-        if (snap.exists) {
-          existingMap.set(snap.id, snap.data()!);
-        }
-      }
-
-      const batch = db.batch();
-      let hasWrites = false;
-
-      for (const dataset of chunk) {
-        const docRef = targetRef.doc(dataset.id);
-        const existingData = existingMap.get(dataset.id);
-
-        let shouldWrite = false;
-
-        if (!existingData) {
-          shouldWrite = true;
-          if (!isFirstSync) {
-            // New government dataset alert
-            await broadcastAlert(db, {
-              type: "new_government_dataset",
-              datasetId: dataset.id,
-              title: {
-                he: `נתגלה מאגר מידע ממשלתי חדש: ${dataset.title}`,
-                en: `New Government Dataset Discovered: ${dataset.title}`,
-              },
-              description: {
-                he: `המאגר '${dataset.title}' פורסם על ידי ${dataset.publisher} ב-data.gov.il.`,
-                en: `The dataset '${dataset.title}' was published by ${dataset.publisher} on data.gov.il.`,
-              },
-            });
-
-            if (dataset.isSupported) {
-              // Visualizer supported alert
-              await broadcastAlert(db, {
-                type: "new_dataset",
-                datasetId: dataset.id,
-                title: {
-                  he: `מאגר מידע חדש זמין לצפייה: ${dataset.title}`,
-                  en: `New Visualizer Supported: ${dataset.title}`,
-                },
-                description: {
-                  he: `מאגר '${dataset.title}' זמין כעת לצפייה והדמיות אינטראקטיביות באפליקציה!`,
-                  en: `The dataset '${dataset.title}' is now available for interactive visualization in the app!`,
-                },
-              });
-            }
-          }
-        } else {
-          const isIdentical = areRecordsEqual(existingData, dataset);
-          if (!isIdentical) {
-            shouldWrite = true;
-            const wasSupported = existingData.isSupported === true;
-            const isNowSupported = dataset.isSupported === true;
-            if (!wasSupported && isNowSupported && !isFirstSync) {
-              // Visualizer supported transition alert
-              await broadcastAlert(db, {
-                type: "new_dataset",
-                datasetId: dataset.id,
-                title: {
-                  he: `מאגר מידע חדש זמין לצפייה: ${dataset.title}`,
-                  en: `New Visualizer Supported: ${dataset.title}`,
-                },
-                description: {
-                  he: `מאגר '${dataset.title}' זמין כעת לצפייה והדמיות אינטראקטיביות באפליקציה!`,
-                  en: `The dataset '${dataset.title}' is now available for interactive visualization in the app!`,
-                },
-              });
-            }
-          }
-        }
-
-        if (shouldWrite) {
-          batch.set(docRef, dataset, { merge: true });
-          changedCount++;
-          hasWrites = true;
-        }
-        processedCount++;
-      }
-
-      if (hasWrites) {
-        await batch.commit();
-      }
-    }
-    logger.info(
-      `Successfully synced ${processedCount} dataset metadata records. Changes: ${changedCount}`,
+    const response = await this.executeWithRetry(() =>
+      axios.get(url, { timeout: options?.timeout || this.requestTimeout }),
     );
-
-    // Retrieve total count of documents in the collection
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    await metadataRef.set(
-      {
-        id: collectionName,
-        activeCollection: collectionName,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Dataset metadata sync failed:", error);
-    throw error;
+    return response.data?.result?.results ?? [];
   }
+
+  /**
+   * Parses a raw CKAN package record.
+   */
+  parseRecord(raw: CKANPackage): DatasetMetadata | null {
+    if (!raw.id || !raw.title) {
+      return null;
+    }
+
+    let id = raw.id.trim();
+    let isSupported = false;
+
+    // Check if the package ID itself is one of the supported dataset IDs
+    if (SUPPORTED_DATASET_IDS.has(id)) {
+      isSupported = true;
+    } else {
+      // Find if any resource ID in the package is in the supported dataset list
+      const matchedResource = (raw.resources ?? []).find(
+        (r) => r.id && SUPPORTED_DATASET_IDS.has(r.id.trim()),
+      );
+      if (matchedResource) {
+        id = matchedResource.id.trim();
+        isSupported = true;
+      }
+    }
+
+    const name = (raw.name ?? "").trim();
+    let title = raw.title.trim();
+    if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
+      title = "חברות בפירוק";
+    }
+    const notes = sanitizeNotes(raw.notes);
+    const publisher = (raw.organization?.title ?? "לא ידוע").trim();
+    const resourceCount = raw.num_resources ?? 0;
+    const lastUpdated = raw.metadata_modified ?? new Date().toISOString();
+    const tags = (raw.tags ?? []).map((t) => (t.name ?? "").trim()).filter(Boolean);
+
+    return {
+      id,
+      datasetId: raw.id.trim(),
+      name,
+      title,
+      notes,
+      publisher,
+      resourceCount,
+      lastUpdated,
+      tags,
+      isSupported,
+    };
+  }
+
+  /**
+   * Overrides triggerAlerts to bypass standard subscriber alerts.
+   */
+  protected override async triggerAlerts(
+    _db: admin.firestore.Firestore,
+    _result: ScraperResult,
+    _isFirstSync: boolean,
+  ): Promise<void> {}
+
+  /**
+   * Triggers specific global system alerts when a new dataset is found or supported.
+   */
+  protected override async onRecordUpdate(
+    db: admin.firestore.Firestore,
+    incoming: DatasetMetadata,
+    existing: DatasetMetadata | null,
+    isFirstSync: boolean,
+  ): Promise<void> {
+    if (isFirstSync) {
+      return;
+    }
+
+    if (!existing) {
+      // New government dataset alert
+      await broadcastAlert(db, {
+        type: "new_government_dataset",
+        datasetId: incoming.id,
+        title: {
+          he: `נתגלה מאגר מידע ממשלתי חדש: ${incoming.title}`,
+          en: `New Government Dataset Discovered: ${incoming.title}`,
+        },
+        description: {
+          he: `המאגר '${incoming.title}' פורסם על ידי ${incoming.publisher} ב-data.gov.il.`,
+          en: `The dataset '${incoming.title}' was published by ${incoming.publisher} on data.gov.il.`,
+        },
+      });
+
+      if (incoming.isSupported) {
+        // Visualizer supported alert
+        await broadcastAlert(db, {
+          type: "new_dataset",
+          datasetId: incoming.id,
+          title: {
+            he: `מאגר מידע חדש זמין לצפייה: ${incoming.title}`,
+            en: `New Visualizer Supported: ${incoming.title}`,
+          },
+          description: {
+            he: `מאגר '${incoming.title}' זמין כעת לצפייה והדמיות אינטראקטיביות באפליקציה!`,
+            en: `The dataset '${incoming.title}' is now available for interactive visualization in the app!`,
+          },
+        });
+      }
+    } else {
+      const wasSupported = existing.isSupported === true;
+      const isNowSupported = incoming.isSupported === true;
+      if (!wasSupported && isNowSupported) {
+        // Visualizer supported transition alert
+        await broadcastAlert(db, {
+          type: "new_dataset",
+          datasetId: incoming.id,
+          title: {
+            he: `מאגר מידע חדש זמין לצפייה: ${incoming.title}`,
+            en: `New Visualizer Supported: ${incoming.title}`,
+          },
+          description: {
+            he: `מאגר '${incoming.title}' זמין כעת לצפייה והדמיות אינטראקטיביות באפליקציה!`,
+            en: `The dataset '${incoming.title}' is now available for interactive visualization in the app!`,
+          },
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Scrapes dataset metadata from data.gov.il CKAN API and syncs to Firestore.
+ * Backward-compatible wrapper function.
+ *
+ * @param db Firestore database instance.
+ * @returns Execution outcome metrics.
+ */
+export async function scrapeAndSyncDatasetMetadata(
+  db: admin.firestore.Firestore,
+): Promise<ScraperResult> {
+  const scraper = new MetadataScraper();
+  return scraper.scrape(db);
 }

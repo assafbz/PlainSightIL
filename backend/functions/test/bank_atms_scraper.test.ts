@@ -203,6 +203,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
   let mockCollection: any;
   let mockDoc: any;
   let mockMetadataSet: any;
+  let mockMetadataGet: any;
   let mockCountGet: any;
   let mockGetAll: any;
 
@@ -210,10 +211,15 @@ describe("Bank ATMs Ingest Sync Process", () => {
     vi.clearAllMocks();
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
+    mockMetadataGet = vi.fn().mockResolvedValue({
+      exists: false,
+      data: () => ({}),
+    });
 
     mockDoc = vi.fn().mockImplementation((id) => {
       if (id === DATASET_IDS.BANK_ATMS) {
         return {
+          get: mockMetadataGet,
           set: mockMetadataSet,
         };
       }
@@ -470,7 +476,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
   });
 
   it("should handle sync failure and update metadata status to error", async () => {
-    vi.mocked(axios.get).mockRejectedValueOnce(new Error("Network Error"));
+    vi.mocked(axios.get).mockRejectedValue(new Error("Network Error"));
 
     await expect(scrapeAndSyncBankAtms(mockDb)).rejects.toThrow("Network Error");
     expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.BANK_ATMS);

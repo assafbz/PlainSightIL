@@ -5,7 +5,7 @@ import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -14,6 +14,13 @@ proj4.defs(
 );
 const itmToWgs84Converter = proj4("EPSG:2039", "EPSG:4326");
 
+/**
+ * Converts Israel Transverse Mercator (ITM) coordinates to WGS84 latitude/longitude.
+ *
+ * @param xItm ITM X coordinate.
+ * @param yItm ITM Y coordinate.
+ * @returns Object with latitude and longitude.
+ */
 export function convertItmToWgs84(
   xItm: number,
   yItm: number,
@@ -22,6 +29,13 @@ export function convertItmToWgs84(
   return { latitude, longitude };
 }
 
+/**
+ * Validates whether the coordinates fall inside Israel's approximate bounding box.
+ *
+ * @param latitude Latitude in WGS84.
+ * @param longitude Longitude in WGS84.
+ * @returns True if valid, false otherwise.
+ */
 export function isValidIsraelCoordinates(latitude: number, longitude: number): boolean {
   return latitude >= 29.3 && latitude <= 33.4 && longitude >= 34.2 && longitude <= 35.9;
 }
@@ -35,12 +49,21 @@ const OPERATOR_TRANSLATIONS: Record<string, string> = {
   "הוט מובייל": "HOT Mobile",
 };
 
+/**
+ * Normalizes and translates the cellular operator name to English.
+ *
+ * @param rawValue Raw Hebrew operator name.
+ * @returns Localized operator name object.
+ */
 export function getTranslatedOperator(rawValue: string): { he: string; en: string } {
   const normalized = (rawValue || "").trim();
   const english = OPERATOR_TRANSLATIONS[normalized] || normalized;
   return { he: normalized, en: english };
 }
 
+/**
+ * Raw record format from the API source.
+ */
 export interface HebrewAntennaRecord {
   מזהה?: number | string;
   _id?: number;
@@ -65,6 +88,9 @@ export interface HebrewAntennaRecord {
   "טכנולוגיית שידור"?: string;
 }
 
+/**
+ * Normalized and sanitized cellular antenna record written to Firestore.
+ */
 export interface CellularAntenna {
   id: string;
   antennaId: string;
@@ -81,7 +107,7 @@ export interface CellularAntenna {
   addressEnglish: string;
   createdAt?: string;
   updatedAt?: string;
-  lastUpdated?: string;
+  lastUpdated: string;
 }
 
 function parseFrequency(tech: string): number {
@@ -141,6 +167,12 @@ function translateAddress(hebrewAddress: string): string {
   return english;
 }
 
+/**
+ * Parses a raw cellular antenna record into the normalized format.
+ *
+ * @param record Raw Hebrew record.
+ * @returns Normalized CellularAntenna object, or null if invalid.
+ */
 export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null {
   const rawId = record.מזהה ?? record._id;
   const x = record.X_ITM;
@@ -201,153 +233,67 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
   };
 }
 
-export async function saveAntennasToFirestore(
-  db: admin.firestore.Firestore,
-  antennas: CellularAntenna[],
-): Promise<number> {
-  const collectionRef = db.collection(DATASET_IDS.CELLULAR_ANTENNAS);
-  const now = new Date().toISOString();
-  let changedCount = 0;
+/**
+ * Scraper class for Cellular Antennas dataset.
+ */
+export class CellularAntennasScraper extends BaseScraper<HebrewAntennaRecord, CellularAntenna> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.CELLULAR_ANTENNAS;
+  override readonly updateIntervalHours = 24; // daily
+  override readonly lastUpdatedSource = "parsed";
 
-  // Process in chunks of 500
-  for (let i = 0; i < antennas.length; i += 500) {
-    const chunk = antennas.slice(i, i + 500);
-
-    // Get doc refs for the chunk
-    const docRefs = chunk.map((a) => collectionRef.doc(a.antennaId));
-
-    // Lookup existing documents in batch
-    const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-    const existingMap = new Map<string, admin.firestore.DocumentData>();
-    for (const snap of snapshots) {
-      const data = snap.data();
-      if (snap.exists && data) {
-        existingMap.set(snap.id, data);
-      }
-    }
-
-    // Prepare and write chunk
-    const batch = db.batch();
-    let hasWrites = false;
-    for (const a of chunk) {
-      const docRef = collectionRef.doc(a.antennaId);
-      const existingData = existingMap.get(a.antennaId);
-
-      a.lastUpdated = a.lastUpdated || now;
-      if (existingData) {
-        const isIdentical = areRecordsEqual(existingData, a);
-        if (isIdentical) {
-          continue;
-        }
-        a.createdAt = existingData.createdAt || now;
-        a.updatedAt = now;
-      } else {
-        a.createdAt = now;
-        a.updatedAt = now;
-      }
-
-      batch.set(docRef, a);
-      hasWrites = true;
-      changedCount++;
-    }
-    if (hasWrites) {
-      await batch.commit();
-    }
+  constructor(resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS) {
+    super();
+    this.datasetId = resourceIdOrUrl;
   }
-  return changedCount;
+
+  /**
+   * Overridden fetchPage to support direct URL execution.
+   */
+  protected override async fetchPage(
+    offset: number,
+    limit: number,
+    options?: ScraperOptions,
+  ): Promise<HebrewAntennaRecord[]> {
+    const isUrl = this.datasetId.startsWith("http");
+    if (isUrl && offset > 0) {
+      return []; // Return empty to stop pagination loop after page 1
+    }
+
+    const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
+    const url = isUrl
+      ? this.datasetId
+      : `${baseUrl}/api/3/action/datastore_search?resource_id=${this.datasetId}&limit=${limit}&offset=${offset}`;
+
+    logger.info(`Fetching cellular antennas data from: ${url}`);
+    const response = await this.executeWithRetry(() =>
+      axios.get(url, { timeout: options?.timeout || this.requestTimeout }),
+    );
+    return response.data?.result?.records ?? [];
+  }
+
+  /**
+   * Parses raw record.
+   */
+  parseRecord(raw: HebrewAntennaRecord): CellularAntenna | null {
+    return parseRecord(raw);
+  }
 }
 
+/**
+ * Scrapes cellular antennas from data.gov.il API and syncs them to Firestore.
+ * Backward-compatible wrapper function.
+ *
+ * @param db Firestore database instance.
+ * @param resourceIdOrUrl Resource ID or direct API URL.
+ * @param options Synchronizer options.
+ * @returns Execution outcome metrics.
+ */
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
   resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS,
-  options?: { limit?: number; forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
-  try {
-    const targetCollection = DATASET_IDS.CELLULAR_ANTENNAS;
-    logger.info(`Starting sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    // Paginated API fetch from data.gov.il datastore search
-    let offset = 0;
-    let limit = 10000;
-    if (options?.limit !== undefined) {
-      limit = options.limit;
-    } else if (isEmulator && !options?.forceFullSync) {
-      limit = 10;
-    }
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-
-    const isUrl = resourceIdOrUrl.startsWith("http");
-
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      const url = isUrl
-        ? resourceIdOrUrl
-        : `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceIdOrUrl}&limit=${limit}&offset=${offset}`;
-
-      logger.info(`Fetching data from: ${url}`);
-      const response = await axios.get(url, { timeout: 15000 });
-      const records: HebrewAntennaRecord[] = response.data?.result?.records ?? [];
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      // Collect parsed records for this page
-      const parsedRecords: CellularAntenna[] = [];
-      for (const rec of records) {
-        const parsed = parseRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-        }
-      }
-
-      // Save parsed records in chunks
-      if (parsedRecords.length > 0) {
-        const pageChanged = await saveAntennasToFirestore(db, parsedRecords);
-        changedCount += pageChanged;
-        processedCount += parsedRecords.length;
-      }
-
-      if ((isEmulator && !options?.forceFullSync) || isUrl) {
-        hasMore = false;
-      } else {
-        offset += limit;
-      }
-    }
-
-    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
-
-    // Retrieve total count of documents in the collection
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    // Atomic update of active collection pointer and count
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated metadata. Ingestion complete.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new CellularAntennasScraper(resourceIdOrUrl);
+  return scraper.scrape(db, options);
 }

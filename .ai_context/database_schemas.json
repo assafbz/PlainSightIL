@@ -125,7 +125,7 @@
       ]
     },
     "cellular_permit_applications": {
-      "description": "Permit applications for cellular towers under construction or review. Follows the blue-green partition system (e.g. permit_apps_blue and permit_apps_green).",
+      "description": "Permit applications for cellular towers under construction or review.",
       "type": "object",
       "properties": {
         "id": {
@@ -202,7 +202,7 @@
       ]
     },
     "dataset_metadata": {
-      "description": "Coordination meta-records for active scraper sync partitions (Double Buffering metadata).",
+      "description": "Coordination meta-records for dataset scraper synchronization state.",
       "type": "object",
       "properties": {
         "id": {
@@ -211,7 +211,7 @@
         },
         "activeCollection": {
           "type": "string",
-          "description": "The name of the partition currently active for client queries (e.g., 'permit_apps_blue')."
+          "description": "The name of the collection currently active for client queries."
         },
         "lastUpdated": {
           "type": "string",

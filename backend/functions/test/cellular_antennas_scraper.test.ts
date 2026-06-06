@@ -125,16 +125,22 @@ describe("Scraper and Sync Ingestion", () => {
   let mockDoc: any;
   let mockGetAll: any;
   let mockMetadataSet: any;
+  let mockMetadataGet: any;
   let mockCountGet: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
+    mockMetadataGet = vi.fn().mockResolvedValue({
+      exists: false,
+      data: () => ({}),
+    });
 
     mockDoc = vi.fn().mockImplementation((id) => {
       if (id === DATASET_IDS.CELLULAR_ANTENNAS) {
         return {
+          get: mockMetadataGet,
           set: mockMetadataSet,
         };
       }

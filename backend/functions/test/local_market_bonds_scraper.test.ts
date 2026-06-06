@@ -306,7 +306,7 @@ describe("Local Market Bonds Ingest Sync Process", () => {
   });
 
   it("should handle scraper errors and update metadata status to error", async () => {
-    vi.mocked(axios.get).mockRejectedValueOnce(new Error("API Timeout"));
+    vi.mocked(axios.get).mockRejectedValue(new Error("API Timeout"));
 
     await expect(scrapeAndSyncLocalMarketBonds(mockDb)).rejects.toThrow("API Timeout");
     expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });

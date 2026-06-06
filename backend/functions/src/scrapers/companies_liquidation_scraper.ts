@@ -1,8 +1,6 @@
 import * as admin from "firebase-admin";
-import { AppLogger as logger } from "../utils/logger";
-import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
 // Translation mapping for case statuses
 const STATUS_TRANSLATIONS: Record<string, string> = {
@@ -15,12 +13,21 @@ const STATUS_TRANSLATIONS: Record<string, string> = {
   "הקפאת הליכים": "Frozen",
 };
 
+/**
+ * Translates a raw Hebrew case status.
+ *
+ * @param rawValue The raw Hebrew status string.
+ * @returns Localized status object.
+ */
 export function getTranslatedStatus(rawValue: string): { he: string; en: string } {
   const normalized = (rawValue || "").trim();
   const english = STATUS_TRANSLATIONS[normalized] || normalized;
   return { he: normalized, en: english };
 }
 
+/**
+ * Raw record format received from companies liquidation API.
+ */
 export interface HebrewLiquidationRecord {
   "מזהה תיק פירוק חברה"?: number | string;
   "עיר פעילות חברה"?: string;
@@ -36,6 +43,9 @@ export interface HebrewLiquidationRecord {
   _id?: number;
 }
 
+/**
+ * Normalized and sanitized companies liquidation record written to Firestore.
+ */
 export interface CompaniesLiquidationRecord {
   id: string;
   companyId: number;
@@ -77,6 +87,12 @@ function parseDateString(rawDate: unknown): string {
   return "";
 }
 
+/**
+ * Maps a raw Hebrew companies liquidation record into the clean, typed CompaniesLiquidationRecord format.
+ *
+ * @param record The raw record from the API.
+ * @returns Mapped record, or null if key fields are missing or invalid.
+ */
 export function parseLiquidationRecord(
   record: HebrewLiquidationRecord,
 ): CompaniesLiquidationRecord | null {
@@ -126,148 +142,78 @@ export function parseLiquidationRecord(
   };
 }
 
+/**
+ * Scraper class for Companies Liquidation dataset.
+ */
+export class CompaniesLiquidationScraper extends BaseScraper<
+  HebrewLiquidationRecord,
+  CompaniesLiquidationRecord
+> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.COMPANIES_LIQUIDATION;
+  override readonly updateIntervalHours = 168; // weekly
+  override readonly lastUpdatedSource = "parsed";
+
+  constructor(resourceId = DATASET_IDS.COMPANIES_LIQUIDATION) {
+    super();
+    this.datasetId = resourceId;
+  }
+
+  /**
+   * Parses a raw companies liquidation record.
+   *
+   * @param raw The raw record.
+   * @returns Mapped record, or null if invalid.
+   */
+  parseRecord(raw: HebrewLiquidationRecord): CompaniesLiquidationRecord | null {
+    return parseLiquidationRecord(raw);
+  }
+
+  /**
+   * Returns mock records for emulator seeding.
+   *
+   * @returns Array of mock records.
+   */
+  protected override getMockRecords(): HebrewLiquidationRecord[] {
+    return [
+      {
+        "מזהה תיק פירוק חברה": 11111,
+        "שם החברה": "בשן פרסום ויחסי צבור בע~מ",
+        "מספר זיהוי של החברה": 510000001,
+        "סטטוס תיק": "פירוק פעיל",
+        "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
+        "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
+        "בית משפט מחוזי בו מתנהל התיק": "מחוזי תל אביב",
+        "עיר פעילות חברה": "תל אביב - יפו",
+      },
+      {
+        "מזהה תיק פירוק חברה": 22222,
+        "שם החברה": "מלון הגליל בע~מ",
+        "מספר זיהוי של החברה": 510000002,
+        "סטטוס תיק": "פירוק פעיל",
+        "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
+        "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
+        "בית משפט מחוזי בו מתנהל התיק": "מחוזי נצרת",
+        "עיר פעילות חברה": "טבריה",
+      },
+    ];
+  }
+}
+
+/**
+ * Scrapes companies liquidation from data.gov.il datastore API and syncs them in-place.
+ * Backward-compatible wrapper function.
+ *
+ * @param db Firestore database instance.
+ * @param resourceId Official resource identifier from data.gov.il.
+ * @param options Synchronizer options.
+ * @returns Execution outcome metrics.
+ */
 export async function scrapeAndSyncCompaniesLiquidation(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.COMPANIES_LIQUIDATION,
-  options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = resourceId;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-  try {
-    const targetCollection = DATASET_IDS.COMPANIES_LIQUIDATION;
-    logger.info(`Starting sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    const forceFullSync = options?.forceFullSync === true;
-    let offset = 0;
-    const limit = isEmulator ? 100 : 10000;
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
-      logger.info(`Fetching data from: ${url}`);
-
-      let records: HebrewLiquidationRecord[] = [];
-      if (isEmulator && !forceFullSync) {
-        records = [
-          {
-            "מזהה תיק פירוק חברה": 11111,
-            "שם החברה": "בשן פרסום ויחסי צבור בע~מ",
-            "מספר זיהוי של החברה": 510000001,
-            "סטטוס תיק": "פירוק פעיל",
-            "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
-            "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
-            "בית משפט מחוזי בו מתנהל התיק": "מחוזי תל אביב",
-            "עיר פעילות חברה": "תל אביב - יפו",
-          },
-          {
-            "מזהה תיק פירוק חברה": 22222,
-            "שם החברה": "מלון הגליל בע~מ",
-            "מספר זיהוי של החברה": 510000002,
-            "סטטוס תיק": "פירוק פעיל",
-            "תאריך הגשת הבקשה": "2024-05-12T00:00:00",
-            "תאריך קבלת צו פירוק": "2024-06-15T00:00:00",
-            "בית משפט מחוזי בו מתנהל התיק": "מחוזי נצרת",
-            "עיר פעילות חברה": "טבריה",
-          },
-        ];
-      } else {
-        const response = await axios.get(url, { timeout: 15000 });
-        records = response.data?.result?.records ?? [];
-      }
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const parsedRecords: CompaniesLiquidationRecord[] = [];
-      for (const rec of records) {
-        const parsed = parseLiquidationRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-        }
-      }
-
-      for (let i = 0; i < parsedRecords.length; i += 500) {
-        const chunk = parsedRecords.slice(i, i + 500);
-        const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-        // Lookup existing documents in batch
-        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingMap = new Map<string, admin.firestore.DocumentData>();
-        for (const snap of snapshots) {
-          const data = snap.data();
-          if (snap.exists && data) {
-            existingMap.set(snap.id, data);
-          }
-        }
-
-        // Prepare and write chunk
-        const batch = db.batch();
-        let hasWrites = false;
-        for (const r of chunk) {
-          const docRef = targetRef.doc(r.id);
-          const existingData = existingMap.get(r.id);
-
-          r.lastUpdated = r.lastUpdated || now;
-          if (existingData) {
-            const isIdentical = areRecordsEqual(existingData, r);
-            if (isIdentical) {
-              processedCount++;
-              continue;
-            }
-            r.createdAt = existingData.createdAt || now;
-            r.updatedAt = now;
-          } else {
-            r.createdAt = now;
-            r.updatedAt = now;
-          }
-
-          batch.set(docRef, r);
-          hasWrites = true;
-          processedCount++;
-          changedCount++;
-        }
-        if (hasWrites) {
-          await batch.commit();
-        }
-      }
-
-      if (isEmulator && !forceFullSync) {
-        hasMore = false;
-        break;
-      }
-
-      offset += limit;
-    }
-
-    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
-
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated metadata. Ingestion complete.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new CompaniesLiquidationScraper(resourceId);
+  return scraper.scrape(db, options);
 }
