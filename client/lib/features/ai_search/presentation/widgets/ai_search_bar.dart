@@ -101,8 +101,9 @@ class _AiSearchBarState extends State<AiSearchBar> {
                 ListenableBuilder(
                   listenable: widget.controller!,
                   builder: (context, _) {
-                    if (widget.controller!.text.isEmpty)
+                    if (widget.controller!.text.isEmpty) {
                       return const SizedBox.shrink();
+                    }
                     return IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
