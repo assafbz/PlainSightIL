@@ -59,7 +59,8 @@ export interface CompaniesLiquidationRecord {
   closureReason: string | null;
   districtCourt: string;
   cityOfActivity: string;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -123,7 +124,8 @@ export function parseLiquidationRecord(
   const closureDate = parseDateString(record["תאריך סגירת תיק"]) || null;
   const closureReason = cleanString(record["סיבת סגירה"]) || null;
 
-  const lastUpdated = liquidationOrderDate || submissionDate || new Date().toISOString();
+  const sourceCreatedAt = submissionDate || new Date().toISOString();
+  const sourceUpdatedAt = liquidationOrderDate || submissionDate || new Date().toISOString();
 
   return {
     id,
@@ -138,7 +140,8 @@ export function parseLiquidationRecord(
     closureReason,
     districtCourt,
     cityOfActivity,
-    lastUpdated,
+    sourceCreatedAt,
+    sourceUpdatedAt,
   };
 }
 

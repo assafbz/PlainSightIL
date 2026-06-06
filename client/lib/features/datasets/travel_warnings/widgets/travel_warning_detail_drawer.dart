@@ -130,7 +130,14 @@ class TravelWarningDetailDrawer extends StatelessWidget {
         .replaceAll('&nbsp;', ' ')
         .trim();
 
-    final dateToShow = (record.date != null && record.date!.trim().isNotEmpty)
+    final dateToShow =
+        (record.sourceUpdatedAt != null &&
+            record.sourceUpdatedAt!.trim().isNotEmpty)
+        ? record.sourceUpdatedAt!
+        : (record.sourceCreatedAt != null &&
+              record.sourceCreatedAt!.trim().isNotEmpty)
+        ? record.sourceCreatedAt!
+        : (record.date != null && record.date!.trim().isNotEmpty)
         ? record.date!
         : (record.lastUpdated != null && record.lastUpdated!.trim().isNotEmpty)
         ? record.lastUpdated!

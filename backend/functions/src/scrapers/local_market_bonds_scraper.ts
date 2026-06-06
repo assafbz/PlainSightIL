@@ -54,7 +54,8 @@ export interface LocalMarketBondRecord {
   coverRatio: number;
   grossAvgYield: number;
   grossCutoffYield: number;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -157,7 +158,8 @@ export function parseLocalMarketBondRecord(
     coverRatio: parseNum(record.COVERRATIO),
     grossAvgYield: parseNum(record.GROSSAVGYIELD),
     grossCutoffYield: parseNum(record.GROSSCUTOFFYIELD),
-    lastUpdated: redemptionDate || new Date().toISOString(),
+    sourceCreatedAt: issuanceDate || new Date().toISOString(),
+    sourceUpdatedAt: issuanceDate || new Date().toISOString(),
   };
 }
 
