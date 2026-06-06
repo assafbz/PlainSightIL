@@ -448,8 +448,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                             alignment: Alignment.topCenter,
                                             children: <Widget>[
                                               ...previousChildren,
-                                              if (currentChild != null)
-                                                currentChild,
+                                              ?currentChild,
                                             ],
                                           );
                                         },
@@ -458,7 +457,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                         opacity: animation,
                                         child: SizeTransition(
                                           sizeFactor: animation,
-                                          axisAlignment: -1.0,
+                                          alignment: Alignment.topCenter,
                                           child: child,
                                         ),
                                       );
