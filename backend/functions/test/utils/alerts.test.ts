@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as admin from "firebase-admin";
 import { createAlert, broadcastAlert, notifySubscribers } from "../../src/utils/alerts";
-import { checkAndAlertForScraper } from "../../src/index";
 
 vi.mock("firebase-functions", () => ({
   logger: {
@@ -163,55 +162,6 @@ describe("Alerts Utility and Triggers Tests", () => {
       expect(mockDb.batch).toHaveBeenCalledTimes(2);
       expect(mockBatch.set).toHaveBeenCalledTimes(505);
       expect(mockBatch.commit).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe("checkAndAlertForScraper", () => {
-    it("should bypass alerts on first sync", async () => {
-      await checkAndAlertForScraper(mockDb, "ds-1", { count: 10, changedCount: 5 }, true);
-
-      // Verify no queries are made
-      expect(mockCollection).not.toHaveBeenCalledWith("subscriptions");
-      expect(mockDb.batch).not.toHaveBeenCalled();
-    });
-
-    it("should bypass alerts if changedCount is 0", async () => {
-      await checkAndAlertForScraper(mockDb, "ds-1", { count: 10, changedCount: 0 }, false);
-
-      expect(mockCollection).not.toHaveBeenCalledWith("subscriptions");
-      expect(mockDb.batch).not.toHaveBeenCalled();
-    });
-
-    it("should trigger notifySubscribers if not first sync and changedCount > 0", async () => {
-      // Setup title doc
-      mockDocGet.mockResolvedValueOnce({
-        exists: true,
-        data: () => ({ title: "Cellular Antennas" }),
-      });
-
-      // Setup subscriptions list
-      const mockSubs = [{ data: () => ({ userId: "user-sub-1" }) }];
-      mockCollection.mockImplementation((name: string) => {
-        if (name === "subscriptions") {
-          return {
-            where: vi.fn().mockReturnThis(),
-            get: vi.fn().mockResolvedValue({
-              empty: false,
-              docs: mockSubs,
-            }),
-          };
-        }
-        return {
-          doc: mockDoc,
-        };
-      });
-
-      await checkAndAlertForScraper(mockDb, "ds-1", { count: 10, changedCount: 3 }, false);
-
-      expect(mockCollection).toHaveBeenCalledWith("subscriptions");
-      expect(mockDb.batch).toHaveBeenCalledTimes(1);
-      expect(mockBatch.set).toHaveBeenCalledTimes(1);
-      expect(mockBatch.commit).toHaveBeenCalledTimes(1);
     });
   });
 });

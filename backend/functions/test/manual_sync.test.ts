@@ -1,34 +1,49 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 1. Hoist the mock variables to make them available inside vi.mock calls
-const { mockVerifyIdToken, mockDbGet, mockDbSet, mockDbLimitGet, mockFirestoreInstance } =
-  vi.hoisted(() => {
-    const verify = vi.fn().mockResolvedValue({ uid: "mock-admin-uid" });
-    const get = vi.fn().mockResolvedValue({
-      exists: false,
-      data: () => ({}),
-    });
-    const set = vi.fn().mockResolvedValue(true);
-    const limitGet = vi.fn().mockResolvedValue({ empty: false });
-    const instance = {
-      collection: vi.fn().mockReturnValue({
-        doc: vi.fn().mockReturnValue({
-          get,
-          set,
-        }),
-        limit: vi.fn().mockReturnValue({
-          get: limitGet,
-        }),
-      }),
-    };
-    return {
-      mockVerifyIdToken: verify,
-      mockDbGet: get,
-      mockDbSet: set,
-      mockDbLimitGet: limitGet,
-      mockFirestoreInstance: instance,
-    };
+const {
+  mockVerifyIdToken,
+  mockDbGet,
+  mockDbSet,
+  mockDbLimitGet,
+  mockFirestoreInstance,
+  mockScrapeAntennas,
+  mockScrapeDoctors,
+  mockScrapeCarImporters,
+} = vi.hoisted(() => {
+  const verify = vi.fn().mockResolvedValue({ uid: "mock-admin-uid" });
+  const get = vi.fn().mockResolvedValue({
+    exists: false,
+    data: () => ({}),
   });
+  const set = vi.fn().mockResolvedValue(true);
+  const limitGet = vi.fn().mockResolvedValue({ empty: false });
+  const instance = {
+    collection: vi.fn().mockReturnValue({
+      doc: vi.fn().mockReturnValue({
+        get,
+        set,
+      }),
+      limit: vi.fn().mockReturnValue({
+        get: limitGet,
+      }),
+    }),
+  };
+  const scrapeAntennas = vi.fn().mockResolvedValue({ count: 12, changedCount: 0 });
+  const scrapeDoctors = vi.fn().mockResolvedValue({ count: 10, changedCount: 0 });
+  const scrapeCarImporters = vi.fn().mockResolvedValue({ count: 50, changedCount: 0 });
+
+  return {
+    mockVerifyIdToken: verify,
+    mockDbGet: get,
+    mockDbSet: set,
+    mockDbLimitGet: limitGet,
+    mockFirestoreInstance: instance,
+    mockScrapeAntennas: scrapeAntennas,
+    mockScrapeDoctors: scrapeDoctors,
+    mockScrapeCarImporters: scrapeCarImporters,
+  };
+});
 
 // 2. Mock firebase-functions partially
 vi.mock("firebase-functions/v1", async (importOriginal) => {
@@ -63,27 +78,51 @@ vi.mock("firebase-functions/v1", async (importOriginal) => {
 
 // 3. Mock individual scraper modules
 vi.mock("../src/scrapers/cellular_antennas_scraper", () => ({
+  CellularAntennasScraper: class {
+    scrape = mockScrapeAntennas;
+  },
   scrapeAndSyncAntennas: vi.fn().mockResolvedValue({ count: 12 }),
 }));
 vi.mock("../src/scrapers/cellular_permits_scraper", () => ({
+  CellularPermitsScraper: class {
+    scrape = vi.fn().mockResolvedValue({ count: 24, changedCount: 0 });
+  },
   scrapeAndSyncPermitApplications: vi.fn().mockResolvedValue({ count: 24 }),
 }));
 vi.mock("../src/scrapers/metadata_scraper", () => ({
+  MetadataScraper: class {
+    scrape = vi.fn().mockResolvedValue({ count: 0, changedCount: 0 });
+  },
   scrapeAndSyncDatasetMetadata: vi.fn().mockResolvedValue({ count: 0 }),
 }));
 vi.mock("../src/scrapers/companies_liquidation_scraper", () => ({
+  CompaniesLiquidationScraper: class {
+    scrape = vi.fn().mockResolvedValue({ count: 5, changedCount: 0 });
+  },
   scrapeAndSyncCompaniesLiquidation: vi.fn().mockResolvedValue({ count: 5 }),
 }));
 vi.mock("../src/scrapers/doctors_licenses_scraper", () => ({
+  DoctorsLicensesScraper: class {
+    scrape = mockScrapeDoctors;
+  },
   scrapeAndSyncDoctorsLicenses: vi.fn().mockResolvedValue({ count: 10 }),
 }));
 vi.mock("../src/scrapers/bank_atms_scraper", () => ({
+  BankAtmsScraper: class {
+    scrape = vi.fn().mockResolvedValue({ count: 8, changedCount: 0 });
+  },
   scrapeAndSyncBankAtms: vi.fn().mockResolvedValue({ count: 8 }),
 }));
 vi.mock("../src/scrapers/patent_classifications_scraper", () => ({
+  PatentClassificationsScraper: class {
+    scrape = vi.fn().mockResolvedValue({ count: 15, changedCount: 0 });
+  },
   scrapeAndSyncPatentClassifications: vi.fn().mockResolvedValue({ count: 15 }),
 }));
 vi.mock("../src/scrapers/car_importers_scraper", () => ({
+  CarImportersScraper: class {
+    scrape = mockScrapeCarImporters;
+  },
   scrapeAndSyncCarImporters: vi.fn().mockResolvedValue({ count: 50 }),
 }));
 
@@ -155,14 +194,12 @@ describe("Manual Sync Cloud Functions Factory", () => {
 
     await manualSyncAntennas(req, res);
 
-    expect(mockDbSet).toHaveBeenCalledWith(
-      { status: "syncing", syncStartedAt: expect.any(String) },
-      { merge: true },
-    );
+    expect(mockScrapeAntennas).toHaveBeenCalledWith(mockFirestoreInstance, { forceFullSync: true });
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
       count: 12,
+      changedCount: 0,
     });
   });
 
@@ -208,14 +245,14 @@ describe("Manual Sync Cloud Functions Factory", () => {
 
     await manualSyncAntennas(req, res);
 
-    expect(mockDbSet).toHaveBeenCalledWith(
-      { status: "syncing", syncStartedAt: expect.any(String) },
-      { merge: true },
-    );
+    expect(mockScrapeAntennas).toHaveBeenCalledWith(mockFirestoreInstance, {
+      forceFullSync: false,
+    });
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
       count: 12,
+      changedCount: 0,
     });
   });
 
@@ -231,6 +268,7 @@ describe("Manual Sync Cloud Functions Factory", () => {
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
       count: 10,
+      changedCount: 0,
     });
   });
 
@@ -246,6 +284,7 @@ describe("Manual Sync Cloud Functions Factory", () => {
     expect(jsonMock).toHaveBeenCalledWith({
       message: "Sync completed successfully",
       count: 50,
+      changedCount: 0,
     });
   });
 

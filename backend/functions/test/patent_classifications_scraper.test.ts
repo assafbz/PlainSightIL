@@ -321,7 +321,7 @@ describe("Patent Classifications Ingest Sync Process", () => {
   });
 
   it("should handle scraper errors and update metadata status to error", async () => {
-    vi.mocked(axios.get).mockRejectedValueOnce(new Error("API Error"));
+    vi.mocked(axios.get).mockRejectedValue(new Error("API Error"));
 
     await expect(scrapeAndSyncPatentClassifications(mockDb)).rejects.toThrow("API Error");
     expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
