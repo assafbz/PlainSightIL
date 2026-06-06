@@ -93,8 +93,11 @@ class BankAtmsNotifier extends ChangeNotifier {
           hasForexTransaction: true,
           hasAdditionalTransactions: true,
           hasHandicapAccess: true,
-          lastUpdated: '2026-06-02T09:00:00Z',
+          sourceCreatedAt: '2026-06-02T09:00:00Z',
+          sourceUpdatedAt: '2026-06-02T09:00:00Z',
           createdAt: '2026-06-02T09:00:00Z',
+          updatedAt: '2026-06-02T09:00:00Z',
+          lastUpdated: '2026-06-02T09:00:00Z',
         ),
         BankAtmRecordModel(
           id: '2',
@@ -117,8 +120,11 @@ class BankAtmsNotifier extends ChangeNotifier {
           hasForexTransaction: false,
           hasAdditionalTransactions: false,
           hasHandicapAccess: true,
-          lastUpdated: '2026-06-02T09:00:00Z',
+          sourceCreatedAt: '2026-06-02T09:00:00Z',
+          sourceUpdatedAt: '2026-06-02T09:00:00Z',
           createdAt: '2026-06-02T09:00:00Z',
+          updatedAt: '2026-06-02T09:00:00Z',
+          lastUpdated: '2026-06-02T09:00:00Z',
         ),
         BankAtmRecordModel(
           id: '3',
@@ -147,8 +153,11 @@ class BankAtmsNotifier extends ChangeNotifier {
           hasForexTransaction: true,
           hasAdditionalTransactions: false,
           hasHandicapAccess: false,
-          lastUpdated: '2026-06-02T09:00:00Z',
+          sourceCreatedAt: '2026-06-02T09:00:00Z',
+          sourceUpdatedAt: '2026-06-02T09:00:00Z',
           createdAt: '2026-06-02T09:00:00Z',
+          updatedAt: '2026-06-02T09:00:00Z',
+          lastUpdated: '2026-06-02T09:00:00Z',
         ),
       ];
       _isLoadingAtms = false;

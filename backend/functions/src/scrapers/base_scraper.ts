@@ -40,7 +40,14 @@ export interface ScraperResult {
  */
 export abstract class BaseScraper<
   RawRecord,
-  ParsedRecord extends { id: string; createdAt?: string; updatedAt?: string; lastUpdated: string },
+  ParsedRecord extends {
+    id: string;
+    createdAt?: string;
+    updatedAt?: string;
+    sourceCreatedAt?: string;
+    sourceUpdatedAt?: string;
+    lastUpdated?: string;
+  },
 > {
   /** The unique identifier of the dataset (e.g. DATASET_IDS.VEHICLE_RECALLS). */
   abstract readonly datasetId: string;
@@ -59,7 +66,7 @@ export abstract class BaseScraper<
   protected requestTimeout = 15000;
   /** The metadata document snapshot retrieved at the start of sync. */
   protected metadataSnapshot: admin.firestore.DocumentSnapshot | null = null;
-  /** Defines whether lastUpdated is parsed from the source record or generated at sync time. */
+  /** Defines whether source timestamps are parsed from the source record or generated at sync time. */
   readonly lastUpdatedSource: "parsed" | "generated" = "generated";
 
   /**
@@ -327,7 +334,9 @@ export abstract class BaseScraper<
     const metaDoc = await metadataRef.get();
     this.metadataSnapshot = metaDoc;
     const isFirstSync =
-      !metaDoc.exists || !metaDoc.data()?.lastUpdated || (metaDoc.data()?.recordCount || 0) === 0;
+      !metaDoc.exists ||
+      (!metaDoc.data()?.updatedAt && !metaDoc.data()?.lastUpdated) ||
+      (metaDoc.data()?.recordCount || 0) === 0;
 
     await metadataRef.set({ status: "syncing", syncStartedAt: nowStr }, { merge: true });
 
@@ -451,15 +460,24 @@ export abstract class BaseScraper<
       const docRef = targetRef.doc(r.id);
       const existingData = existingMap.get(r.id) as ParsedRecord | undefined;
 
-      const originalIncomingLastUpdated = r.lastUpdated;
-      if (existingData && existingData.lastUpdated) {
+      const originalIncomingSourceCreatedAt = r.sourceCreatedAt;
+      const originalIncomingSourceUpdatedAt = r.sourceUpdatedAt;
+
+      if (existingData) {
+        r.createdAt = existingData.createdAt || nowStr;
+
         if (this.lastUpdatedSource === "generated") {
-          r.lastUpdated = existingData.lastUpdated;
+          r.sourceCreatedAt = existingData.sourceCreatedAt || existingData.lastUpdated || nowStr;
+          r.sourceUpdatedAt = existingData.sourceUpdatedAt || existingData.lastUpdated || nowStr;
         } else {
-          r.lastUpdated = r.lastUpdated || existingData.lastUpdated || nowStr;
+          r.sourceCreatedAt = originalIncomingSourceCreatedAt || existingData.sourceCreatedAt || existingData.lastUpdated || nowStr;
+          r.sourceUpdatedAt = originalIncomingSourceUpdatedAt || existingData.sourceUpdatedAt || existingData.lastUpdated || nowStr;
         }
       } else {
-        r.lastUpdated = r.lastUpdated || nowStr;
+        r.createdAt = nowStr;
+        r.updatedAt = nowStr;
+        r.sourceCreatedAt = originalIncomingSourceCreatedAt || nowStr;
+        r.sourceUpdatedAt = originalIncomingSourceUpdatedAt || nowStr;
       }
 
       let shouldWrite = false;
@@ -468,17 +486,22 @@ export abstract class BaseScraper<
         const isIdentical = this.compareRecords(existingData, r);
         if (!isIdentical) {
           shouldWrite = true;
-          // Preserve source-parsed modification timestamp if available, fallback to sync execution time
-          r.lastUpdated = originalIncomingLastUpdated || nowStr;
-          r.createdAt = existingData.createdAt || nowStr;
+          if (this.lastUpdatedSource === "parsed") {
+            r.sourceUpdatedAt = originalIncomingSourceUpdatedAt || nowStr;
+          } else {
+            r.sourceUpdatedAt = nowStr;
+          }
           r.updatedAt = nowStr;
+        } else {
+          r.sourceUpdatedAt = existingData.sourceUpdatedAt || r.sourceUpdatedAt || nowStr;
+          r.updatedAt = existingData.updatedAt || nowStr;
         }
       } else {
         shouldWrite = true;
-        r.lastUpdated = originalIncomingLastUpdated || nowStr;
-        r.createdAt = nowStr;
-        r.updatedAt = nowStr;
       }
+
+      // Add lastUpdated legacy field for backward compatibility
+      r.lastUpdated = r.sourceUpdatedAt;
 
       if (shouldWrite) {
         await this.onRecordUpdate(db, r, existingData || null, isFirstSync);
@@ -530,7 +553,9 @@ export abstract class BaseScraper<
       {
         id: this.datasetId,
         activeCollection: this.targetCollection,
-        lastUpdated: nowStr,
+        createdAt: metaDoc.exists ? (metaDoc.data()?.createdAt || metaDoc.data()?.lastUpdated || nowStr) : nowStr,
+        updatedAt: nowStr,
+        lastUpdated: nowStr, // Keep for backward compatibility
         recordCount: totalRecords,
         status: "idle",
         scheduler: {

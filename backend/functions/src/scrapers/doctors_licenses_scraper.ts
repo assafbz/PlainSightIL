@@ -29,7 +29,8 @@ export interface DoctorLicenseRecord {
   specialtyCertificateNumber: number | null;
   specialtyRegistrationDate: string | null;
   specialtyName: string | null;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -115,7 +116,8 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
     : null;
   const specialtyName = record["שם התמחות"] ? String(record["שם התמחות"]).trim() : null;
 
-  const lastUpdated = licenseRegistrationDate || new Date().toISOString();
+  const sourceCreatedAt = licenseRegistrationDate || new Date().toISOString();
+  const sourceUpdatedAt = specialtyRegistrationDate || licenseRegistrationDate || new Date().toISOString();
 
   return {
     id,
@@ -127,7 +129,8 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
     specialtyCertificateNumber,
     specialtyRegistrationDate: specialtyRegistrationDate || null,
     specialtyName: specialtyName || null,
-    lastUpdated,
+    sourceCreatedAt,
+    sourceUpdatedAt,
   };
 }
 

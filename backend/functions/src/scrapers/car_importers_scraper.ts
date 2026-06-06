@@ -35,7 +35,8 @@ export interface CarImporterRecord {
   productionYear: number | null;
   price: number | null;
   commercialName: string;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -74,7 +75,9 @@ export function parseCarImporterRecord(record: HebrewCarImporterRecord): CarImpo
   const price = record.mehir !== undefined && record.mehir !== null ? Number(record.mehir) : null;
   const commercialName = (record.kinuy_mishari ?? "").trim();
 
-  const lastUpdated = new Date().toISOString();
+  const nowStr = new Date().toISOString();
+  const sourceCreatedAt = nowStr;
+  const sourceUpdatedAt = nowStr;
 
   return {
     id,
@@ -89,7 +92,8 @@ export function parseCarImporterRecord(record: HebrewCarImporterRecord): CarImpo
     productionYear: isNaN(Number(productionYear)) ? null : productionYear,
     price: isNaN(Number(price)) ? null : price,
     commercialName,
-    lastUpdated,
+    sourceCreatedAt,
+    sourceUpdatedAt,
   };
 }
 
