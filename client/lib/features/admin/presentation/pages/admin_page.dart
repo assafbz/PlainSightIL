@@ -222,7 +222,10 @@ class _AdminPageState extends State<AdminPage> {
         final dirStatus = (dirLiveData['status'] as String? ?? 'idle')
             .toLowerCase();
         final dirRecordCount = dirLiveData['recordCount'] as num? ?? 0;
-        final dirLastUpdated = dirLiveData['lastUpdated'] as String? ?? '';
+        final dirLastUpdated =
+            dirLiveData['updatedAt'] as String? ??
+            dirLiveData['lastUpdated'] as String? ??
+            '';
 
         final Map<String, dynamic> enrichedDirectory = {
           ...directorySpec,
@@ -263,7 +266,10 @@ class _AdminPageState extends State<AdminPage> {
           final status = (liveData['status'] as String? ?? 'idle')
               .toLowerCase();
           final recordCount = liveData['recordCount'] as num? ?? 0;
-          final lastUpdated = liveData['lastUpdated'] as String? ?? '';
+          final lastUpdated =
+              liveData['updatedAt'] as String? ??
+              liveData['lastUpdated'] as String? ??
+              '';
 
           return {
             ...spec,

@@ -106,7 +106,8 @@ export interface BankAtmRecord {
   handicapAccess: boolean;
   coordinates: GeoPoint;
   geohash: string;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -188,7 +189,8 @@ export function parseAtmRecord(record: HebrewAtmRecord): BankAtmRecord | null {
     handicapAccess: parseHebrewBoolean(record.Handicap_Access),
     coordinates: new GeoPoint(latitude, longitude),
     geohash,
-    lastUpdated: new Date().toISOString(),
+    sourceCreatedAt: new Date().toISOString(),
+    sourceUpdatedAt: new Date().toISOString(),
   };
 }
 

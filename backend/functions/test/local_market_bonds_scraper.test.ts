@@ -101,7 +101,7 @@ describe("Local Market Bonds Record Parser", () => {
       expect(parsed.coverRatio).toBe(1);
       expect(parsed.grossAvgYield).toBe(3.73);
       expect(parsed.grossCutoffYield).toBe(3.73);
-      expect(parsed.lastUpdated).toBe("2035-10-31T00:00:00.000Z");
+      expect(parsed.sourceUpdatedAt).toBe("2026-06-02T00:00:00.000Z");
     }
   });
 });

@@ -61,7 +61,7 @@ export function areRecordsEqual(existing: any, incoming: any): boolean {
   }
 
   // Handle Objects
-  const ignoredKeys = new Set(["createdAt", "updatedAt"]);
+  const ignoredKeys = new Set(["createdAt", "updatedAt", "sourceCreatedAt", "lastUpdated"]);
 
   const keysExisting = Object.keys(existing).filter((k) => !ignoredKeys.has(k));
   const keysIncoming = Object.keys(incoming).filter((k) => !ignoredKeys.has(k));
@@ -69,8 +69,12 @@ export function areRecordsEqual(existing: any, incoming: any): boolean {
   const allKeys = new Set([...keysExisting, ...keysIncoming]);
 
   for (const key of allKeys) {
-    const valExisting = existing[key];
+    let valExisting = existing[key];
     const valIncoming = incoming[key];
+
+    if (key === "sourceUpdatedAt") {
+      valExisting = existing.sourceUpdatedAt ?? existing.lastUpdated;
+    }
 
     if (!areRecordsEqual(valExisting, valIncoming)) {
       return false;

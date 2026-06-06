@@ -30,7 +30,8 @@ export interface TravelWarningRecord {
   date: string | null;
   office: string;
   warningLevel: number;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -80,7 +81,7 @@ export function parseTravelWarningRecord(
   }
 
   const warningLevel = extractWarningLevel(recommendations);
-  const lastUpdated = date || new Date().toISOString();
+  const sourceDate = date || new Date().toISOString();
 
   return {
     id,
@@ -93,7 +94,8 @@ export function parseTravelWarningRecord(
     date,
     office,
     warningLevel,
-    lastUpdated,
+    sourceCreatedAt: sourceDate,
+    sourceUpdatedAt: sourceDate,
   };
 }
 

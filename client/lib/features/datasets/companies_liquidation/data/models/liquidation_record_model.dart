@@ -17,7 +17,13 @@ class LiquidationRecordModel {
   /// Firestore database modification timestamp (optional ISO-8601 string)
   final String? updatedAt;
 
-  /// Source metadata modification timestamp (optional ISO-8601 string)
+  /// Source creation timestamp (optional ISO-8601 string)
+  final String? sourceCreatedAt;
+
+  /// Source modification timestamp (optional ISO-8601 string)
+  final String? sourceUpdatedAt;
+
+  /// Source metadata modification timestamp (optional ISO-8601 string) - Legacy backward compatibility
   final String? lastUpdated;
 
   LiquidationRecordModel({
@@ -34,6 +40,8 @@ class LiquidationRecordModel {
     required this.companyId,
     this.createdAt,
     this.updatedAt,
+    this.sourceCreatedAt,
+    this.sourceUpdatedAt,
     this.lastUpdated,
   });
 
@@ -64,7 +72,12 @@ class LiquidationRecordModel {
       companyId: (map['companyId'] as num? ?? 0).toInt(),
       createdAt: map['createdAt'] as String?,
       updatedAt: map['updatedAt'] as String?,
-      lastUpdated: map['lastUpdated'] as String?,
+      sourceCreatedAt:
+          map['sourceCreatedAt'] as String? ?? map['lastUpdated'] as String?,
+      sourceUpdatedAt:
+          map['sourceUpdatedAt'] as String? ?? map['lastUpdated'] as String?,
+      lastUpdated:
+          map['sourceUpdatedAt'] as String? ?? map['lastUpdated'] as String?,
     );
   }
 
@@ -83,6 +96,8 @@ class LiquidationRecordModel {
       'companyId': companyId,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'sourceCreatedAt': sourceCreatedAt,
+      'sourceUpdatedAt': sourceUpdatedAt,
       'lastUpdated': lastUpdated,
     };
   }
