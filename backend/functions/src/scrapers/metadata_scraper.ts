@@ -43,6 +43,7 @@ const SUPPORTED_DATASET_IDS = new Set<string>([
   DATASET_IDS.CAR_IMPORTERS, // Car Importers
   DATASET_IDS.LOCAL_MARKET_BONDS, // Local Market Bonds
   DATASET_IDS.BANK_ATMS, // Bank ATMs
+  DATASET_IDS.VEHICLE_RECALLS, // Vehicle Recalls
 ]);
 
 /**
