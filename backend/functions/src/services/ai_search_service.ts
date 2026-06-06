@@ -23,50 +23,112 @@ interface DatasetField {
 
 const DATASET_QUERYABLE_FIELDS: Record<string, DatasetField[]> = {
   [DATASET_IDS.VEHICLE_RECALLS]: [
-    { name: "manufacturerName", type: "string", description: "Car manufacturer name in Hebrew (e.g. טויוטה, יונדאי, מאזדה). Translate English names to Hebrew." },
-    { name: "modelName", type: "string", description: "Car model name in Hebrew or English (e.g. קורולה, טוסון, CX-5)." },
-    { name: "recallYear", type: "number", description: "The year the recall was issued (e.g. 2024)." },
-    { name: "defectCategory", type: "string", description: "Category of the defect in Hebrew (e.g. כריות אוויר)." }
+    {
+      name: "manufacturerName",
+      type: "string",
+      description:
+        "Car manufacturer name in Hebrew (e.g. טויוטה, יונדאי, מאזדה). Translate English names to Hebrew.",
+    },
+    {
+      name: "modelName",
+      type: "string",
+      description: "Car model name in Hebrew or English (e.g. קורולה, טוסון, CX-5).",
+    },
+    {
+      name: "recallYear",
+      type: "number",
+      description: "The year the recall was issued (e.g. 2024).",
+    },
+    {
+      name: "defectCategory",
+      type: "string",
+      description: "Category of the defect in Hebrew (e.g. כריות אוויר).",
+    },
   ],
   [DATASET_IDS.TRAVEL_WARNINGS]: [
-    { name: "country", type: "string", description: "Country name in Hebrew (e.g. טורקיה, יוון). Translate English country names to Hebrew." },
-    { name: "continent", type: "string", description: "Continent name in Hebrew (e.g. אסיה, אירופה)." }
+    {
+      name: "country",
+      type: "string",
+      description:
+        "Country name in Hebrew (e.g. טורקיה, יוון). Translate English country names to Hebrew.",
+    },
+    {
+      name: "continent",
+      type: "string",
+      description: "Continent name in Hebrew (e.g. אסיה, אירופה).",
+    },
   ],
   [DATASET_IDS.CELLULAR_ANTENNAS]: [
-    { name: "locality", type: "string", description: "Locality or city name in Hebrew (e.g. תל אביב - יפו, ירושלים)." },
-    { name: "operatorName", type: "string", description: "Cellular operator name in English (e.g. Pelephone, Cellcom, Partner, PHI)." }
+    {
+      name: "locality",
+      type: "string",
+      description: "Locality or city name in Hebrew (e.g. תל אביב - יפו, ירושלים).",
+    },
+    {
+      name: "operatorName",
+      type: "string",
+      description: "Cellular operator name in English (e.g. Pelephone, Cellcom, Partner, PHI).",
+    },
   ],
   [DATASET_IDS.CELLULAR_PERMITS]: [
-    { name: "locality", type: "string", description: "Locality or city name in Hebrew (e.g. תל אביב - יפו, ירושלים)." },
-    { name: "company.he", type: "string", description: "Cellular company name in Hebrew (e.g. פלאפון, סלקום, פרטנר)." }
+    {
+      name: "locality",
+      type: "string",
+      description: "Locality or city name in Hebrew (e.g. תל אביב - יפו, ירושלים).",
+    },
+    {
+      name: "company.he",
+      type: "string",
+      description: "Cellular company name in Hebrew (e.g. פלאפון, סלקום, פרטנר).",
+    },
   ],
   [DATASET_IDS.COMPANIES_LIQUIDATION]: [
     { name: "companyName", type: "string", description: "Company name in Hebrew." },
-    { name: "cityOfActivity", type: "string", description: "City where the company operates/operated in Hebrew." }
+    {
+      name: "cityOfActivity",
+      type: "string",
+      description: "City where the company operates/operated in Hebrew.",
+    },
   ],
   [DATASET_IDS.DOCTORS_LICENSES]: [
     { name: "firstName", type: "string", description: "Doctor's first name in Hebrew." },
     { name: "lastName", type: "string", description: "Doctor's last name in Hebrew." },
     { name: "specialtyName", type: "string", description: "Medical specialty name in Hebrew." },
-    { name: "licenseNumber", type: "number", description: "Doctor's license number." }
+    { name: "licenseNumber", type: "number", description: "Doctor's license number." },
   ],
   [DATASET_IDS.BANK_ATMS]: [
-    { name: "bankName.he", type: "string", description: "Bank name in Hebrew (e.g. בנק לאומי, בנק הפועלים)." },
-    { name: "city", type: "string", description: "City name in Hebrew." }
+    {
+      name: "bankName.he",
+      type: "string",
+      description: "Bank name in Hebrew (e.g. בנק לאומי, בנק הפועלים).",
+    },
+    { name: "city", type: "string", description: "City name in Hebrew." },
   ],
   [DATASET_IDS.CAR_IMPORTERS]: [
-    { name: "makerName", type: "string", description: "Car maker/manufacturer name in Hebrew/English (e.g. טויוטה, יונדאי)." },
+    {
+      name: "makerName",
+      type: "string",
+      description: "Car maker/manufacturer name in Hebrew/English (e.g. טויוטה, יונדאי).",
+    },
     { name: "modelName", type: "string", description: "Car model name." },
-    { name: "importerName", type: "string", description: "Importer company name in Hebrew." }
+    { name: "importerName", type: "string", description: "Importer company name in Hebrew." },
   ],
   [DATASET_IDS.LOCAL_MARKET_BONDS]: [
-    { name: "bondType.he", type: "string", description: "Bond type in Hebrew (e.g. ממשלתי, צמוד)." }
+    {
+      name: "bondType.he",
+      type: "string",
+      description: "Bond type in Hebrew (e.g. ממשלתי, צמוד).",
+    },
   ],
   [DATASET_IDS.PATENT_CLASSIFICATIONS]: [
     { name: "titleHebrew", type: "string", description: "Patent title in Hebrew." },
     { name: "titleEnglish", type: "string", description: "Patent title in English." },
-    { name: "cpcClassification", type: "string", description: "CPC classification code (e.g. A61K)." }
-  ]
+    {
+      name: "cpcClassification",
+      type: "string",
+      description: "CPC classification code (e.g. A61K).",
+    },
+  ],
 };
 
 const stage1Schema: any = {
@@ -79,31 +141,31 @@ const stage1Schema: any = {
         properties: {
           collectionId: {
             type: "string",
-            description: "Firestore collection ID from the supported list."
+            description: "Firestore collection ID from the supported list.",
           },
           field: {
             type: "string",
-            description: "Field name to query on."
+            description: "Field name to query on.",
           },
           operator: {
             type: "string",
             enum: ["==", "array-contains"],
-            description: "The comparison operator."
+            description: "The comparison operator.",
           },
           value: {
             type: "string",
-            description: "The parsed and translated value to match."
-          }
+            description: "The parsed and translated value to match.",
+          },
         },
-        required: ["collectionId", "field", "operator", "value"]
-      }
+        required: ["collectionId", "field", "operator", "value"],
+      },
     },
     isRelatedToDatasets: {
       type: "boolean",
-      description: "True if the query is related to the supported datasets, false otherwise."
-    }
+      description: "True if the query is related to the supported datasets, false otherwise.",
+    },
   },
-  required: ["queries", "isRelatedToDatasets"]
+  required: ["queries", "isRelatedToDatasets"],
 };
 
 const stage2Schema: any = {
@@ -111,23 +173,31 @@ const stage2Schema: any = {
   properties: {
     answer: {
       type: "string",
-      description: "Synthesized markdown answer grounded ONLY on the provided documents. Incorporate citation tags like [cit-01]."
+      description:
+        "Synthesized markdown answer grounded ONLY on the provided documents. Incorporate citation tags like [cit-01].",
     },
     citations: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          id: { type: "string", description: "The citation ID used in the answer, e.g., 'cit-01'." },
+          id: {
+            type: "string",
+            description: "The citation ID used in the answer, e.g., 'cit-01'.",
+          },
           datasetId: { type: "string", description: "The datasetId of the cited record." },
           docId: { type: "string", description: "The docId of the cited record." },
-          title: { type: "string", description: "A concise descriptive title in Hebrew for this cited record (e.g. 'קריאה לתיקון טויוטה 11020')." }
+          title: {
+            type: "string",
+            description:
+              "A concise descriptive title in Hebrew for this cited record (e.g. 'קריאה לתיקון טויוטה 11020').",
+          },
         },
-        required: ["id", "datasetId", "docId", "title"]
-      }
-    }
+        required: ["id", "datasetId", "docId", "title"],
+      },
+    },
   },
-  required: ["answer", "citations"]
+  required: ["answer", "citations"],
 };
 
 /**
@@ -135,59 +205,73 @@ const stage2Schema: any = {
  */
 function getMockSearchResponse(query: string, lang: "he" | "en"): AiSearchResponse {
   const q = query.toLowerCase();
-  if (q.includes("toyota") || q.includes("טויוטה") || q.includes("avensis") || q.includes("אוונסיס")) {
+  if (
+    q.includes("toyota") ||
+    q.includes("טויוטה") ||
+    q.includes("avensis") ||
+    q.includes("אוונסיס")
+  ) {
     return {
-      answer: lang === "he"
-        ? "נמצאו קריאות פעילות לתיקון עבור רכבי טויוטה [cit-01]. התקלה נובעת משסתום צינור דלק במנוע של דגמי אוונסיס משנת 2011."
-        : "Active recalls found for Toyota vehicles [cit-01]. The defect is in the engine fuel pipe valve for 2011 Avensis models.",
+      answer:
+        lang === "he"
+          ? "נמצאו קריאות פעילות לתיקון עבור רכבי טויוטה [cit-01]. התקלה נובעת משסתום צינור דלק במנוע של דגמי אוונסיס משנת 2011."
+          : "Active recalls found for Toyota vehicles [cit-01]. The defect is in the engine fuel pipe valve for 2011 Avensis models.",
       citations: [
         {
           id: "cit-01",
           datasetId: DATASET_IDS.VEHICLE_RECALLS,
           docId: "11020",
-          title: "טויוטה אוונסיס 2011 - שסתום צינור דלק"
-        }
-      ]
+          title: "טויוטה אוונסיס 2011 - שסתום צינור דלק",
+        },
+      ],
     };
   }
 
   if (q.includes("turkey") || q.includes("טורקיה")) {
     return {
-      answer: lang === "he"
-        ? "נמצאה אזהרת מסע פעילה לטורקיה [cit-01]. רמת האזהרה היא רמה 4 (איום גבוה), מומלץ להימנע מכל נסיעה למדינה."
-        : "Active travel warning found for Turkey [cit-01]. The warning level is Level 4 (High Threat), recommending to avoid all travel.",
+      answer:
+        lang === "he"
+          ? "נמצאה אזהרת מסע פעילה לטורקיה [cit-01]. רמת האזהרה היא רמה 4 (איום גבוה), מומלץ להימנע מכל נסיעה למדינה."
+          : "Active travel warning found for Turkey [cit-01]. The warning level is Level 4 (High Threat), recommending to avoid all travel.",
       citations: [
         {
           id: "cit-01",
           datasetId: DATASET_IDS.TRAVEL_WARNINGS,
           docId: "3", // arbitrary docId
-          title: "אזהרת מסע לטורקיה - רמת סיכון גבוהה"
-        }
-      ]
+          title: "אזהרת מסע לטורקיה - רמת סיכון גבוהה",
+        },
+      ],
     };
   }
 
-  if (q.includes("cellular") || q.includes("antenna") || q.includes("סלולר") || q.includes("אנטנה")) {
+  if (
+    q.includes("cellular") ||
+    q.includes("antenna") ||
+    q.includes("סלולר") ||
+    q.includes("אנטנה")
+  ) {
     return {
-      answer: lang === "he"
-        ? "נמצאו אנטנות סלולריות פעילות באזור תל אביב [cit-01]. האנטנה מופעלת על ידי חברת פלאפון."
-        : "Active cellular antennas found in Tel Aviv [cit-01]. The site is operated by Pelephone.",
+      answer:
+        lang === "he"
+          ? "נמצאו אנטנות סלולריות פעילות באזור תל אביב [cit-01]. האנטנה מופעלת על ידי חברת פלאפון."
+          : "Active cellular antennas found in Tel Aviv [cit-01]. The site is operated by Pelephone.",
       citations: [
         {
           id: "cit-01",
           datasetId: DATASET_IDS.CELLULAR_ANTENNAS,
           docId: "123",
-          title: "אנטנה סלולרית פלאפון - תל אביב"
-        }
-      ]
+          title: "אנטנה סלולרית פלאפון - תל אביב",
+        },
+      ],
     };
   }
 
   return {
-    answer: lang === "he"
-      ? "לא נמצאו תוצאות התואמות את החיפוש שלך במאגרי המידע. אנא נסה לשנות את מונחי החיפוש (לדוגמה: 'קריאות תיקון לטויוטה' או 'אזהרת מסע לטורקיה')."
-      : "No matching results found in our database. Please try refining your query (e.g., 'Toyota recalls' or 'Turkey travel warnings').",
-    citations: []
+    answer:
+      lang === "he"
+        ? "לא נמצאו תוצאות התואמות את החיפוש שלך במאגרי המידע. אנא נסה לשנות את מונחי החיפוש (לדוגמה: 'קריאות תיקון לטויוטה' או 'אזהרת מסע לטורקיה')."
+        : "No matching results found in our database. Please try refining your query (e.g., 'Toyota recalls' or 'Turkey travel warnings').",
+    citations: [],
   };
 }
 
@@ -197,7 +281,7 @@ function getMockSearchResponse(query: string, lang: "he" | "en"): AiSearchRespon
 export async function processAiSearch(
   db: admin.firestore.Firestore,
   query: string,
-  lang: "he" | "en" = "he"
+  lang: "he" | "en" = "he",
 ): Promise<AiSearchResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -217,17 +301,18 @@ export async function processAiSearch(
       id: doc.id,
       name: data.name || "",
       title: data.title || "",
-      notes: data.notes || ""
+      notes: data.notes || "",
     };
   });
 
   if (supportedDatasets.length === 0) {
     logger.warn("No supported datasets found in datasets_metadata registry.");
     return {
-      answer: lang === "he"
-        ? "אין כרגע מאגרי מידע נתמכים לחיפוש."
-        : "No supported datasets available for search.",
-      citations: []
+      answer:
+        lang === "he"
+          ? "אין כרגע מאגרי מידע נתמכים לחיפוש."
+          : "No supported datasets available for search.",
+      citations: [],
     };
   }
 
@@ -256,8 +341,8 @@ export async function processAiSearch(
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: stage1Schema,
-      temperature: 0.1
-    }
+      temperature: 0.1,
+    },
   });
 
   const stage1Prompt = `You are a query routing agent for PlainSightIL. Your job is to parse natural language queries (in Hebrew or English) and convert them into specific Firestore query filters.
@@ -285,13 +370,18 @@ User query: "${query}"`;
     return getMockSearchResponse(query, lang);
   }
 
-  if (!stage1Output.isRelatedToDatasets || !stage1Output.queries || stage1Output.queries.length === 0) {
+  if (
+    !stage1Output.isRelatedToDatasets ||
+    !stage1Output.queries ||
+    stage1Output.queries.length === 0
+  ) {
     logger.info("Stage 1 determined query is not related or has no Firestore routing target.");
     return {
-      answer: lang === "he"
-        ? "חיפוש זה אינו נתמך. באפשרותי לספק תשובות מתוך מאגרי המידע הציבוריים הפעילים בלבד, כגון קריאות לתיקון רכבים ואזהרות מסע."
-        : "This search is not supported. I can only provide answers from active public databases, such as vehicle recalls and travel warnings.",
-      citations: []
+      answer:
+        lang === "he"
+          ? "חיפוש זה אינו נתמך. באפשרותי לספק תשובות מתוך מאגרי המידע הציבוריים הפעילים בלבד, כגון קריאות לתיקון רכבים ואזהרות מסע."
+          : "This search is not supported. I can only provide answers from active public databases, such as vehicle recalls and travel warnings.",
+      citations: [],
     };
   }
 
@@ -322,14 +412,16 @@ User query: "${query}"`;
         }
       }
 
-      logger.info(`Executing Firestore query: collection=${q.collectionId}, field=${q.field}, op=${q.operator}, val=${finalValue}`);
+      logger.info(
+        `Executing Firestore query: collection=${q.collectionId}, field=${q.field}, op=${q.operator}, val=${finalValue}`,
+      );
       const collectionRef = db.collection(q.collectionId);
       const snap = await collectionRef.where(q.field, q.operator, finalValue).limit(5).get();
 
       return snap.docs.map((doc) => ({
         id: doc.id,
         datasetId: q.collectionId,
-        data: doc.data()
+        data: doc.data(),
       }));
     } catch (err) {
       logger.error(`Error querying collection ${q.collectionId}:`, err);
@@ -343,10 +435,11 @@ User query: "${query}"`;
 
   if (flatRecords.length === 0) {
     return {
-      answer: lang === "he"
-        ? "לא נמצאו רשומות רלוונטיות במאגרי המידע התואמות את הבקשה שלך."
-        : "No relevant records found in our databases matching your request.",
-      citations: []
+      answer:
+        lang === "he"
+          ? "לא נמצאו רשומות רלוונטיות במאגרי המידע התואמות את הבקשה שלך."
+          : "No relevant records found in our databases matching your request.",
+      citations: [],
     };
   }
 
@@ -354,7 +447,7 @@ User query: "${query}"`;
   let recordsContextText = "";
   flatRecords.forEach((rec, index) => {
     const citationId = `cit-${String(index + 1).padStart(2, "0")}`;
-    
+
     // Build a simple text summary of the record fields
     let titleStr = "Record";
     if (rec.datasetId === DATASET_IDS.VEHICLE_RECALLS) {
@@ -366,7 +459,7 @@ User query: "${query}"`;
     } else if (rec.data.titleHebrew) {
       titleStr = rec.data.titleHebrew;
     }
-    
+
     recordsContextText += `Record [${citationId}]:\n`;
     recordsContextText += `- Title: ${titleStr}\n`;
     recordsContextText += `- Dataset ID: ${rec.datasetId}\n`;
@@ -379,8 +472,8 @@ User query: "${query}"`;
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: stage2Schema,
-      temperature: 0.2
-    }
+      temperature: 0.2,
+    },
   });
 
   const stage2Prompt = `You are a helpful bilingual data assistant for PlainSightIL. Your job is to answer the user query based ONLY on the provided database records.

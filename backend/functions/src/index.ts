@@ -759,8 +759,15 @@ export const aiSemanticSearch = functions
 
     // 4. Validate body parameters
     const { query, lang } = req.body || {};
-    if (!query || typeof query !== "string" || query.trim().length === 0 || query.trim().length > 200) {
-      logger.warn("Rejected aiSemanticSearch request: query must be a non-empty string under 200 characters.");
+    if (
+      !query ||
+      typeof query !== "string" ||
+      query.trim().length === 0 ||
+      query.trim().length > 200
+    ) {
+      logger.warn(
+        "Rejected aiSemanticSearch request: query must be a non-empty string under 200 characters.",
+      );
       res.status(400).json({
         error: "Bad Request",
         message: "Query must be a non-empty string under 200 characters.",

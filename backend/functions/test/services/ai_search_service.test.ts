@@ -8,7 +8,7 @@ const {
   mockDbWhere,
   mockDbLimitGet,
   mockFirestoreInstance,
-  mockGenerateContent
+  mockGenerateContent,
 } = vi.hoisted(() => {
   const verifyAuth = vi.fn().mockResolvedValue({ uid: "mock-user-uid" });
   const verifyAppCheck = vi.fn().mockResolvedValue({ appId: "mock-app-id" });
@@ -17,8 +17,8 @@ const {
     data: () => ({
       name: "vehicle_recalls",
       title: "קריאות לתיקון",
-      isSupported: true
-    })
+      isSupported: true,
+    }),
   });
   const dbLimitGet = vi.fn().mockResolvedValue({
     docs: [
@@ -27,14 +27,14 @@ const {
         data: () => ({
           manufacturerName: "טויוטה",
           modelName: "אוונסיס",
-          defectDescription: "שסתום צינור דלק"
-        })
-      }
-    ]
+          defectDescription: "שסתום צינור דלק",
+        }),
+      },
+    ],
   });
   const dbWhere = vi.fn().mockReturnValue({
     limit: vi.fn().mockReturnValue({
-      get: dbLimitGet
+      get: dbLimitGet,
     }),
     get: vi.fn().mockResolvedValue({
       docs: [
@@ -43,29 +43,29 @@ const {
           data: () => ({
             name: "vehicle_recalls",
             title: "קריאות לתיקון",
-            isSupported: true
-          })
-        }
-      ]
-    })
+            isSupported: true,
+          }),
+        },
+      ],
+    }),
   });
 
   const instance = {
     collection: vi.fn().mockReturnValue({
       doc: vi.fn().mockReturnValue({
-        get: dbGet
+        get: dbGet,
       }),
       where: dbWhere,
       limit: vi.fn().mockReturnValue({
-        get: dbLimitGet
-      })
-    })
+        get: dbLimitGet,
+      }),
+    }),
   };
 
   const genMock = vi.fn().mockResolvedValue({
     response: {
-      text: () => "{}"
-    }
+      text: () => "{}",
+    },
   });
 
   return {
@@ -75,7 +75,7 @@ const {
     mockDbWhere: dbWhere,
     mockDbLimitGet: dbLimitGet,
     mockFirestoreInstance: instance,
-    mockGenerateContent: genMock
+    mockGenerateContent: genMock,
   };
 });
 
@@ -87,26 +87,26 @@ vi.mock("firebase-functions/v1", async (importOriginal) => {
     ...actual,
     https: {
       ...actual.https,
-      onRequest: triggerMock
+      onRequest: triggerMock,
     },
     runWith: vi.fn().mockReturnValue({
       https: {
-        onRequest: triggerMock
+        onRequest: triggerMock,
       },
       pubsub: {
         schedule: vi.fn().mockReturnValue({
-          onRun: triggerMock
+          onRun: triggerMock,
         }),
         topic: vi.fn().mockReturnValue({
-          onPublish: triggerMock
-        })
+          onPublish: triggerMock,
+        }),
       },
       auth: {
         user: vi.fn().mockReturnValue({
-          onCreate: triggerMock
-        })
-      }
-    })
+          onCreate: triggerMock,
+        }),
+      },
+    }),
   };
 });
 
@@ -115,9 +115,9 @@ vi.mock("@google/generative-ai", () => {
   return {
     GoogleGenerativeAI: class {
       getGenerativeModel = vi.fn().mockReturnValue({
-        generateContent: mockGenerateContent
+        generateContent: mockGenerateContent,
       });
-    }
+    },
   };
 });
 
@@ -126,11 +126,11 @@ vi.mock("firebase-admin", () => ({
   initializeApp: vi.fn(),
   firestore: () => mockFirestoreInstance,
   auth: () => ({
-    verifyIdToken: mockVerifyIdToken
+    verifyIdToken: mockVerifyIdToken,
   }),
   appCheck: () => ({
-    verifyToken: mockVerifyAppCheckToken
-  })
+    verifyToken: mockVerifyAppCheckToken,
+  }),
 }));
 
 import { aiSemanticSearch } from "../../src/index";
@@ -156,17 +156,17 @@ describe("AI Semantic Search Unit Tests", () => {
       method: "POST",
       headers: {
         authorization: "Bearer mock-auth-token",
-        "x-firebase-appcheck": "mock-appcheck-token"
+        "x-firebase-appcheck": "mock-appcheck-token",
       },
       body: {
         query: "Toyota recalls",
-        lang: "he"
-      }
+        lang: "he",
+      },
     };
 
     res = {
       status: statusMock,
-      set: setHeaderMock
+      set: setHeaderMock,
     };
   });
 
@@ -181,7 +181,7 @@ describe("AI Semantic Search Unit Tests", () => {
       await aiSemanticSearch(req, res);
       expect(statusMock).toHaveBeenCalledWith(405);
       expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({ error: "Method Not Allowed" })
+        expect.objectContaining({ error: "Method Not Allowed" }),
       );
     });
 
@@ -191,7 +191,7 @@ describe("AI Semantic Search Unit Tests", () => {
       await aiSemanticSearch(req, res);
       expect(statusMock).toHaveBeenCalledWith(401);
       expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({ message: "Missing App Check token." })
+        expect.objectContaining({ message: "Missing App Check token." }),
       );
     });
 
@@ -199,18 +199,14 @@ describe("AI Semantic Search Unit Tests", () => {
       mockVerifyIdToken.mockRejectedValueOnce(new Error("Token expired"));
       await aiSemanticSearch(req, res);
       expect(statusMock).toHaveBeenCalledWith(401);
-      expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({ error: "Unauthorized" })
-      );
+      expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({ error: "Unauthorized" }));
     });
 
     it("should reject query longer than 200 characters with 400", async () => {
       req.body.query = "a".repeat(201);
       await aiSemanticSearch(req, res);
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({ error: "Bad Request" })
-      );
+      expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({ error: "Bad Request" }));
     });
   });
 
@@ -229,35 +225,37 @@ describe("AI Semantic Search Unit Tests", () => {
       // 1. Stage 1 Mock Output (Query instructions)
       mockGenerateContent.mockResolvedValueOnce({
         response: {
-          text: () => JSON.stringify({
-            queries: [
-              {
-                collectionId: DATASET_IDS.VEHICLE_RECALLS,
-                field: "manufacturerName",
-                operator: "==",
-                value: "טויוטה"
-              }
-            ],
-            isRelatedToDatasets: true
-          })
-        }
+          text: () =>
+            JSON.stringify({
+              queries: [
+                {
+                  collectionId: DATASET_IDS.VEHICLE_RECALLS,
+                  field: "manufacturerName",
+                  operator: "==",
+                  value: "טויוטה",
+                },
+              ],
+              isRelatedToDatasets: true,
+            }),
+        },
       });
 
       // 2. Stage 2 Mock Output (Context synthesis)
       mockGenerateContent.mockResolvedValueOnce({
         response: {
-          text: () => JSON.stringify({
-            answer: "נמצאה קריאה לטויוטה [cit-01]",
-            citations: [
-              {
-                id: "cit-01",
-                datasetId: DATASET_IDS.VEHICLE_RECALLS,
-                docId: "11020",
-                title: "טויוטה אוונסיס 2011"
-              }
-            ]
-          })
-        }
+          text: () =>
+            JSON.stringify({
+              answer: "נמצאה קריאה לטויוטה [cit-01]",
+              citations: [
+                {
+                  id: "cit-01",
+                  datasetId: DATASET_IDS.VEHICLE_RECALLS,
+                  docId: "11020",
+                  title: "טויוטה אוונסיס 2011",
+                },
+              ],
+            }),
+        },
       });
 
       const result = await processAiSearch(mockFirestoreInstance as any, "toyota recalls", "he");
