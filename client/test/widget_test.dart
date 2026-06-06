@@ -103,6 +103,19 @@ void main() {
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
+    // Ensure Travel Warnings card is visible and tap it
+    await tester.ensureVisible(find.text('Travel Warnings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Travel Warnings'));
+    await tester.pumpAndSettle();
+
+    // Verify Travel Warnings screen is shown
+    expect(find.text('Search by country or continent...'), findsOneWidget);
+
+    // Tap the AppBar Back button to go back to Dashboard
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
     // Verify we are back on the Dashboard by checking for the mission subtitle
     expect(find.text('Democratizing Civic Data'), findsOneWidget);
 
