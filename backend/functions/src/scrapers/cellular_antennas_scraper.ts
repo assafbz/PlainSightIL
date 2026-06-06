@@ -269,7 +269,7 @@ export async function scrapeAndSyncAntennas(
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    let limit = 1000;
+    let limit = 10000;
     if (options?.limit !== undefined) {
       limit = options.limit;
     } else if (isEmulator && !options?.forceFullSync) {

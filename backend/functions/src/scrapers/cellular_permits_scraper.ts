@@ -151,7 +151,7 @@ export async function scrapeAndSyncPermitApplications(
     const forceFullSync = options?.forceFullSync === true;
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    const limit = isEmulator && !forceFullSync ? 100 : 1000;
+    const limit = isEmulator && !forceFullSync ? 100 : 10000;
     let hasMore = true;
     let processedCount = 0;
 

@@ -523,7 +523,7 @@ describe("Scraper and Sync Ingestion", () => {
       // Since forceFullSync is true, it should fetch pages recursively until records are empty
       expect(axios.get).toHaveBeenCalledTimes(2);
       expect(axios.get).toHaveBeenCalledWith(
-        expect.stringContaining("limit=1000"),
+        expect.stringContaining("limit=10000"),
         expect.any(Object),
       );
     } finally {
