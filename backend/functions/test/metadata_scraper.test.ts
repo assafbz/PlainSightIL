@@ -174,4 +174,150 @@ describe("scrapeAndSyncDatasetMetadata", () => {
       { merge: true },
     );
   });
+
+  it("should trigger alerts on subsequent syncs for new and modified/supported datasets", async () => {
+    // 1. Mock isFirstSync = false
+    const mockGet = vi.fn().mockResolvedValue({
+      exists: true,
+      data: () => ({ lastUpdated: "2026-06-05T00:00:00Z" }),
+    });
+
+    mockDoc = vi.fn().mockImplementation((docId) => {
+      return {
+        id: docId,
+        set: mockDocSet,
+        get: mockGet,
+      };
+    });
+
+    mockCollection = vi.fn().mockImplementation((name) => {
+      if (name === "users") {
+        return {
+          get: vi.fn().mockResolvedValue({
+            empty: false,
+            docs: [{ id: "user-123" }],
+          }),
+          doc: vi.fn().mockReturnValue({
+            collection: vi.fn().mockReturnValue({
+              doc: vi.fn().mockReturnValue({
+                set: vi.fn().mockResolvedValue(true),
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        doc: mockDoc,
+        count: vi.fn().mockReturnValue({
+          get: mockCountGet,
+        }),
+      };
+    });
+
+    // 2. Mock some datasets already existing, and one visualizer transition
+    mockDb.collection = mockCollection;
+    mockDb.getAll = vi.fn().mockImplementation(async (...refs) => {
+      return refs.map((ref) => {
+        if (ref.id === "completely-unsupported-pkg-id") {
+          // Exists and identical
+          return {
+            id: ref.id,
+            exists: true,
+            data: () => ({
+              id: ref.id,
+              datasetId: ref.id,
+              name: "completely-unsupported",
+              title: "Completely Unsupported Dataset",
+              notes: "Description",
+              publisher: "Unrelated Org",
+              resourceCount: 1,
+              lastUpdated: "2026-05-03T12:00:00.000Z",
+              isSupported: false,
+              tags: [],
+            }),
+          };
+        }
+        if (ref.id === "ff398c7e-c522-4ee8-a53a-312b188a573d") {
+          // Exists but transition from not supported to supported
+          return {
+            id: ref.id,
+            exists: true,
+            data: () => ({
+              id: ref.id,
+              datasetId: "unsupported-dataset-pkg-id",
+              name: "unsupported-name",
+              title: "Unsupported Title",
+              notes: "Regular notes description",
+              publisher: "Some Ministry",
+              resourceCount: 1,
+              lastUpdated: "2026-05-02T12:00:00.000Z",
+              isSupported: false, // was false, now true
+              tags: [],
+            }),
+          };
+        }
+        // Others don't exist (e.g. 8935c8e5-ec77-421f-af86-d970583195f8 which is new and supported)
+        return {
+          id: ref.id,
+          exists: false,
+          data: () => ({}),
+        };
+      });
+    });
+
+    const packagesResponse = {
+      data: {
+        result: {
+          results: [
+            {
+              id: "8935c8e5-ec77-421f-af86-d970583195f8", // New and supported
+              name: "cellular-antennas",
+              title: "Cellular Antennas Active",
+              notes: "Cellular Antennas Active",
+              organization: { title: "Ministry of Communications" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [{ id: "8935c8e5-ec77-421f-af86-d970583195f8" }],
+            },
+            {
+              id: "unsupported-dataset-pkg-id", // New and not supported
+              name: "unsupported-name",
+              title: "Unsupported Title",
+              notes: "Regular notes description",
+              organization: { title: "Some Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-02T12:00:00.000Z",
+              tags: [],
+              resources: [
+                { id: "ff398c7e-c522-4ee8-a53a-312b188a573d" }, // Maps to supported ID
+              ],
+            },
+            {
+              id: "completely-unsupported-pkg-id", // Exists and identical, should not write
+              name: "completely-unsupported",
+              title: "Completely Unsupported Dataset",
+              notes: "Description",
+              organization: { title: "Unrelated Org" },
+              num_resources: 1,
+              metadata_modified: "2026-05-03T12:00:00.000Z",
+              tags: [],
+              resources: [{ id: "some-other-id" }],
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(packagesResponse);
+
+    const result = await scrapeAndSyncDatasetMetadata(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(3);
+    expect(result.changedCount).toBe(2); // New supported, and transition supported. Identical unsupported is skipped.
+
+    // Verify batch commits
+    expect(mockDb.batch).toHaveBeenCalledTimes(4); // 1 for metadata scraper, 3 for broadcast alerts
+    expect(mockBatch.set).toHaveBeenCalledTimes(5); // 2 for metadata updates, 3 for alert creations
+  });
 });

@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.95% </span>
+                <span class="strong">93.19% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>132/142</span>
+                <span class='fraction'>137/147</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.33% </span>
+                <span class="strong">93.57% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>126/135</span>
+                <span class='fraction'>131/140</span>
             </div>
         
             
@@ -411,7 +411,12 @@
 <a name='L346'></a><a href='#L346'>346</a>
 <a name='L347'></a><a href='#L347'>347</a>
 <a name='L348'></a><a href='#L348'>348</a>
-<a name='L349'></a><a href='#L349'>349</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L349'></a><a href='#L349'>349</a>
+<a name='L350'></a><a href='#L350'>350</a>
+<a name='L351'></a><a href='#L351'>351</a>
+<a name='L352'></a><a href='#L352'>352</a>
+<a name='L353'></a><a href='#L353'>353</a>
+<a name='L354'></a><a href='#L354'>354</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -421,11 +426,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -440,7 +445,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -620,6 +625,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
@@ -660,11 +666,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -688,6 +696,7 @@
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -721,6 +730,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
@@ -965,9 +975,10 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
 export async function saveAntennasToFirestore(
   db: admin.firestore.Firestore,
   antennas: CellularAntenna[],
-): Promise&lt;void&gt; {
+): Promise&lt;number&gt; {
   const collectionRef = db.collection(DATASET_IDS.CELLULAR_ANTENNAS);
   const now = new Date().toISOString();
+  let changedCount = 0;
 &nbsp;
   // Process in chunks of 500
   for (let i = 0; i &lt; antennas.length; i += 500) {
@@ -1008,18 +1019,20 @@ export async function saveAntennasToFirestore(
 &nbsp;
       batch.set(docRef, a);
       hasWrites = true;
+      changedCount++;
     }
     if (hasWrites) {
       await batch.commit();
     }
   }
+  return changedCount;
 }
 &nbsp;
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
   resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS,
   options?: { limit?: number; forceFullSync?: boolean },
-): Promise&lt;{ success: boolean; count: number }&gt; {
+): Promise&lt;{ success: boolean; count: number; changedCount: number }&gt; {
   const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 &nbsp;
@@ -1030,7 +1043,7 @@ export async function scrapeAndSyncAntennas(
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     // Paginated API fetch from data.gov.il datastore search
     let offset = 0;
-    let limit = 1000;
+    let limit = 10000;
     if (options?.limit !== undefined) {
       limit = options.limit;
     } else if (isEmulator &amp;&amp; !options?.forceFullSync) {
@@ -1038,6 +1051,7 @@ export async function scrapeAndSyncAntennas(
     }
     let hasMore = true;
     let processedCount = 0;
+    let changedCount = 0;
 &nbsp;
     const targetRef = db.collection(targetCollection);
     const now = new Date().toISOString();
@@ -1070,7 +1084,8 @@ export async function scrapeAndSyncAntennas(
 &nbsp;
       // Save parsed records in chunks
       <span class="missing-if-branch" title="else path not taken" >E</span>if (parsedRecords.length &gt; 0) {
-        await saveAntennasToFirestore(db, parsedRecords);
+        const pageChanged = await saveAntennasToFirestore(db, parsedRecords);
+        changedCount += pageChanged;
         processedCount += parsedRecords.length;
       }
 &nbsp;
@@ -1100,7 +1115,7 @@ export async function scrapeAndSyncAntennas(
     );
 &nbsp;
     logger.info("Updated metadata. Ingestion complete.");
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
 <span class="cstat-no" title="statement not covered" >    logger.error("Scraper failed:", error);</span>
 <span class="cstat-no" title="statement not covered" >    await metadataRef.set({ status: "error" }, { merge: true });</span>
@@ -1114,7 +1129,7 @@ export async function scrapeAndSyncAntennas(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-05T14:33:18.046Z
+                at 2026-06-06T15:08:38.729Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as admin from "firebase-admin";
-import { createAlert, broadcastAlert, notifySubscribers } from "../src/utils/alerts";
-import { checkAndAlertForScraper } from "../src/index";
+import { createAlert, broadcastAlert, notifySubscribers } from "../../src/utils/alerts";
+import { checkAndAlertForScraper } from "../../src/index";
 
 vi.mock("firebase-functions", () => ({
   logger: {

@@ -353,14 +353,22 @@ class AppStateNotifier extends ChangeNotifier {
 
   // Delegated Methods for AlertsNotifier
   bool isSubscribed(String datasetId) => alertsNotifier.isSubscribed(datasetId);
-  Future<void> toggleSubscription(String datasetId) => alertsNotifier
-      .toggleSubscription(datasetId, authNotifier.currentUser?.uid ?? '');
-  Future<void> markAlertAsRead(String alertId) =>
-      alertsNotifier.markAsRead(alertId, authNotifier.currentUser?.uid ?? '');
-  Future<void> markAllAlertsAsRead() =>
-      alertsNotifier.markAllAsRead(authNotifier.currentUser?.uid ?? '');
-  Future<void> deleteAlert(String alertId) =>
-      alertsNotifier.deleteAlert(alertId, authNotifier.currentUser?.uid ?? '');
+  Future<void> toggleSubscription(String datasetId) =>
+      alertsNotifier.toggleSubscription(
+        datasetId,
+        authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+      );
+  Future<void> markAlertAsRead(String alertId) => alertsNotifier.markAsRead(
+    alertId,
+    authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+  );
+  Future<void> markAllAlertsAsRead() => alertsNotifier.markAllAsRead(
+    authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+  );
+  Future<void> deleteAlert(String alertId) => alertsNotifier.deleteAlert(
+    alertId,
+    authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+  );
 
   // Global layout and localization helper methods
   TextDirection get textDirection =>
