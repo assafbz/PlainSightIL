@@ -769,7 +769,7 @@ void main() {
           testRequestsStream: requestsController.stream,
         );
 
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
 
         expect(notifier.isLoadingAdminMetadata, isTrue);
@@ -856,7 +856,7 @@ void main() {
       () {
         AppStateNotifier.isTesting = false;
         final notifier = TelemetryNotifier(isTesting: false);
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
         expect(notifier.isLoadingAdminMetadata, isFalse);
         expect(notifier.isLoadingTelemetry, isFalse);
@@ -1357,7 +1357,7 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestore,
         );
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
 
         telemetryMetadataController.add(
@@ -1424,7 +1424,7 @@ void main() {
       () async {
         AppStateNotifier.testIsFirebaseInitialized = false;
         final notifier = TelemetryNotifier(isTesting: false);
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
         expect(notifier.isLoadingAdminMetadata, isFalse);
         expect(notifier.isLoadingTelemetry, isFalse);
@@ -1882,7 +1882,7 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestoreThrow,
         );
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
         expect(notifier.isLoadingAdminMetadata, isFalse);
         expect(notifier.isLoadingTelemetry, isFalse);
@@ -1893,7 +1893,7 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestore,
         );
-        notifier2.initAdminMetadataListener();
+        notifier2.initAdminMetadataListener(isAdmin: true);
         telemetryHealthController.add(
           FakeDocumentSnapshot('data_gov_il', false, null),
         );

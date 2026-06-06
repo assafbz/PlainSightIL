@@ -245,7 +245,7 @@ class AppStateNotifier extends ChangeNotifier {
   void initPermitMetadataListener() {
     antennasNotifier.initAntennaListener();
     permitsNotifier.initPermitMetadataListener();
-    telemetryNotifier.initAdminMetadataListener();
+    telemetryNotifier.initAdminMetadataListener(isAdmin: authNotifier.isAdmin);
     telemetryNotifier.initDirectoryListener();
     liquidationNotifier.initLiquidationListener();
     doctorsNotifier.initDoctorsListener();
@@ -259,7 +259,7 @@ class AppStateNotifier extends ChangeNotifier {
   }
 
   void initAdminMetadataListener() {
-    telemetryNotifier.initAdminMetadataListener();
+    telemetryNotifier.initAdminMetadataListener(isAdmin: authNotifier.isAdmin);
   }
 
   void initAntennaListener() => antennasNotifier.initAntennaListener();
@@ -313,7 +313,8 @@ class AppStateNotifier extends ChangeNotifier {
   void resetBondsFilters() => bondsNotifier.resetFilters();
   Future<void> fetchNextBondsPage() => bondsNotifier.fetchNextPage();
 
-  void initTelemetryListeners() => telemetryNotifier.initTelemetryListeners();
+  void initTelemetryListeners() =>
+      telemetryNotifier.initTelemetryListeners(isAdmin: authNotifier.isAdmin);
   void cancelAdminMetadataListener() =>
       telemetryNotifier.cancelAdminMetadataListener();
 
