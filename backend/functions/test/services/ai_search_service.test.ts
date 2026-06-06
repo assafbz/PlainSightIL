@@ -133,9 +133,9 @@ vi.mock("firebase-admin", () => ({
   })
 }));
 
-import { aiSemanticSearch } from "../src/index";
-import { processAiSearch } from "../src/services/ai_search_service";
-import { DATASET_IDS } from "../src/utils/constants";
+import { aiSemanticSearch } from "../../src/index";
+import { processAiSearch } from "../../src/services/ai_search_service";
+import { DATASET_IDS } from "../../src/utils/constants";
 
 describe("AI Semantic Search Unit Tests", () => {
   let req: any;
