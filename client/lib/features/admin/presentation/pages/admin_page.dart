@@ -184,6 +184,14 @@ class _AdminPageState extends State<AdminPage> {
         'agencyEn': 'Ministry of Finance - Accountant General',
         'agencyHe': 'משרד האוצר - החשב הכללי',
       },
+      {
+        'id': DatasetIds.travelWarnings,
+        'titleEn': 'Travel Warnings',
+        'titleHe': 'אזהרות מסע',
+        'resourceId': DatasetIds.travelWarnings,
+        'agencyEn': 'National Security Council & Ministry of Foreign Affairs',
+        'agencyHe': 'המטה לביטחון לאומי ומשרד החוץ',
+      },
     ];
 
     return ListenableBuilder(
@@ -1233,6 +1241,11 @@ class _AdminPageState extends State<AdminPage> {
         'id': DatasetIds.carImporters,
         'titleEn': 'Car Importers',
         'titleHe': 'יבואני רכב',
+      },
+      {
+        'id': DatasetIds.travelWarnings,
+        'titleEn': 'Travel Warnings',
+        'titleHe': 'אזהרות מסע',
       },
       {
         'id': 'datasets_metadata',
