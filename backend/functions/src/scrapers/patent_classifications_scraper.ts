@@ -110,7 +110,7 @@ export async function scrapeAndSyncPatentClassifications(
 
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     let offset = 0;
-    const limit = isEmulator ? 10 : 1000;
+    const limit = isEmulator ? 10 : 10000;
     let hasMore = true;
     let processedCount = 0;
     let newWritesCount = 0;

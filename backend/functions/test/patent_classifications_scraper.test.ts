@@ -244,4 +244,91 @@ describe("Patent Classifications Ingest Sync Process", () => {
       { merge: true },
     );
   });
+
+  it("should handle existing identical records and skip them, or update changed records", async () => {
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 741205,
+              "מספר בקשה": 327015,
+              "שם האמצאה באנגלית": "DRUG COMBINATION",
+              "לבקשה CPC סיווג": "A61P35/00",
+              ראשי: "ראשי",
+            },
+            {
+              _id: 741206,
+              "מספר בקשה": 327015,
+              "שם האמצאה באנגלית": "DRUG COMBINATION DIFFERENT",
+              "לבקשה CPC סיווג": "A61P35/00",
+              ראשי: "ראשי",
+            },
+          ],
+        },
+      },
+    };
+
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "741205",
+        data: () =>
+          parsePatentRecord({
+            _id: 741205,
+            "מספר בקשה": 327015,
+            "שם האמצאה באנגלית": "DRUG COMBINATION",
+            "לבקשה CPC סיווג": "A61P35/00",
+            ראשי: "ראשי",
+          }),
+      },
+      {
+        exists: true,
+        id: "741206",
+        data: () => ({
+          _id: 741206,
+          applicationNumber: 327015,
+          titleHebrew: "",
+          titleEnglish: "DRUG COMBINATION OLD",
+          cpcClassification: "A61P35/00",
+          isPrimary: true,
+          lastUpdated: "2026-06-01T00:00:00.000Z",
+          createdAt: "2026-06-01T00:00:00.000Z",
+        }),
+      },
+    ]);
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncPatentClassifications(mockDb);
+    expect(result.success).toBe(true);
+    expect(mockBatch.set).toHaveBeenCalledTimes(1); // Only 1 record written (741206)
+  });
+
+  it("should handle empty API response gracefully", async () => {
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncPatentClassifications(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should handle scraper errors and update metadata status to error", async () => {
+    vi.mocked(axios.get).mockRejectedValueOnce(new Error("API Error"));
+
+    await expect(scrapeAndSyncPatentClassifications(mockDb)).rejects.toThrow("API Error");
+    expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
+  });
+
+  it("should parse CPC classification empty string as null", () => {
+    const raw = {
+      _id: 1,
+      "מספר בקשה": 12345,
+      "שם האמצאה בעברית": "מכשיר",
+      "לבקשה CPC סיווג": "   ", // spaces only
+    };
+    expect(parsePatentRecord(raw as any)).toBeNull();
+  });
 });

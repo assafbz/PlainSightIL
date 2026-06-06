@@ -151,7 +151,7 @@ export async function scrapeAndSyncVehicleRecalls(
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     const forceFullSync = options?.forceFullSync === true;
     let offset = 0;
-    const limit = isEmulator ? 100 : 1000;
+    const limit = isEmulator ? 100 : 10000;
     let hasMore = true;
     let processedCount = 0;
 
