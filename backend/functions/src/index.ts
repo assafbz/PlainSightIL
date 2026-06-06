@@ -385,9 +385,7 @@ export const runScraperPubSub = functions
       // Read metadata first to determine if it is the first sync
       const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
       const isFirstSync =
-        !metaDoc.exists ||
-        !metaDoc.data()?.lastUpdated ||
-        (metaDoc.data()?.recordCount || 0) === 0;
+        !metaDoc.exists || !metaDoc.data()?.lastUpdated || (metaDoc.data()?.recordCount || 0) === 0;
 
       // Ensure status is set to syncing in database
       await db
@@ -554,9 +552,7 @@ function createManualSyncHandler(
       // Read metadata first to determine if it is the first sync
       const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
       const isFirstSync =
-        !metaDoc.exists ||
-        !metaDoc.data()?.lastUpdated ||
-        (metaDoc.data()?.recordCount || 0) === 0;
+        !metaDoc.exists || !metaDoc.data()?.lastUpdated || (metaDoc.data()?.recordCount || 0) === 0;
 
       // Set status to syncing in Firestore immediately
       await db

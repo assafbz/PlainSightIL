@@ -58,11 +58,7 @@ export async function broadcastAlert(
 
   for (const userDoc of usersSnapshot.docs) {
     const userId = userDoc.id;
-    const alertDocRef = db
-      .collection("users")
-      .doc(userId)
-      .collection("alerts")
-      .doc();
+    const alertDocRef = db.collection("users").doc(userId).collection("alerts").doc();
 
     const alertData = {
       id: alertDocRef.id,
@@ -116,11 +112,7 @@ export async function notifySubscribers(
     const userId = subDoc.data().userId;
     if (!userId) continue;
 
-    const alertDocRef = db
-      .collection("users")
-      .doc(userId)
-      .collection("alerts")
-      .doc();
+    const alertDocRef = db.collection("users").doc(userId).collection("alerts").doc();
 
     const alertData = {
       id: alertDocRef.id,

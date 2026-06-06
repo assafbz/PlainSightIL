@@ -227,7 +227,9 @@ export async function scrapeAndSyncDatasetMetadata(
         await batch.commit();
       }
     }
-    logger.info(`Successfully synced ${processedCount} dataset metadata records. Changes: ${changedCount}`);
+    logger.info(
+      `Successfully synced ${processedCount} dataset metadata records. Changes: ${changedCount}`,
+    );
 
     // Retrieve total count of documents in the collection
     const countSnapshot = await targetRef.count().get();
