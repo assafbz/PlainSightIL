@@ -152,6 +152,8 @@ function startServices() {
       '/demo-plainsightil/us-central1/manualSyncCompaniesLiquidation',
       '/demo-plainsightil/us-central1/manualSyncTravelWarnings',
       '/demo-plainsightil/us-central1/manualSyncVehicleRecalls',
+      '/demo-plainsightil/us-central1/manualSyncCarImporters',
+      '/demo-plainsightil/us-central1/manualSyncLocalMarketBonds',
       '/demo-plainsightil/us-central1/manualApiHealthCheck'
     ];
 

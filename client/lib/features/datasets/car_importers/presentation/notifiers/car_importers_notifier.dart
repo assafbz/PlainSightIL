@@ -54,9 +54,20 @@ class CarImportersNotifier extends ChangeNotifier {
       _isLoadingCarImporters = true;
       _carImportersSubscription = testFirestoreStream!.listen(
         (snapshot) {
-          _carImporterRecords = snapshot.docs
-              .map((doc) => CarImporterRecordModel.fromMap(doc.data()))
-              .toList();
+          final List<CarImporterRecordModel> records = [];
+          for (final doc in snapshot.docs) {
+            try {
+              records.add(CarImporterRecordModel.fromMap(doc.data()));
+            } catch (e) {
+              // coverage:ignore-start
+              AppLogger.error(
+                'Failed to parse document ${doc.id} in CarImportersNotifier test stream',
+                e,
+              );
+              // coverage:ignore-end
+            }
+          }
+          _carImporterRecords = records;
           _isLoadingCarImporters = false;
           notifyListeners();
         },
@@ -122,12 +133,25 @@ class CarImportersNotifier extends ChangeNotifier {
     try {
       _carImportersSubscription = (testFirestore ?? FirebaseFirestore.instance)
           .collection('39f455bf-6db0-4926-859d-017f34eacbcb')
+          .orderBy('_id', descending: true)
+          .limit(200)
           .snapshots()
           .listen(
             (snapshot) {
-              _carImporterRecords = snapshot.docs
-                  .map((doc) => CarImporterRecordModel.fromMap(doc.data()))
-                  .toList();
+              final List<CarImporterRecordModel> records = [];
+              for (final doc in snapshot.docs) {
+                try {
+                  records.add(CarImporterRecordModel.fromMap(doc.data()));
+                } catch (e) {
+                  // coverage:ignore-start
+                  AppLogger.error(
+                    'Failed to parse document ${doc.id} in CarImportersNotifier',
+                    e,
+                  );
+                  // coverage:ignore-end
+                }
+              }
+              _carImporterRecords = records;
               _isLoadingCarImporters = false;
               notifyListeners();
             },
