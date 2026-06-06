@@ -5,6 +5,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import '../data/models/bank_atm_record_model.dart';
 import '../widgets/bank_atms_map_view.dart';
 import '../../cellular_antennas/widgets/map_controls_overlay.dart';
@@ -40,7 +41,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
   void initState() {
     super.initState();
     // Register the dataset in recent history
-    widget.appState.addRecent('21fde05f-62e3-401b-81cf-5c385862026d');
+    widget.appState.addRecent(DatasetIds.bankAtms);
     widget.appState.initBankAtmsListener();
   }
 
@@ -655,11 +656,9 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
           ListenableBuilder(
             listenable: widget.appState,
             builder: (context, _) {
-              final isFav = widget.appState.isFavorite(
-                '21fde05f-62e3-401b-81cf-5c385862026d',
-              );
+              final isFav = widget.appState.isFavorite(DatasetIds.bankAtms);
               final isSubbed = widget.appState.isSubscribed(
-                '21fde05f-62e3-401b-81cf-5c385862026d',
+                DatasetIds.bankAtms,
               );
               return Row(
                 mainAxisSize: MainAxisSize.min,
@@ -676,18 +675,16 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
                           ? AppColors.primary
                           : AppColors.textSecondary,
                     ),
-                    onPressed: () => widget.appState.toggleSubscription(
-                      '21fde05f-62e3-401b-81cf-5c385862026d',
-                    ),
+                    onPressed: () =>
+                        widget.appState.toggleSubscription(DatasetIds.bankAtms),
                   ),
                   IconButton(
                     icon: Icon(
                       isFav ? Icons.favorite : Icons.favorite_border,
                       color: isFav ? AppColors.danger : AppColors.textSecondary,
                     ),
-                    onPressed: () => widget.appState.toggleFavorite(
-                      '21fde05f-62e3-401b-81cf-5c385862026d',
-                    ),
+                    onPressed: () =>
+                        widget.appState.toggleFavorite(DatasetIds.bankAtms),
                   ),
                 ],
               );

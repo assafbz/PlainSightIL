@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 
 class MockHttpClient extends http.BaseClient {
   final Future<http.Response> Function(http.BaseRequest request) sendHandler;
@@ -46,9 +47,7 @@ void main() {
         expect(notifier.isLoadingAdminMetadata, isFalse);
         expect(notifier.datasetMetadataMap, isNotEmpty);
         expect(
-          notifier.datasetMetadataMap.containsKey(
-            '21fde05f-62e3-401b-81cf-5c385862026d',
-          ),
+          notifier.datasetMetadataMap.containsKey(DatasetIds.bankAtms),
           isTrue,
         );
       },
@@ -118,9 +117,7 @@ void main() {
           httpClient: mockClient,
         );
 
-        final result = await notifier.triggerManualSync(
-          '21fde05f-62e3-401b-81cf-5c385862026d',
-        );
+        final result = await notifier.triggerManualSync(DatasetIds.bankAtms);
         expect(result['success'], isTrue);
         expect(result['count'], equals(3019));
         expect(result['message'], equals('Manual sync successful'));
@@ -144,9 +141,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      final result = await notifier.triggerManualSync(
-        '21fde05f-62e3-401b-81cf-5c385862026d',
-      );
+      final result = await notifier.triggerManualSync(DatasetIds.bankAtms);
       expect(result['success'], isFalse);
       expect(result['message'], equals('Failed to sync ATMs dataset'));
     });

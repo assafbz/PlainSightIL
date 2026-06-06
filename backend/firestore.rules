@@ -38,7 +38,6 @@ service cloud.firestore {
     match /2a01d234-b2b0-4d46-baa0-cec05c401e7d/{docId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /b2c59e21-c345-4b02-b071-2890a3d431d6/{docId} {
       allow read: if true;
@@ -48,7 +47,6 @@ service cloud.firestore {
     match /2c33523f-87aa-44ec-a736-edbb0a82975e/{docId} {
       allow read: if true;
       allow write: if false;
-      allow list: if request.query.limit <= 100;
     }
     match /39f455bf-6db0-4926-859d-017f34eacbcb/{docId} {
       allow read: if true;

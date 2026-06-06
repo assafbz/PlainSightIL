@@ -473,7 +473,7 @@ describe("Bank ATMs Ingest Sync Process", () => {
     vi.mocked(axios.get).mockRejectedValueOnce(new Error("Network Error"));
 
     await expect(scrapeAndSyncBankAtms(mockDb)).rejects.toThrow("Network Error");
-    expect(mockDoc).toHaveBeenCalledWith("21fde05f-62e3-401b-81cf-5c385862026d");
+    expect(mockDoc).toHaveBeenCalledWith(DATASET_IDS.BANK_ATMS);
     expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
   });
 });

@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/bank_atm_record_model.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles Bank ATMs collection streams,
@@ -164,7 +165,7 @@ class BankAtmsNotifier extends ChangeNotifier {
     AppLogger.info('Initializing Bank ATMs listener in BankAtmsNotifier');
     try {
       _atmsSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('21fde05f-62e3-401b-81cf-5c385862026d')
+          .collection(DatasetIds.bankAtms)
           .snapshots()
           .listen(
             (snapshot) {

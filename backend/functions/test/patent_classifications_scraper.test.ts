@@ -246,6 +246,9 @@ describe("Patent Classifications Ingest Sync Process", () => {
   });
 
   it("should handle existing identical records and skip them, or update changed records", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-06T09:00:00.000Z"));
+
     const apiResponse = {
       data: {
         result: {
@@ -292,7 +295,7 @@ describe("Patent Classifications Ingest Sync Process", () => {
           titleEnglish: "DRUG COMBINATION OLD",
           cpcClassification: "A61P35/00",
           isPrimary: true,
-          lastUpdated: "2026-06-01T00:00:00.000Z",
+          lastUpdated: "2026-06-06T09:00:00.000Z",
           createdAt: "2026-06-01T00:00:00.000Z",
         }),
       },
@@ -304,6 +307,8 @@ describe("Patent Classifications Ingest Sync Process", () => {
     const result = await scrapeAndSyncPatentClassifications(mockDb);
     expect(result.success).toBe(true);
     expect(mockBatch.set).toHaveBeenCalledTimes(1); // Only 1 record written (741206)
+
+    vi.useRealTimers();
   });
 
   it("should handle empty API response gracefully", async () => {

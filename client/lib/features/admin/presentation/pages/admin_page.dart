@@ -153,12 +153,20 @@ class _AdminPageState extends State<AdminPage> {
         'agencyHe': 'משרד הבריאות',
       },
       {
-        'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'id': DatasetIds.bankAtms,
         'titleEn': 'Bank ATMs',
         'titleHe': 'כספומטים',
-        'resourceId': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'resourceId': DatasetIds.bankAtms,
         'agencyEn': 'Bank of Israel',
         'agencyHe': 'בנק ישראל',
+      },
+      {
+        'id': DatasetIds.vehicleRecalls,
+        'titleEn': 'Vehicle Recalls',
+        'titleHe': 'קריאות חוזרות לרכב',
+        'resourceId': DatasetIds.vehicleRecalls,
+        'agencyEn': 'Ministry of Transport',
+        'agencyHe': 'משרד התחבורה',
       },
       {
         'id': DatasetIds.patentClassifications,
@@ -1228,9 +1236,19 @@ class _AdminPageState extends State<AdminPage> {
         'titleHe': 'רישיונות רופאים',
       },
       {
-        'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        'id': DatasetIds.bankAtms,
         'titleEn': 'Bank ATMs',
         'titleHe': 'כספומטים',
+      },
+      {
+        'id': DatasetIds.localMarketBonds,
+        'titleEn': 'Local Market Bonds',
+        'titleHe': 'אגרות חוב מקומיות',
+      },
+      {
+        'id': DatasetIds.vehicleRecalls,
+        'titleEn': 'Vehicle Recalls',
+        'titleHe': 'קריאות חוזרות לרכב',
       },
       {
         'id': DatasetIds.patentClassifications,

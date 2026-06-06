@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles active cellular antenna stream queries,
@@ -120,7 +121,7 @@ class AntennasNotifier extends ChangeNotifier {
 
     try {
       _antennaSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('8935c8e5-ec77-421f-af86-d970583195f8')
+          .collection(DatasetIds.cellularAntennas)
           .snapshots()
           .listen(
             (snapshot) {

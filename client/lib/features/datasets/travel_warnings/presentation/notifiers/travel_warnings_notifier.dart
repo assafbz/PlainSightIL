@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/travel_warning_model.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles travel warnings collection streams,
@@ -131,7 +132,7 @@ class TravelWarningsNotifier extends ChangeNotifier {
 
     try {
       _warningsSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('2a01d234-b2b0-4d46-baa0-cec05c401e7d')
+          .collection(DatasetIds.travelWarnings)
           .snapshots()
           .listen(
             (snapshot) {

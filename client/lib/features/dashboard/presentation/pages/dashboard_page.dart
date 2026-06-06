@@ -32,7 +32,7 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('budget_title');
     } else if (item.id == DatasetIds.doctorsLicenses) {
       return appState.translate('doctors_title');
-    } else if (item.id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+    } else if (item.id == DatasetIds.bankAtms) {
       return appState.translate('atm_title');
     } else if (item.id == DatasetIds.patentClassifications) {
       return appState.translate('patent_classifications_title');
@@ -60,7 +60,7 @@ class DashboardScreen extends StatelessWidget {
       return appState.translate('budget_desc');
     } else if (item.id == DatasetIds.doctorsLicenses) {
       return appState.translate('doctors_desc');
-    } else if (item.id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+    } else if (item.id == DatasetIds.bankAtms) {
       return appState.translate('atm_desc');
     } else if (item.id == DatasetIds.patentClassifications) {
       return appState.translate('patent_classifications_desc');
@@ -98,7 +98,7 @@ class DashboardScreen extends StatelessWidget {
           builder: (context) => DoctorsLicensesScreen(appState: appState),
         ),
       );
-    } else if (id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+    } else if (id == DatasetIds.bankAtms) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => BankAtmsScreen(appState: appState),
@@ -189,7 +189,7 @@ class DashboardScreen extends StatelessWidget {
       children: favRecords.map((item) {
         final isLiquidation = item.id == DatasetIds.companiesLiquidation;
         final isDoctors = item.id == DatasetIds.doctorsLicenses;
-        final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
+        final isAtm = item.id == DatasetIds.bankAtms;
         final isPatent = item.id == DatasetIds.patentClassifications;
         final isRecall = item.id == DatasetIds.vehicleRecalls;
         final isCar = item.id == DatasetIds.carImporters;
@@ -266,7 +266,7 @@ class DashboardScreen extends StatelessWidget {
         children: recentRecords.map((item) {
           final isLiquidation = item.id == DatasetIds.companiesLiquidation;
           final isDoctors = item.id == DatasetIds.doctorsLicenses;
-          final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
+          final isAtm = item.id == DatasetIds.bankAtms;
           final isPatent = item.id == DatasetIds.patentClassifications;
           final isRecall = item.id == DatasetIds.vehicleRecalls;
           final isCar = item.id == DatasetIds.carImporters;
@@ -369,7 +369,7 @@ class DashboardScreen extends StatelessWidget {
       children: supported.map((item) {
         final isLiquidation = item.id == DatasetIds.companiesLiquidation;
         final isDoctors = item.id == DatasetIds.doctorsLicenses;
-        final isAtm = item.id == '21fde05f-62e3-401b-81cf-5c385862026d';
+        final isAtm = item.id == DatasetIds.bankAtms;
         final isPatent = item.id == DatasetIds.patentClassifications;
         final isRecall = item.id == DatasetIds.vehicleRecalls;
         final isCar = item.id == DatasetIds.carImporters;

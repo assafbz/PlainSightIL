@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/patent_classification_model.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
 
@@ -150,7 +151,7 @@ class PatentClassificationsNotifier extends ChangeNotifier {
 
     try {
       final collectionRef = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('b2c59e21-c345-4b02-b071-2890a3d431d6');
+          .collection(DatasetIds.patentClassifications);
 
       Query query = collectionRef;
 

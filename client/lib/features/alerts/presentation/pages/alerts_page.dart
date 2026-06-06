@@ -41,7 +41,7 @@ class AlertsPage extends StatelessWidget {
           builder: (context) => DoctorsLicensesScreen(appState: appState),
         ),
       );
-    } else if (datasetId == '21fde05f-62e3-401b-81cf-5c385862026d') {
+    } else if (datasetId == DatasetIds.bankAtms) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => BankAtmsScreen(appState: appState),

@@ -103,6 +103,7 @@ export interface BankAtmRecord {
   geohash: string;
   lastUpdated: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -268,9 +269,11 @@ export async function scrapeAndSyncBankAtms(
               continue;
             }
             r.createdAt = existingData.createdAt || now;
+            r.updatedAt = now;
             r.lastUpdated = now;
           } else {
             r.createdAt = now;
+            r.updatedAt = now;
             r.lastUpdated = now;
           }
 
