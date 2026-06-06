@@ -991,6 +991,7 @@ void main() {
     vehicleRecallsController;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       AppStateNotifier.isTesting = false;
       AppStateNotifier.testIsFirebaseInitialized = true;
 
@@ -1216,6 +1217,12 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestore,
         );
+
+        // Coverage for isFirebaseInitialized lines 33, 38
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        expect(notifier.isFirebaseInitialized, isA<bool>());
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
         notifier.initLiquidationListener();
 
         liquidationController.add(
@@ -1223,12 +1230,20 @@ void main() {
             FakeQueryDocumentSnapshot('liq1', {
               'liquidationCaseId': 999,
               'companyName': 'Liquidation Case 1',
+              'companyId': 512345678,
+              'lastUpdated': '2026-06-01T00:00:00Z',
+            }),
+            FakeQueryDocumentSnapshot('liq2', {
+              'liquidationCaseId': 1000,
+              'companyName': 'Liquidation Case 2',
+              'companyId': 512345679,
+              'lastUpdated': '2026-06-02T00:00:00Z',
             }),
           ]),
         );
         await Future<void>.delayed(const Duration(milliseconds: 10));
         expect(notifier.isLoadingLiquidation, isFalse);
-        expect(notifier.liquidationRecords.first.liquidationCaseId, 999);
+        expect(notifier.liquidationRecords.first.liquidationCaseId, 1000);
 
         liquidationController.addError('Liquidation Error');
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -1253,6 +1268,12 @@ void main() {
       'VehicleRecallsNotifier handles real Firestore stream and error path',
       () async {
         final notifier = VehicleRecallsNotifier(testFirestore: mockFirestore);
+
+        // Coverage for isFirebaseInitialized lines 32, 37
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        expect(notifier.isFirebaseInitialized, isA<bool>());
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
         notifier.initRecallsListener();
 
         vehicleRecallsController.add(
@@ -1271,11 +1292,25 @@ void main() {
               'createdAt': '2026-06-01T00:00:00Z',
               'scrapedAt': '2026-06-01T00:00:00Z',
             }),
+            FakeQueryDocumentSnapshot('rec2', {
+              'recallId': 54322,
+              'recallYear': 2026,
+              'manufacturerName': 'Honda',
+              'modelName': 'Civic',
+              'recallType': 'Safety',
+              'defectDescription': 'Airbag issue',
+              'defectCategory': 'Airbags',
+              'buildStartDate': '2025-01-01',
+              'buildEndDate': '2025-12-31',
+              'lastUpdated': '2026-06-02T00:00:00Z',
+              'createdAt': '2026-06-02T00:00:00Z',
+              'scrapedAt': '2026-06-02T00:00:00Z',
+            }),
           ]),
         );
         await Future<void>.delayed(const Duration(milliseconds: 10));
         expect(notifier.isLoadingRecalls, isFalse);
-        expect(notifier.recallRecords.first.recallId, 54321);
+        expect(notifier.recallRecords.first.recallId, 54322);
 
         vehicleRecallsController.addError('Vehicle Recalls Error');
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -1318,6 +1353,12 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestore,
         );
+
+        // Coverage for isFirebaseInitialized lines 33, 38
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        expect(notifier.isFirebaseInitialized, isA<bool>());
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
         notifier.initDoctorsListener();
 
         doctorsController.add(
@@ -1325,12 +1366,18 @@ void main() {
             FakeQueryDocumentSnapshot('doc1', {
               'id': 'doc1',
               'licenseNumber': 8888,
+              'lastUpdated': '2026-06-01T00:00:00Z',
+            }),
+            FakeQueryDocumentSnapshot('doc2', {
+              'id': 'doc2',
+              'licenseNumber': 9999,
+              'lastUpdated': '2026-06-02T00:00:00Z',
             }),
           ]),
         );
         await Future<void>.delayed(const Duration(milliseconds: 10));
         expect(notifier.isLoadingDoctors, isFalse);
-        expect(notifier.doctorRecords.first.licenseNumber, 8888);
+        expect(notifier.doctorRecords.first.licenseNumber, 9999);
 
         doctorsController.addError('Doctors Error');
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -2033,6 +2080,12 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestore,
         );
+
+        // Coverage for isFirebaseInitialized lines 33, 38
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        expect(notifier.isFirebaseInitialized, isA<bool>());
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
         expect(notifier.isLoadingAtms, isTrue);
 
         notifier.initBankAtmsListener();
@@ -2062,12 +2115,35 @@ void main() {
               'lastUpdated': '2026-06-02T09:00:00Z',
               'createdAt': '2026-06-02T09:00:00Z',
             }),
+            FakeQueryDocumentSnapshot('doc2', {
+              'id': '2',
+              'atmNum': 5001,
+              'bankCode': 10,
+              'bankName': {'he': 'בנק לאומי', 'en': 'Bank Leumi'},
+              'branchCode': 800,
+              'address': 'דיזנגוף 50',
+              'addressExtra': 'דיזנגוף 50',
+              'city': 'תל אביב',
+              'atmLocation': {'he': 'על קיר הסניף', 'en': 'On Branch Wall'},
+              'coordinates': {'latitude': 32.075, 'longitude': 34.774},
+              'geohash': 'sv8wrg6p7',
+              'hasCommission': true,
+              'hasCashWithdrawal': true,
+              'hasCashDeposit': false,
+              'hasChequeDeposit': false,
+              'hasEnvelopeDeposit': false,
+              'hasForexTransaction': false,
+              'hasAdditionalTransactions': false,
+              'hasHandicapAccess': true,
+              'lastUpdated': '2026-06-03T09:00:00Z',
+              'createdAt': '2026-06-03T09:00:00Z',
+            }),
           ]),
         );
         await Future<void>.delayed(const Duration(milliseconds: 10));
         expect(notifier.isLoadingAtms, isFalse);
-        expect(notifier.atmRecords.first.id, '1');
-        expect(notifier.atmRecords.first.atmNum, 3777);
+        expect(notifier.atmRecords.first.id, '2');
+        expect(notifier.atmRecords.first.atmNum, 5001);
 
         bankAtmsController.addError('Stream Error');
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -2233,14 +2309,28 @@ void main() {
               'date': '2026-06-03',
               'office': 'מל"ל',
               'warningLevel': 2,
+              'lastUpdated': '2026-06-03T00:00:00Z',
+            }),
+            FakeQueryDocumentSnapshot('doc2', {
+              'id': '2',
+              '_id': 2,
+              'continent': 'אירופה',
+              'country': 'צרפת',
+              'recommendations': 'רמה 1/ איום פוטנציאלי',
+              'details': 'פרטים צרפת',
+              'logo': 'לוגו צרפת',
+              'date': '2026-06-04',
+              'office': 'מל"ל',
+              'warningLevel': 1,
+              'lastUpdated': '2026-06-04T00:00:00Z',
             }),
           ]),
         );
         await Future<void>.delayed(const Duration(milliseconds: 10));
         expect(notifier.isLoadingWarnings, isFalse);
-        expect(notifier.warningRecords.first.id, '1');
-        expect(notifier.warningRecords.first.country, 'אוגנדה');
-        expect(notifier.warningRecords.first.warningLevel, 2);
+        expect(notifier.warningRecords.first.id, '2');
+        expect(notifier.warningRecords.first.country, 'צרפת');
+        expect(notifier.warningRecords.first.warningLevel, 1);
 
         travelWarningsController.addError('Warnings Error');
         await Future<void>.delayed(const Duration(milliseconds: 10));
