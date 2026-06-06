@@ -155,7 +155,7 @@ export function parseLocalMarketBondRecord(
 export async function scrapeAndSyncLocalMarketBonds(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.LOCAL_MARKET_BONDS,
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; count: number; changedCount: number }> {
   const datasetId = DATASET_IDS.LOCAL_MARKET_BONDS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
@@ -168,7 +168,7 @@ export async function scrapeAndSyncLocalMarketBonds(
     const limit = isEmulator ? 10 : 10000;
     let hasMore = true;
     let processedCount = 0;
-    let newWritesCount = 0;
+    let changedCount = 0;
 
     // Retrieve the last synced maximum _id to support delta sync
     const metadataDoc = await metadataRef.get();
@@ -258,7 +258,7 @@ export async function scrapeAndSyncLocalMarketBonds(
             batch.set(docRef, r);
             hasWrites = true;
             processedCount++;
-            newWritesCount++;
+            changedCount++;
           }
 
           if (hasWrites) {
@@ -282,7 +282,7 @@ export async function scrapeAndSyncLocalMarketBonds(
     }
 
     logger.info(
-      `Ingestion complete. Processed: ${processedCount}, Wrote: ${newWritesCount} records.`,
+      `Ingestion complete. Processed: ${processedCount}, Wrote: ${changedCount} records.`,
     );
 
     const countSnapshot = await targetRef.count().get();
@@ -301,7 +301,7 @@ export async function scrapeAndSyncLocalMarketBonds(
     );
 
     logger.info("Updated local market bonds metadata.");
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
     logger.error("Local market bonds scraper failed:", error);
     await metadataRef.set({ status: "error" }, { merge: true });

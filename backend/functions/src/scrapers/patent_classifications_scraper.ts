@@ -100,7 +100,7 @@ export function parsePatentRecord(record: HebrewPatentRecord): PatentClassificat
 export async function scrapeAndSyncPatentClassifications(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.PATENT_CLASSIFICATIONS,
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; count: number; changedCount: number }> {
   const datasetId = DATASET_IDS.PATENT_CLASSIFICATIONS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
@@ -113,7 +113,7 @@ export async function scrapeAndSyncPatentClassifications(
     const limit = isEmulator ? 10 : 10000;
     let hasMore = true;
     let processedCount = 0;
-    let newWritesCount = 0;
+    let changedCount = 0;
 
     // 1. Retrieve the last synced maximum _id to support delta sync
     const metadataDoc = await metadataRef.get();
@@ -207,7 +207,7 @@ export async function scrapeAndSyncPatentClassifications(
             batch.set(docRef, r);
             hasWrites = true;
             processedCount++;
-            newWritesCount++;
+            changedCount++;
           }
 
           if (hasWrites) {
@@ -232,7 +232,7 @@ export async function scrapeAndSyncPatentClassifications(
     }
 
     logger.info(
-      `Ingestion complete. Processed: ${processedCount}, Wrote: ${newWritesCount} records.`,
+      `Ingestion complete. Processed: ${processedCount}, Wrote: ${changedCount} records.`,
     );
 
     // Retrieve total count of documents in the collection
@@ -253,7 +253,7 @@ export async function scrapeAndSyncPatentClassifications(
     );
 
     logger.info("Updated patent classifications metadata.");
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
     logger.error("Patent classifications scraper failed:", error);
     await metadataRef.set({ status: "error" }, { merge: true });

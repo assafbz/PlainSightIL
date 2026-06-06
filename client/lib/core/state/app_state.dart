@@ -24,6 +24,8 @@ import '../../features/datasets/car_importers/presentation/notifiers/car_importe
 import '../../features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import '../../features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 import '../../features/admin/presentation/notifiers/telemetry_notifier.dart';
+import '../../features/alerts/data/models/alert_model.dart';
+import '../../features/alerts/presentation/notifiers/alerts_notifier.dart';
 import '../theme/design_system.dart';
 import '../utils/app_logger.dart';
 import 'local_storage.dart';
@@ -64,6 +66,7 @@ class AppStateNotifier extends ChangeNotifier {
   late final CarImportersNotifier carImportersNotifier;
   late final LocalMarketBondsNotifier bondsNotifier;
   late final TelemetryNotifier telemetryNotifier;
+  late final AlertsNotifier alertsNotifier;
 
   // Configuration Getters
   String get locale => _locale;
@@ -150,6 +153,12 @@ class AppStateNotifier extends ChangeNotifier {
   bool get isLoadingDirectory => telemetryNotifier.isLoadingDirectory;
   bool get isCheckingApiHealth => telemetryNotifier.isCheckingApiHealth;
 
+  // Delegated Getters for AlertsNotifier
+  List<AlertModel> get alerts => alertsNotifier.alerts;
+  List<String> get subscribedDatasetIds => alertsNotifier.subscribedDatasetIds;
+  bool get isLoadingAlerts => alertsNotifier.isLoading;
+  int get unreadAlertsCount => alertsNotifier.unreadCount;
+
   bool _isDisposed = false;
 
   /// Construct and initialize the AppStateNotifier Facade.
@@ -172,6 +181,7 @@ class AppStateNotifier extends ChangeNotifier {
       isTesting: isTesting,
       functionsPort: functionsPort,
     );
+    alertsNotifier = AlertsNotifier(isTesting: isTesting);
 
     // Listen to changes in sub-notifiers and forward notifications safely
     authNotifier.addListener(_onSubNotifierChanged);
@@ -186,6 +196,13 @@ class AppStateNotifier extends ChangeNotifier {
     carImportersNotifier.addListener(_onSubNotifierChanged);
     bondsNotifier.addListener(_onSubNotifierChanged);
     telemetryNotifier.addListener(_onSubNotifierChanged);
+    alertsNotifier.addListener(_onSubNotifierChanged);
+
+    // Initialize alerts listener and listen to auth changes to re-init
+    alertsNotifier.initAlertsListener(authNotifier.currentUser?.uid);
+    authNotifier.addListener(() {
+      alertsNotifier.initAlertsListener(authNotifier.currentUser?.uid);
+    });
 
     _initPackageInfo();
     _loadLocale();
@@ -238,6 +255,7 @@ class AppStateNotifier extends ChangeNotifier {
     vehicleRecallsNotifier.initRecallsListener();
     carImportersNotifier.initCarImportersListener();
     bondsNotifier.initBondsListener();
+    alertsNotifier.initAlertsListener(authNotifier.currentUser?.uid);
   }
 
   void initAdminMetadataListener() {
@@ -333,6 +351,25 @@ class AppStateNotifier extends ChangeNotifier {
     updateIntervalHours: updateIntervalHours,
   );
 
+  // Delegated Methods for AlertsNotifier
+  bool isSubscribed(String datasetId) => alertsNotifier.isSubscribed(datasetId);
+  Future<void> toggleSubscription(String datasetId) =>
+      alertsNotifier.toggleSubscription(
+        datasetId,
+        authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+      );
+  Future<void> markAlertAsRead(String alertId) => alertsNotifier.markAsRead(
+    alertId,
+    authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+  );
+  Future<void> markAllAlertsAsRead() => alertsNotifier.markAllAsRead(
+    authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+  );
+  Future<void> deleteAlert(String alertId) => alertsNotifier.deleteAlert(
+    alertId,
+    authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
+  );
+
   // Global layout and localization helper methods
   TextDirection get textDirection =>
       _locale == 'he' ? TextDirection.rtl : TextDirection.ltr;
@@ -377,6 +414,7 @@ class AppStateNotifier extends ChangeNotifier {
     carImportersNotifier.removeListener(_onSubNotifierChanged);
     bondsNotifier.removeListener(_onSubNotifierChanged);
     telemetryNotifier.removeListener(_onSubNotifierChanged);
+    alertsNotifier.removeListener(_onSubNotifierChanged);
 
     authNotifier.dispose();
     antennasNotifier.dispose();
@@ -390,6 +428,7 @@ class AppStateNotifier extends ChangeNotifier {
     carImportersNotifier.dispose();
     bondsNotifier.dispose();
     telemetryNotifier.dispose();
+    alertsNotifier.dispose();
     super.dispose();
   }
 
@@ -630,6 +669,15 @@ class AppStateNotifier extends ChangeNotifier {
       'recall_phone_label': 'Importer Telephone: ',
       'recall_website_label': 'Importer Website: ',
       'recalls_publisher': 'Ministry of Transport - Vehicle Licensing Division',
+      'alerts_empty_title': 'No Alerts Yet',
+      'alerts_empty_desc':
+          'You will receive notifications here when your subscribed datasets get updated.',
+      'alerts_mark_all_read': 'Mark All as Read',
+      'subscribe_tooltip': 'Subscribe to updates',
+      'unsubscribe_tooltip': 'Unsubscribe from updates',
+      'alerts_sign_in_title': 'Stay Updated',
+      'alerts_sign_in_desc':
+          'Sign in to subscribe to open datasets and receive notifications when new records are ingested.',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -860,6 +908,15 @@ class AppStateNotifier extends ChangeNotifier {
       'recall_phone_label': 'טלפון יבואן: ',
       'recall_website_label': 'אתר יבואן: ',
       'recalls_publisher': 'משרד התחבורה והבטיחות בדרכים - אגף הרישוי',
+      'alerts_empty_title': 'אין התראות עדיין',
+      'alerts_empty_desc':
+          'כאן יופיעו עדכונים והתראות כאשר מאגרי המידע שנרשמת אליהם יעודכנו.',
+      'alerts_mark_all_read': 'סמן הכל כנקרא',
+      'subscribe_tooltip': 'הרשמה לעדכונים',
+      'unsubscribe_tooltip': 'ביטול הרשמה לעדכונים',
+      'alerts_sign_in_title': 'הישאר מעודכן',
+      'alerts_sign_in_desc':
+          'התחבר כדי להירשם לעדכונים ממאגרי המידע ולקבל התראות ברגע שנקלטות רשומות חדשות.',
     },
   };
 

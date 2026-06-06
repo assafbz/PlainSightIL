@@ -418,6 +418,59 @@ void main() {
       appState.dispose();
     });
 
+    test('alerts delegation works correctly', () async {
+      AppStateNotifier.isTesting = true;
+      final appState = AppStateNotifier();
+
+      // Verify initial values from mock loader
+      expect(appState.alerts.length, 2);
+      expect(appState.subscribedDatasetIds, ['cellular_antennas']);
+      expect(appState.isLoadingAlerts, isFalse);
+      expect(appState.unreadAlertsCount, 1);
+
+      // check isSubscribed
+      expect(appState.isSubscribed('cellular_antennas'), isTrue);
+      expect(appState.isSubscribed('other_dataset'), isFalse);
+
+      var listenerCalled = false;
+      appState.addListener(() {
+        listenerCalled = true;
+      });
+
+      // toggleSubscription (subscribe)
+      await appState.toggleSubscription('other_dataset');
+      expect(appState.isSubscribed('other_dataset'), isTrue);
+      expect(listenerCalled, isTrue);
+
+      listenerCalled = false;
+      // toggleSubscription (unsubscribe)
+      await appState.toggleSubscription('other_dataset');
+      expect(appState.isSubscribed('other_dataset'), isFalse);
+      expect(listenerCalled, isTrue);
+
+      listenerCalled = false;
+      // markAlertAsRead
+      await appState.markAlertAsRead('mock_alert_1');
+      expect(appState.unreadAlertsCount, 0);
+      expect(appState.alerts.first.isRead, isTrue);
+      expect(listenerCalled, isTrue);
+
+      // Reset mock alerts for markAllAlertsAsRead test
+      appState.dispose();
+      final appState2 = AppStateNotifier();
+      expect(appState2.unreadAlertsCount, 1);
+
+      await appState2.markAllAlertsAsRead();
+      expect(appState2.unreadAlertsCount, 0);
+
+      // deleteAlert
+      expect(appState2.alerts.length, 2);
+      await appState2.deleteAlert('mock_alert_1');
+      expect(appState2.alerts.length, 1);
+
+      appState2.dispose();
+    });
+
     test('patent classifications delegation works correctly', () async {
       AppStateNotifier.isTesting = true;
       final appState = AppStateNotifier();

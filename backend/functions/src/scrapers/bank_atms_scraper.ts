@@ -198,7 +198,7 @@ export async function scrapeAndSyncBankAtms(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.BANK_ATMS,
   options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; count: number; changedCount: number }> {
   const datasetId = DATASET_IDS.BANK_ATMS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
@@ -212,6 +212,7 @@ export async function scrapeAndSyncBankAtms(
     const limit = isEmulator && !forceFullSync ? 100 : 10000;
     let hasMore = true;
     let processedCount = 0;
+    let changedCount = 0;
 
     const targetRef = db.collection(targetCollection);
     const now = new Date().toISOString();
@@ -276,6 +277,7 @@ export async function scrapeAndSyncBankAtms(
           batch.set(docRef, r);
           hasWrites = true;
           processedCount++;
+          changedCount++;
         }
         if (hasWrites) {
           await batch.commit();
@@ -308,7 +310,7 @@ export async function scrapeAndSyncBankAtms(
     );
 
     logger.info("Updated bank ATMs metadata. Ingestion complete.");
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
     logger.error("Bank ATMs scraper failed:", error);
     await metadataRef.set({ status: "error" }, { merge: true });

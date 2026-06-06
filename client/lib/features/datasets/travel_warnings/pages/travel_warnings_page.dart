@@ -238,16 +238,45 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                           final isFav = widget.appState.isFavorite(
                             DatasetIds.travelWarnings,
                           );
-                          return IconButton(
-                            icon: Icon(
-                              isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav
-                                  ? AppColors.danger
-                                  : AppColors.textSecondary,
-                            ),
-                            onPressed: () => widget.appState.toggleFavorite(
-                              DatasetIds.travelWarnings,
-                            ),
+                          final isSubbed = widget.appState.isSubscribed(
+                            DatasetIds.travelWarnings,
+                          );
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: widget.appState.translate(
+                                  isSubbed
+                                      ? 'unsubscribe_tooltip'
+                                      : 'subscribe_tooltip',
+                                ),
+                                icon: Icon(
+                                  isSubbed
+                                      ? Icons.notifications_active
+                                      : Icons.notifications_none,
+                                  color: isSubbed
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () =>
+                                    widget.appState.toggleSubscription(
+                                      DatasetIds.travelWarnings,
+                                    ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  isFav
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFav
+                                      ? AppColors.danger
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () => widget.appState.toggleFavorite(
+                                  DatasetIds.travelWarnings,
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),
@@ -372,6 +401,18 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                               item.warningLevel,
                             );
 
+                            final dateToShow =
+                                (item.date != null &&
+                                    item.date!.trim().isNotEmpty)
+                                ? item.date!
+                                : (item.lastUpdated != null &&
+                                      item.lastUpdated!.trim().isNotEmpty)
+                                ? item.lastUpdated!
+                                : (item.createdAt != null &&
+                                      item.createdAt!.trim().isNotEmpty)
+                                ? item.createdAt!
+                                : '';
+
                             // Clean HTML from recommendation summary to display plain text
                             final cleanRecSummary = item.recommendations
                                 .replaceAll(RegExp(r'<[^>]*>'), '')
@@ -491,15 +532,14 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 8),
-                                            if (item.date != null &&
-                                                item.date!.isNotEmpty)
+                                            if (dateToShow.isNotEmpty)
                                               Text(
-                                                item.date!.length >= 10
-                                                    ? item.date!.substring(
+                                                dateToShow.length >= 10
+                                                    ? dateToShow.substring(
                                                         0,
                                                         10,
                                                       )
-                                                    : item.date!,
+                                                    : dateToShow,
                                                 style:
                                                     AppTypography.labelXs(
                                                       context,

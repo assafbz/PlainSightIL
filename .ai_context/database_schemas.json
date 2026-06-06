@@ -596,6 +596,114 @@
         "updatedAt",
         "lastUpdated"
       ]
+    },
+    "subscriptions": {
+      "description": "User subscriptions to updates of specific datasets.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the subscription (composite: userId_datasetId)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the subscribing user."
+        },
+        "datasetId": {
+          "type": "string",
+          "description": "Identifier of the monitored dataset."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of subscription creation."
+        }
+      },
+      "required": ["id", "userId", "datasetId", "createdAt"]
+    },
+    "users": {
+      "description": "Registered user profile records.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user identifier matching the Auth UID."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "Security access role."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of user profile creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of last profile update."
+        }
+      },
+      "required": ["uid", "firstName", "lastName", "email", "role", "createdAt", "updatedAt"],
+      "subcollections": {
+        "alerts": {
+          "description": "In-app notifications feed for the user.",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the alert (matches doc ID)."
+            },
+            "userId": {
+              "type": "string",
+              "description": "UID of the target user."
+            },
+            "type": {
+              "type": "string",
+              "enum": ["new_dataset", "new_government_dataset", "new_records"],
+              "description": "Category of the notification trigger."
+            },
+            "title": {
+              "$ref": "#/definitions/localizedString"
+            },
+            "description": {
+              "$ref": "#/definitions/localizedString"
+            },
+            "datasetId": {
+              "type": ["string", "null"],
+              "description": "Identifier of the referenced dataset, if applicable."
+            },
+            "recordCount": {
+              "type": ["integer", "null"],
+              "description": "Number of newly ingested records, if applicable."
+            },
+            "isRead": {
+              "type": "boolean",
+              "description": "Flag representing whether the user has read the alert."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO timestamp of alert creation."
+            }
+          },
+          "required": ["id", "userId", "type", "title", "description", "isRead", "createdAt"]
+        }
+      }
     }
   }
 }

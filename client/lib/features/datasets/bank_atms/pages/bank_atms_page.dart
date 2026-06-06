@@ -658,14 +658,38 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
               final isFav = widget.appState.isFavorite(
                 '21fde05f-62e3-401b-81cf-5c385862026d',
               );
-              return IconButton(
-                icon: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  color: isFav ? AppColors.danger : AppColors.textSecondary,
-                ),
-                onPressed: () => widget.appState.toggleFavorite(
-                  '21fde05f-62e3-401b-81cf-5c385862026d',
-                ),
+              final isSubbed = widget.appState.isSubscribed(
+                '21fde05f-62e3-401b-81cf-5c385862026d',
+              );
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: widget.appState.translate(
+                      isSubbed ? 'unsubscribe_tooltip' : 'subscribe_tooltip',
+                    ),
+                    icon: Icon(
+                      isSubbed
+                          ? Icons.notifications_active
+                          : Icons.notifications_none,
+                      color: isSubbed
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ),
+                    onPressed: () => widget.appState.toggleSubscription(
+                      '21fde05f-62e3-401b-81cf-5c385862026d',
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav ? AppColors.danger : AppColors.textSecondary,
+                    ),
+                    onPressed: () => widget.appState.toggleFavorite(
+                      '21fde05f-62e3-401b-81cf-5c385862026d',
+                    ),
+                  ),
+                ],
               );
             },
           ),

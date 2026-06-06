@@ -204,9 +204,10 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
 export async function saveAntennasToFirestore(
   db: admin.firestore.Firestore,
   antennas: CellularAntenna[],
-): Promise<void> {
+): Promise<number> {
   const collectionRef = db.collection(DATASET_IDS.CELLULAR_ANTENNAS);
   const now = new Date().toISOString();
+  let changedCount = 0;
 
   // Process in chunks of 500
   for (let i = 0; i < antennas.length; i += 500) {
@@ -247,18 +248,20 @@ export async function saveAntennasToFirestore(
 
       batch.set(docRef, a);
       hasWrites = true;
+      changedCount++;
     }
     if (hasWrites) {
       await batch.commit();
     }
   }
+  return changedCount;
 }
 
 export async function scrapeAndSyncAntennas(
   db: admin.firestore.Firestore,
   resourceIdOrUrl: string = DATASET_IDS.CELLULAR_ANTENNAS,
   options?: { limit?: number; forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; count: number; changedCount: number }> {
   const datasetId = DATASET_IDS.CELLULAR_ANTENNAS;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
 
@@ -277,6 +280,7 @@ export async function scrapeAndSyncAntennas(
     }
     let hasMore = true;
     let processedCount = 0;
+    let changedCount = 0;
 
     const targetRef = db.collection(targetCollection);
     const now = new Date().toISOString();
@@ -309,7 +313,8 @@ export async function scrapeAndSyncAntennas(
 
       // Save parsed records in chunks
       if (parsedRecords.length > 0) {
-        await saveAntennasToFirestore(db, parsedRecords);
+        const pageChanged = await saveAntennasToFirestore(db, parsedRecords);
+        changedCount += pageChanged;
         processedCount += parsedRecords.length;
       }
 
@@ -339,7 +344,7 @@ export async function scrapeAndSyncAntennas(
     );
 
     logger.info("Updated metadata. Ingestion complete.");
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
     logger.error("Scraper failed:", error);
     await metadataRef.set({ status: "error" }, { merge: true });

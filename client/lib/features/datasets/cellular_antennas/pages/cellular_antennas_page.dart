@@ -373,12 +373,33 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
                   ? DatasetIds.cellularPermits
                   : DatasetIds.cellularAntennas;
               final isFav = appState.isFavorite(currentDatasetId);
-              return IconButton(
-                icon: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  color: isFav ? AppColors.danger : AppColors.textSecondary,
-                ),
-                onPressed: () => appState.toggleFavorite(currentDatasetId),
+              final isSubbed = appState.isSubscribed(currentDatasetId);
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: appState.translate(
+                      isSubbed ? 'unsubscribe_tooltip' : 'subscribe_tooltip',
+                    ),
+                    icon: Icon(
+                      isSubbed
+                          ? Icons.notifications_active
+                          : Icons.notifications_none,
+                      color: isSubbed
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ),
+                    onPressed: () =>
+                        appState.toggleSubscription(currentDatasetId),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav ? AppColors.danger : AppColors.textSecondary,
+                    ),
+                    onPressed: () => appState.toggleFavorite(currentDatasetId),
+                  ),
+                ],
               );
             },
           ),
