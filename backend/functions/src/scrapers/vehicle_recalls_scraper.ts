@@ -141,7 +141,7 @@ export async function scrapeAndSyncVehicleRecalls(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.VEHICLE_RECALLS,
   options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; count: number; changedCount: number }> {
   const datasetId = resourceId;
   const metadataRef = db.collection("dataset_metadata").doc(datasetId);
   try {
@@ -154,6 +154,7 @@ export async function scrapeAndSyncVehicleRecalls(
     const limit = isEmulator ? 100 : 10000;
     let hasMore = true;
     let processedCount = 0;
+    let changedCount = 0;
 
     const targetRef = db.collection(targetCollection);
     const now = new Date().toISOString();
@@ -258,6 +259,7 @@ export async function scrapeAndSyncVehicleRecalls(
           batch.set(docRef, r);
           hasWrites = true;
           processedCount++;
+          changedCount++;
         }
         if (hasWrites) {
           await batch.commit();
@@ -289,7 +291,7 @@ export async function scrapeAndSyncVehicleRecalls(
     );
 
     logger.info("Updated vehicle recalls metadata. Ingestion complete.");
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
     logger.error("Vehicle recalls scraper failed:", error);
     await metadataRef.set({ status: "error" }, { merge: true });

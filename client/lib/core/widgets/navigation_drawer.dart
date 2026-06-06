@@ -113,9 +113,9 @@ class NavigationDrawerWidget extends StatelessWidget {
                                 context,
                                 index: 2,
                                 icon: Icons.notifications,
-                                titleKey: 'alerts_title',
+                                titleKey: 'nav_alerts',
                                 isActive: appState.activeTab == 2,
-                                isRoadmap: true,
+                                isRoadmap: false,
                               ),
                               if (appState.isAdmin) ...[
                                 const Divider(
@@ -499,7 +499,13 @@ class NavigationDrawerWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Icon(icon, color: labelColor, size: 24),
+                index == 2 && appState.unreadAlertsCount > 0
+                    ? Badge(
+                        label: Text('${appState.unreadAlertsCount}'),
+                        backgroundColor: AppColors.danger,
+                        child: Icon(icon, color: labelColor, size: 24),
+                      )
+                    : Icon(icon, color: labelColor, size: 24),
                 const SizedBox(width: 12),
                 Expanded(child: Text(title, style: itemTextStyle)),
                 if (isRoadmap)

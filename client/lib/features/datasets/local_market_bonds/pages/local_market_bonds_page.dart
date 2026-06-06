@@ -189,16 +189,45 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
                           final isFav = widget.appState.isFavorite(
                             DatasetIds.localMarketBonds,
                           );
-                          return IconButton(
-                            icon: Icon(
-                              isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav
-                                  ? AppColors.danger
-                                  : AppColors.textSecondary,
-                            ),
-                            onPressed: () => widget.appState.toggleFavorite(
-                              DatasetIds.localMarketBonds,
-                            ),
+                          final isSubbed = widget.appState.isSubscribed(
+                            DatasetIds.localMarketBonds,
+                          );
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: widget.appState.translate(
+                                  isSubbed
+                                      ? 'unsubscribe_tooltip'
+                                      : 'subscribe_tooltip',
+                                ),
+                                icon: Icon(
+                                  isSubbed
+                                      ? Icons.notifications_active
+                                      : Icons.notifications_none,
+                                  color: isSubbed
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () =>
+                                    widget.appState.toggleSubscription(
+                                      DatasetIds.localMarketBonds,
+                                    ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  isFav
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFav
+                                      ? AppColors.danger
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () => widget.appState.toggleFavorite(
+                                  DatasetIds.localMarketBonds,
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),

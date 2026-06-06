@@ -205,6 +205,37 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
 }
 ```
 
+#### Subscriptions (`subscriptions/{userId_datasetId}`)
+```json
+{
+  "id": "mock_uid_cellular_antennas",
+  "userId": "mock_uid",
+  "datasetId": "cellular_antennas",
+  "createdAt": "2026-06-06T16:00:00Z"
+}
+```
+
+#### User Alerts (`users/{userId}/alerts/{alertId}`)
+```json
+{
+  "id": "alert_12345",
+  "userId": "mock_uid",
+  "type": "new_records",
+  "title": {
+    "he": "נקלטו רשומות חדשות",
+    "en": "New Records Ingested"
+  },
+  "description": {
+    "he": "מאגר אנטנות סלולריות עודכן עם 14 רשומות חדשות.",
+    "en": "Cellular Antennas dataset was updated with 14 new records."
+  },
+  "datasetId": "cellular_antennas",
+  "recordCount": 14,
+  "isRead": false,
+  "createdAt": "2026-06-06T16:05:00Z"
+}
+```
+
 ### 4.2 Client Local Storage Interface (SharedPreferences Wrapper)
 The client application persists state flags, user favorites, and recents across restarts using the `SharedPreferences` plugin via a unified, platform-conditional `LocalStorage` interface.
 
