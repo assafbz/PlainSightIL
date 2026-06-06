@@ -1,3 +1,5 @@
+// ignore_for_file: subtype_of_sealed_class
+
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -266,7 +268,7 @@ void main() {
         FakeDocRef.deletedDocs.contains('user_123_cellular_antennas'),
         isTrue,
       );
-      subsController2.close();
+      await subsController2.close();
     });
 
     test('markAsRead updates isRead property in database', () async {
@@ -338,7 +340,7 @@ void main() {
       expect(FakeWriteBatch.batchUpdates.length, 1); // Only alert_1 is unread
       expect(FakeWriteBatch.batchUpdates.first['isRead'], isTrue);
       expect(FakeWriteBatch.batchCommitted, isTrue);
-      alertsController2.close();
+      await alertsController2.close();
     });
 
     test('deleteAlert calls delete document', () async {
@@ -520,7 +522,7 @@ void main() {
 
       FakeWriteBatch.throwOnCommit = true;
       expect(() => notifier2.markAllAsRead('user_123'), throwsException);
-      alertsController2.close();
+      await alertsController2.close();
     });
 
     test('deleteAlert handles firestore exceptions', () async {
@@ -570,6 +572,7 @@ class FakeFirestore implements FirebaseFirestore {
 }
 
 class FakeCollectionRef implements CollectionReference<Map<String, dynamic>> {
+  @override
   final String path;
   final Stream<QuerySnapshot<Map<String, dynamic>>>? snapshotStream;
   final CollectionReference<Map<String, dynamic>> Function(String)?
