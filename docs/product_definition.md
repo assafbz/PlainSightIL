@@ -130,3 +130,12 @@ To judge the success of each dataset launch, we will track:
 2.  **Performance Integrity:** Maintain 95+ Core Web Vitals score on mobile viewports.
 3.  **Data Freshness Latency:** Ensure client-cached data is refreshed within 24 hours of a source update.
 4.  **Accessibility Compliance:** WCAG 2.1 AA certification.
+
+---
+
+## 9. AI Semantic Search & Cross-Dataset Capabilities (Issue #144 Roadmap)
+
+*   **Feature Overview**: A unified natural language search input on the dashboard allowing cross-dataset queries.
+*   **Mechanism**: A Gemini-powered query router translates natural language prompts into target collections and structured query filters, fetches the relevant documents, and synthesizes bilingual answers with direct citations.
+*   **Impact**: Breaks down dataset silos, providing direct answers for complex real-world user needs (e.g. combined travel warning and vehicle recall checks).
+

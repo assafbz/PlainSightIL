@@ -28,6 +28,8 @@ PlainSightIL utilizes a decoupled client-server architecture. The backend aggreg
 *   **Platform**: **Firebase & Google Cloud Platform (GCP)**.
 *   **Database**: **Cloud Firestore (NoSQL)**. High-performance document storage with spatial indexing (Geohashing) for geographical queries.
 *   **Scheduled Scrapers**: **Firebase Cloud Functions** (Node.js/TypeScript). Cron-triggered processes pulling datasets daily from `data.gov.il`.
+*   **AI Search Orchestration**: **Firebase Cloud Functions** utilizing the Gemini API (`gemini-flash-latest`) to parse natural language queries, execute parallel Firestore collection queries, and synthesize cited answers.
+
 
 ---
 
