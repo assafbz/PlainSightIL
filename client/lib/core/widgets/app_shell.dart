@@ -3,8 +3,8 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:plainsight/features/directory/presentation/pages/directory_page.dart';
-import 'package:plainsight/core/widgets/coming_soon_screen.dart';
 import 'package:plainsight/core/widgets/navigation_drawer.dart';
+import 'package:plainsight/features/alerts/presentation/pages/alerts_page.dart';
 
 class AppShell extends StatelessWidget {
   final AppStateNotifier appState;
@@ -145,12 +145,8 @@ class AppShell extends StatelessWidget {
           appState: appState,
         );
       case 2:
-        return ComingSoonScreen(
-          key: const ValueKey('alerts_coming_soon'),
-          title: appState.translate('alerts_roadmap_title'),
-          icon: Icons.notifications,
-          color: AppColors.danger,
-          description: appState.translate('alerts_roadmap_desc'),
+        return AlertsPage(
+          key: const ValueKey('alerts_screen'),
           appState: appState,
         );
       default:
@@ -216,7 +212,13 @@ class AppShell extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 24),
+              index == 2 && appState.unreadAlertsCount > 0
+                  ? Badge(
+                      label: Text('${appState.unreadAlertsCount}'),
+                      backgroundColor: AppColors.danger,
+                      child: Icon(icon, color: color, size: 24),
+                    )
+                  : Icon(icon, color: color, size: 24),
               const SizedBox(height: 4),
               Text(
                 label,

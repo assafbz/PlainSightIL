@@ -2,6 +2,8 @@ import * as admin from "firebase-admin";
 import { AppLogger as logger } from "../utils/logger";
 import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
+import { areRecordsEqual } from "../utils/equality";
+import { broadcastAlert } from "../utils/alerts";
 
 export interface CKANPackage {
   id: string;
@@ -54,13 +56,17 @@ function sanitizeNotes(rawNotes?: string): string {
 
 export async function scrapeAndSyncDatasetMetadata(
   db: admin.firestore.Firestore,
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; count: number; changedCount: number }> {
   const collectionName = "datasets_metadata";
   logger.info(`Starting dataset metadata sync. Target collection: ${collectionName}`);
 
   try {
     const targetRef = db.collection(collectionName);
     const now = new Date().toISOString();
+
+    const metadataRef = db.collection("dataset_metadata").doc(collectionName);
+    const existingMetaDoc = await metadataRef.get();
+    const isFirstSync = !existingMetaDoc.exists || !existingMetaDoc.data()?.lastUpdated;
 
     // Query CKAN package_search to fetch all packages.
     // Since there are ~1200 datasets, fetching rows=1500 in one request is efficient and avoids rate limit issues.
@@ -73,7 +79,7 @@ export async function scrapeAndSyncDatasetMetadata(
 
     if (packages.length === 0) {
       logger.warn("No packages returned from CKAN API.");
-      return { success: true, count: 0 };
+      return { success: true, count: 0, changedCount: 0 };
     }
 
     logger.info(`Fetched ${packages.length} packages from CKAN. Processing updates...`);
@@ -129,25 +135,104 @@ export async function scrapeAndSyncDatasetMetadata(
 
     // Process parsed datasets in chunks of 500 for Firestore batched writes
     let processedCount = 0;
+    let changedCount = 0;
+
     for (let i = 0; i < parsedDatasets.length; i += 500) {
       const chunk = parsedDatasets.slice(i, i + 500);
+      const docRefs = chunk.map((d) => targetRef.doc(d.id));
+
+      const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
+      const existingMap = new Map<string, admin.firestore.DocumentData>();
+      for (const snap of snapshots) {
+        if (snap.exists) {
+          existingMap.set(snap.id, snap.data()!);
+        }
+      }
+
       const batch = db.batch();
+      let hasWrites = false;
 
       for (const dataset of chunk) {
         const docRef = targetRef.doc(dataset.id);
-        batch.set(docRef, dataset, { merge: true });
+        const existingData = existingMap.get(dataset.id);
+
+        let shouldWrite = false;
+
+        if (!existingData) {
+          shouldWrite = true;
+          if (!isFirstSync) {
+            // New government dataset alert
+            await broadcastAlert(db, {
+              type: "new_government_dataset",
+              datasetId: dataset.id,
+              title: {
+                he: `נתגלה מאגר מידע ממשלתי חדש: ${dataset.title}`,
+                en: `New Government Dataset Discovered: ${dataset.title}`,
+              },
+              description: {
+                he: `המאגר '${dataset.title}' פורסם על ידי ${dataset.publisher} ב-data.gov.il.`,
+                en: `The dataset '${dataset.title}' was published by ${dataset.publisher} on data.gov.il.`,
+              },
+            });
+
+            if (dataset.isSupported) {
+              // Visualizer supported alert
+              await broadcastAlert(db, {
+                type: "new_dataset",
+                datasetId: dataset.id,
+                title: {
+                  he: `מאגר מידע חדש זמין לצפייה: ${dataset.title}`,
+                  en: `New Visualizer Supported: ${dataset.title}`,
+                },
+                description: {
+                  he: `מאגר '${dataset.title}' זמין כעת לצפייה והדמיות אינטראקטיביות באפליקציה!`,
+                  en: `The dataset '${dataset.title}' is now available for interactive visualization in the app!`,
+                },
+              });
+            }
+          }
+        } else {
+          const isIdentical = areRecordsEqual(existingData, dataset);
+          if (!isIdentical) {
+            shouldWrite = true;
+            const wasSupported = existingData.isSupported === true;
+            const isNowSupported = dataset.isSupported === true;
+            if (!wasSupported && isNowSupported && !isFirstSync) {
+              // Visualizer supported transition alert
+              await broadcastAlert(db, {
+                type: "new_dataset",
+                datasetId: dataset.id,
+                title: {
+                  he: `מאגר מידע חדש זמין לצפייה: ${dataset.title}`,
+                  en: `New Visualizer Supported: ${dataset.title}`,
+                },
+                description: {
+                  he: `מאגר '${dataset.title}' זמין כעת לצפייה והדמיות אינטראקטיביות באפליקציה!`,
+                  en: `The dataset '${dataset.title}' is now available for interactive visualization in the app!`,
+                },
+              });
+            }
+          }
+        }
+
+        if (shouldWrite) {
+          batch.set(docRef, dataset, { merge: true });
+          changedCount++;
+          hasWrites = true;
+        }
         processedCount++;
       }
 
-      await batch.commit();
+      if (hasWrites) {
+        await batch.commit();
+      }
     }
-    logger.info(`Successfully synced ${processedCount} dataset metadata records.`);
+    logger.info(`Successfully synced ${processedCount} dataset metadata records. Changes: ${changedCount}`);
 
     // Retrieve total count of documents in the collection
     const countSnapshot = await targetRef.count().get();
     const totalRecords = countSnapshot.data().count;
 
-    const metadataRef = db.collection("dataset_metadata").doc(collectionName);
     await metadataRef.set(
       {
         id: collectionName,
@@ -159,7 +244,7 @@ export async function scrapeAndSyncDatasetMetadata(
       { merge: true },
     );
 
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, changedCount };
   } catch (error) {
     logger.error("Dataset metadata sync failed:", error);
     throw error;

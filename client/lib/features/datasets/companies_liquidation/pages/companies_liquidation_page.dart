@@ -199,16 +199,45 @@ class _CompaniesLiquidationScreenState
                           final isFav = widget.appState.isFavorite(
                             DatasetIds.companiesLiquidation,
                           );
-                          return IconButton(
-                            icon: Icon(
-                              isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav
-                                  ? AppColors.danger
-                                  : AppColors.textSecondary,
-                            ),
-                            onPressed: () => widget.appState.toggleFavorite(
-                              DatasetIds.companiesLiquidation,
-                            ),
+                          final isSubbed = widget.appState.isSubscribed(
+                            DatasetIds.companiesLiquidation,
+                          );
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: widget.appState.translate(
+                                  isSubbed
+                                      ? 'unsubscribe_tooltip'
+                                      : 'subscribe_tooltip',
+                                ),
+                                icon: Icon(
+                                  isSubbed
+                                      ? Icons.notifications_active
+                                      : Icons.notifications_none,
+                                  color: isSubbed
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () =>
+                                    widget.appState.toggleSubscription(
+                                      DatasetIds.companiesLiquidation,
+                                    ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  isFav
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFav
+                                      ? AppColors.danger
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () => widget.appState.toggleFavorite(
+                                  DatasetIds.companiesLiquidation,
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),

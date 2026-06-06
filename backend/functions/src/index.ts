@@ -18,13 +18,48 @@ import { scrapeAndSyncCarImporters } from "./scrapers/car_importers_scraper";
 import { scrapeAndSyncLocalMarketBonds } from "./scrapers/local_market_bonds_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
+import { notifySubscribers } from "./utils/alerts";
+
+export async function checkAndAlertForScraper(
+  db: admin.firestore.Firestore,
+  datasetId: string,
+  result: { count: number; changedCount?: number },
+  isFirstSync: boolean,
+): Promise<void> {
+  if (isFirstSync) {
+    logger.info(`Bypassing subscriber alerts for ${datasetId} (first sync).`);
+    return;
+  }
+  const changedCount = result.changedCount ?? 0;
+  if (changedCount > 0) {
+    logger.info(`Triggering subscriber alerts for ${datasetId}: ${changedCount} changed records.`);
+    const dirDoc = await db.collection("datasets_metadata").doc(datasetId).get();
+    const title = dirDoc.exists ? dirDoc.data()?.title || datasetId : datasetId;
+
+    await notifySubscribers(db, datasetId, {
+      type: "new_records",
+      datasetId,
+      recordCount: changedCount,
+      title: {
+        he: `נקלטו רשומות חדשות ב${title}`,
+        en: `New Records Ingested in ${title}`,
+      },
+      description: {
+        he: `נקלטו ${changedCount} רשומות חדשות במאגר '${title}'.`,
+        en: `Ingested ${changedCount} new records into '${title}' dataset.`,
+      },
+    });
+  } else {
+    logger.info(`No changed records for ${datasetId}. Alert skipped.`);
+  }
+}
 
 const scraperRegistry: Record<
   string,
   (
     db: admin.firestore.Firestore,
     options?: { forceFullSync?: boolean },
-  ) => Promise<{ count: number }>
+  ) => Promise<{ count: number; changedCount?: number }>
 > = {
   [DATASET_IDS.CELLULAR_ANTENNAS]: (db, opts) =>
     scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, opts),
@@ -347,6 +382,13 @@ export const runScraperPubSub = functions
 
     const tracker = ScraperTelemetryTracker.start(datasetId);
     try {
+      // Read metadata first to determine if it is the first sync
+      const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
+      const isFirstSync =
+        !metaDoc.exists ||
+        !metaDoc.data()?.lastUpdated ||
+        (metaDoc.data()?.recordCount || 0) === 0;
+
       // Ensure status is set to syncing in database
       await db
         .collection("dataset_metadata")
@@ -356,9 +398,13 @@ export const runScraperPubSub = functions
       const result = await scraper(db, { forceFullSync: true });
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
         count: result.count,
+        changedCount: result.changedCount,
       });
       await tracker.complete(db, result.count);
       await updateSchedulerOnComplete(db, datasetId, "idle");
+
+      // Notify subscribers if not first sync and changedCount > 0
+      await checkAndAlertForScraper(db, datasetId, result, isFirstSync);
     } catch (error) {
       const err = error as Error;
       logger.error(`runScraperPubSub failed for dataset: ${datasetId}`, {
@@ -505,6 +551,13 @@ function createManualSyncHandler(
 
     const tracker = ScraperTelemetryTracker.start(datasetId);
     try {
+      // Read metadata first to determine if it is the first sync
+      const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
+      const isFirstSync =
+        !metaDoc.exists ||
+        !metaDoc.data()?.lastUpdated ||
+        (metaDoc.data()?.recordCount || 0) === 0;
+
       // Set status to syncing in Firestore immediately
       await db
         .collection("dataset_metadata")
@@ -520,12 +573,18 @@ function createManualSyncHandler(
       const result = await scraper(db, { forceFullSync });
       logger.info(`manualSync for ${datasetId} sync completed successfully`, {
         count: result.count,
+        changedCount: result.changedCount,
       });
       await tracker.complete(db, result.count);
       await updateSchedulerOnComplete(db, datasetId, "idle");
+
+      // Notify subscribers if not first sync and changedCount > 0
+      await checkAndAlertForScraper(db, datasetId, result, isFirstSync);
+
       res.status(200).json({
         message: "Sync completed successfully",
         count: result.count,
+        changedCount: result.changedCount,
       });
     } catch (error) {
       const err = error as Error;

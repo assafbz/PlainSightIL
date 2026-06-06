@@ -238,16 +238,45 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                           final isFav = widget.appState.isFavorite(
                             DatasetIds.travelWarnings,
                           );
-                          return IconButton(
-                            icon: Icon(
-                              isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav
-                                  ? AppColors.danger
-                                  : AppColors.textSecondary,
-                            ),
-                            onPressed: () => widget.appState.toggleFavorite(
-                              DatasetIds.travelWarnings,
-                            ),
+                          final isSubbed = widget.appState.isSubscribed(
+                            DatasetIds.travelWarnings,
+                          );
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: widget.appState.translate(
+                                  isSubbed
+                                      ? 'unsubscribe_tooltip'
+                                      : 'subscribe_tooltip',
+                                ),
+                                icon: Icon(
+                                  isSubbed
+                                      ? Icons.notifications_active
+                                      : Icons.notifications_none,
+                                  color: isSubbed
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () =>
+                                    widget.appState.toggleSubscription(
+                                      DatasetIds.travelWarnings,
+                                    ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  isFav
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFav
+                                      ? AppColors.danger
+                                      : AppColors.textSecondary,
+                                ),
+                                onPressed: () => widget.appState.toggleFavorite(
+                                  DatasetIds.travelWarnings,
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),

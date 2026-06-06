@@ -102,6 +102,18 @@ service cloud.firestore {
                     && request.resource.data.updatedAt is timestamp
                     && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt']);
       allow delete: if false; // Deletion is managed by administrative cleanup systems only
+
+      match /alerts/{alertId} {
+        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+        allow create: if false; // Only written via Cloud Functions Admin SDK
+      }
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read, write: if request.auth != null && (
+        (resource == null && request.resource.data.userId == request.auth.uid) ||
+        (resource != null && resource.data.userId == request.auth.uid)
+      );
     }
 
     match /system_health/{document} {

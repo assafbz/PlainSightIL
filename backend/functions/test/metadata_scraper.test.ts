@@ -24,15 +24,21 @@ describe("scrapeAndSyncDatasetMetadata", () => {
 
     mockDocSet = vi.fn().mockResolvedValue(true);
 
+    const mockGet = vi.fn().mockResolvedValue({
+      exists: false,
+    });
+
     mockDoc = vi.fn().mockImplementation((docId) => {
       if (docId === "datasets_metadata") {
         return {
-          id: "mock-doc-id",
+          id: docId,
           set: mockDocSet,
+          get: mockGet,
         };
       }
       return {
         id: "mock-doc-id",
+        get: mockGet,
       };
     });
 
@@ -55,6 +61,13 @@ describe("scrapeAndSyncDatasetMetadata", () => {
     mockDb = {
       collection: mockCollection,
       batch: vi.fn().mockReturnValue(mockBatch),
+      getAll: vi.fn().mockImplementation(async (...refs) => {
+        return refs.map((ref) => ({
+          id: ref.id,
+          exists: false,
+          data: () => ({}),
+        }));
+      }),
     };
   });
 
@@ -130,20 +143,20 @@ describe("scrapeAndSyncDatasetMetadata", () => {
 
     // Verify first package (directly supported)
     const firstSetCall = mockBatch.set.mock.calls[0];
-    expect(firstSetCall[0]).toEqual({ id: "mock-doc-id" });
-    expect(mockDoc).toHaveBeenNthCalledWith(1, "8935c8e5-ec77-421f-af86-d970583195f8");
+    expect(firstSetCall[0].id).toBe("mock-doc-id");
+    expect(mockDoc).toHaveBeenCalledWith("8935c8e5-ec77-421f-af86-d970583195f8");
     expect(firstSetCall[1].isSupported).toBe(true);
     expect(firstSetCall[1].notes).toBe("HTML stripped notes description"); // HTML sanitized
     expect(firstSetCall[1].publisher).toBe("Ministry of Communications");
 
     // Verify second package (indirectly supported via resource)
     const secondSetCall = mockBatch.set.mock.calls[1];
-    expect(mockDoc).toHaveBeenNthCalledWith(2, "ff398c7e-c522-4ee8-a53a-312b188a573d"); // Resolves resource ID as document key
+    expect(mockDoc).toHaveBeenCalledWith("ff398c7e-c522-4ee8-a53a-312b188a573d"); // Resolves resource ID as document key
     expect(secondSetCall[1].isSupported).toBe(true);
 
     // Verify third package (not supported)
     const thirdSetCall = mockBatch.set.mock.calls[2];
-    expect(mockDoc).toHaveBeenNthCalledWith(3, "completely-unsupported-pkg-id");
+    expect(mockDoc).toHaveBeenCalledWith("completely-unsupported-pkg-id");
     expect(thirdSetCall[1].isSupported).toBe(false);
 
     expect(mockBatch.commit).toHaveBeenCalledTimes(1);
