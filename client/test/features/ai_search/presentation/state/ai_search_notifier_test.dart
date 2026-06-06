@@ -303,6 +303,21 @@ void main() {
       AppStateNotifier.isTesting = true;
     });
 
+    test('HTTP performSearch throws exception', () async {
+      AppStateNotifier.isTesting = false;
+      final mockClient = http_testing.MockClient((request) async {
+        throw Exception('Network connection error');
+      });
+
+      final notifier = AiSearchNotifier(appState: appState, client: mockClient);
+      await notifier.performSearch('toyota');
+
+      expect(notifier.isLoading, isFalse);
+      expect(notifier.searchResult, isNull);
+      expect(notifier.errorMessage, contains('Network connection error'));
+      AppStateNotifier.isTesting = true;
+    });
+
     test(
       'Fallback http.post when client is null using HttpOverrides',
       () async {
@@ -343,6 +358,7 @@ void main() {
     test(
       'SharedPreferences failures in load, save and clear are caught',
       () async {
+        SharedPreferences.resetStatic();
         SharedPreferencesStorePlatform.instance =
             ThrowingSharedPreferencesStore();
 
