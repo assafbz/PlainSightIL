@@ -34,6 +34,37 @@ class FakeQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakeFirebaseFirestore implements FirebaseFirestore {
+  final CollectionReference Function(String) collectionBuilder;
+  FakeFirebaseFirestore(this.collectionBuilder);
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String path) {
+    return collectionBuilder(path) as CollectionReference<Map<String, dynamic>>;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeCollectionReference
+    implements CollectionReference<Map<String, dynamic>> {
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? stream;
+  FakeCollectionReference({this.stream});
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #where) {
+      return this;
+    }
+    if (invocation.memberName == #snapshots) {
+      return stream ??
+          const Stream<QuerySnapshot<Map<String, dynamic>>>.empty();
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
+
 // Simple record class for generic testing
 class TestRecord {
   final String id;
@@ -265,6 +296,316 @@ void main() {
 
       expect(manager.isSyncing, isFalse);
       expect(stateChanged, isTrue);
+
+      await streamController.close();
+      manager.dispose();
+    });
+
+    Future<void> waitForCondition(
+      bool Function() condition, {
+      int timeoutMs = 1000,
+    }) async {
+      final startTime = DateTime.now();
+      while (!condition()) {
+        if (DateTime.now().difference(startTime).inMilliseconds > timeoutMs) {
+          throw TimeoutException('Condition not met within $timeoutMs ms');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    }
+
+    test(
+      'should run production path with forceProductionAsync and fetch delta',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        // Setup initial cache
+        const cachedJson =
+            '[{"id":"1","lastUpdated":"2026-06-01T00:00:00Z","val":"A"}]';
+        await prefs.setString('dataset_cache_$datasetId', cachedJson);
+
+        final streamController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference(stream: streamController.stream);
+        });
+
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        await manager.initialize(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          forceProductionAsync: true,
+        );
+
+        // Verify cached records loaded
+        await waitForCondition(() => manager.records.length == 1);
+        expect(manager.records.first.val, 'A');
+
+        // Add updates to stream
+        final updateDocs = [
+          FakeQueryDocumentSnapshot('1', {
+            'id': '1',
+            'lastUpdated': '2026-06-03T00:00:00Z',
+            'val': 'A-Updated',
+          }),
+          FakeQueryDocumentSnapshot('2', {
+            'id': '2',
+            'lastUpdated': '2026-06-04T00:00:00Z',
+            'val': 'B',
+          }),
+        ];
+        streamController.add(FakeQuerySnapshot(updateDocs));
+        await waitForCondition(() => manager.records.length == 2);
+
+        expect(manager.records[0].val, 'B');
+
+        await streamController.close();
+        manager.dispose();
+      },
+    );
+
+    test(
+      'should run production path with forceProductionAsync when Firebase is not initialized',
+      () async {
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = false;
+
+        await manager.initialize(isTesting: false, forceProductionAsync: true);
+
+        await waitForCondition(() => !manager.isLoading);
+        expect(manager.isLoading, isFalse);
+        expect(manager.isSyncing, isFalse);
+        manager.dispose();
+      },
+    );
+
+    test(
+      'should handle exceptions in production path when Firestore query throws',
+      () async {
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          throw Exception('Collection query exception');
+        });
+
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        await manager.initialize(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          forceProductionAsync: true,
+        );
+
+        await waitForCondition(() => !manager.isLoading);
+        expect(manager.isLoading, isFalse);
+        expect(manager.isSyncing, isFalse);
+        manager.dispose();
+      },
+    );
+
+    test('should cancel existing subscription on re-initialization', () async {
+      final streamController1 =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      final streamController2 =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      final manager = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+
+      await manager.initialize(
+        isTesting: false,
+        testFirestoreStream: streamController1.stream,
+      );
+
+      // Initialize again to trigger subscription cancellation
+      await manager.initialize(
+        isTesting: false,
+        testFirestoreStream: streamController2.stream,
+      );
+
+      await streamController1.close();
+      await streamController2.close();
+      manager.dispose();
+    });
+
+    test('should handle empty snapshot and update state', () async {
+      final streamController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      final manager = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+
+      await manager.initialize(
+        isTesting: false,
+        testFirestoreStream: streamController.stream,
+      );
+
+      streamController.add(FakeQuerySnapshot([]));
+      await waitForCondition(() => !manager.isLoading);
+
+      expect(manager.records, isEmpty);
+      expect(manager.isLoading, isFalse);
+      expect(manager.isSyncing, isFalse);
+
+      await streamController.close();
+      manager.dispose();
+    });
+
+    test(
+      'should handle cache parsing exceptions gracefully in production path',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('dataset_cache_$datasetId', '{corrupted_json');
+
+        final streamController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference(stream: streamController.stream);
+        });
+
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        await manager.initialize(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          forceProductionAsync: true,
+        );
+
+        streamController.add(FakeQuerySnapshot([]));
+        await waitForCondition(() => !manager.isLoading);
+        expect(manager.records, isEmpty);
+
+        await streamController.close();
+        manager.dispose();
+      },
+    );
+
+    test(
+      'should skip sync in production path if Firebase is not initialized',
+      () async {
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = false;
+
+        await manager.initialize(
+          isTesting: false,
+          testFirestoreStream: const Stream.empty(),
+          forceProductionAsync: true,
+        );
+
+        await waitForCondition(() => !manager.isLoading);
+        expect(manager.isLoading, isFalse);
+        expect(manager.isSyncing, isFalse);
+        manager.dispose();
+      },
+    );
+
+    test(
+      'should fallback to FirebaseFirestore.instance and handle exception if Firebase is not initialized',
+      () async {
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        await manager.initialize(
+          isTesting: false,
+          testFirestore: null,
+          forceProductionAsync: true,
+        );
+
+        await waitForCondition(() => !manager.isLoading);
+        expect(manager.isLoading, isFalse);
+        expect(manager.isSyncing, isFalse);
+        manager.dispose();
+      },
+    );
+
+    test('should handle stream errors in production path', () async {
+      final streamController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      final mockFirestore = FakeFirebaseFirestore((path) {
+        return FakeCollectionReference(stream: streamController.stream);
+      });
+
+      final manager = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+
+      AppStateNotifier.testIsFirebaseInitialized = true;
+
+      await manager.initialize(
+        isTesting: false,
+        testFirestore: mockFirestore,
+        forceProductionAsync: true,
+      );
+
+      streamController.addError('Production path stream error');
+      await waitForCondition(() => !manager.isSyncing);
+
+      expect(manager.isLoading, isFalse);
+      expect(manager.isSyncing, isFalse);
 
       await streamController.close();
       manager.dispose();

@@ -96,6 +96,7 @@ class DatasetSyncManager<T> {
     bool isTesting = false,
     FirebaseFirestore? testFirestore,
     Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream,
+    bool forceProductionAsync = false,
   }) async {
     if (_subscription != null) {
       await _subscription!.cancel();
@@ -125,7 +126,9 @@ class DatasetSyncManager<T> {
     }
 
     // 3. Test environment logic (connect synchronously to bypass SharedPreferences delays in tests)
-    final isTestEnv = testFirestore != null || testFirestoreStream != null;
+    final isTestEnv =
+        (testFirestore != null || testFirestoreStream != null) &&
+        !forceProductionAsync;
     if (isTestEnv) {
       _isSyncing = true;
       try {
