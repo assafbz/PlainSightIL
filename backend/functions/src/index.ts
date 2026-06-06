@@ -19,6 +19,7 @@ import { scrapeAndSyncLocalMarketBonds } from "./scrapers/local_market_bonds_scr
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 import { notifySubscribers } from "./utils/alerts";
+import { processAiSearch } from "./services/ai_search_service";
 
 export async function checkAndAlertForScraper(
   db: admin.firestore.Firestore,
@@ -687,3 +688,99 @@ export const onUserCreate = functions
 
 // Export internal helpers for testing purposes
 export { handleCors };
+
+/**
+ * HTTPS Cloud Function for executing AI-powered semantic search across public datasets.
+ * Enforces Firebase App Check and user authorization.
+ */
+export const aiSemanticSearch = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(async (req, res) => {
+    logger.info("aiSemanticSearch HTTPS trigger invoked");
+    if (handleCors(req, res)) return;
+
+    // 1. Validate request method
+    if (req.method !== "POST") {
+      logger.warn(`Rejected aiSemanticSearch request: method ${req.method} is not allowed.`);
+      res.status(405).json({
+        error: "Method Not Allowed",
+        message: "Semantic search must be a POST request.",
+      });
+      return;
+    }
+
+    // 2. Validate Firebase App Check token (only if not running in emulator)
+    if (process.env.FUNCTIONS_EMULATOR !== "true") {
+      const appCheckToken = req.headers["x-firebase-appcheck"] as string;
+      if (!appCheckToken) {
+        logger.warn("Rejected aiSemanticSearch request: missing App Check token.");
+        res.status(401).json({
+          error: "Unauthorized",
+          message: "Missing App Check token.",
+        });
+        return;
+      }
+      try {
+        await admin.appCheck().verifyToken(appCheckToken);
+      } catch (error) {
+        logger.error("Rejected aiSemanticSearch request: invalid App Check token.", error);
+        res.status(401).json({
+          error: "Unauthorized",
+          message: "Invalid App Check token.",
+        });
+        return;
+      }
+    } else {
+      logger.info("Bypassing App Check token validation (emulator mode).");
+    }
+
+    // 3. Validate user authentication (Bearer token)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      logger.warn("Rejected aiSemanticSearch request: missing or invalid authorization header.");
+      res.status(401).json({
+        error: "Unauthorized",
+        message: "Missing or invalid authorization header.",
+      });
+      return;
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    try {
+      await admin.auth().verifyIdToken(token);
+    } catch (error) {
+      logger.error("Rejected aiSemanticSearch request: invalid ID token.", error);
+      res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid ID token.",
+      });
+      return;
+    }
+
+    // 4. Validate body parameters
+    const { query, lang } = req.body || {};
+    if (!query || typeof query !== "string" || query.trim().length === 0 || query.trim().length > 200) {
+      logger.warn("Rejected aiSemanticSearch request: query must be a non-empty string under 200 characters.");
+      res.status(400).json({
+        error: "Bad Request",
+        message: "Query must be a non-empty string under 200 characters.",
+      });
+      return;
+    }
+
+    const cleanQuery = query.trim().replace(/<[^>]*>/g, ""); // strip simple HTML tags
+    const cleanLang = lang === "en" ? "en" : "he";
+
+    try {
+      const searchResult = await processAiSearch(db, cleanQuery, cleanLang);
+      res.status(200).json(searchResult);
+    } catch (error) {
+      const err = error as Error;
+      logger.error("AI semantic search execution failed:", err);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: "AI semantic search execution failed.",
+        details: err.message || String(error),
+      });
+    }
+  });

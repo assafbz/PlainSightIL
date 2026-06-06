@@ -12,6 +12,8 @@ import 'package:plainsight/features/datasets/car_importers/pages/car_importers_p
 import 'package:plainsight/features/datasets/travel_warnings/pages/travel_warnings_page.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/pages/local_market_bonds_page.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
+import 'package:plainsight/features/ai_search/presentation/widgets/ai_search_bar.dart';
+import 'package:plainsight/features/ai_search/presentation/pages/ai_search_page.dart';
 
 class DashboardScreen extends StatelessWidget {
   final AppStateNotifier appState;
@@ -447,6 +449,61 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // AI Search Bar
+            AiSearchBar(
+              appState: appState,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => AiSearchPage(
+                      appState: appState,
+                      onNavigate: (context, datasetId, docId) {
+                        Navigator.of(
+                          context,
+                        ).pop(); // Close search page overlay
+                        if (datasetId == DatasetIds.vehicleRecalls) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (context) => VehicleRecallsScreen(
+                                appState: appState,
+                                initialSelectedId: docId,
+                              ),
+                            ),
+                          );
+                        } else if (datasetId == DatasetIds.travelWarnings) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (context) => TravelWarningsScreen(
+                                appState: appState,
+                                initialSelectedId: docId,
+                              ),
+                            ),
+                          );
+                        } else if (datasetId == DatasetIds.cellularAntennas ||
+                            datasetId == DatasetIds.cellularPermits) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (context) => CellularAntennasScreen(
+                                appState: appState,
+                                initialFilterIndex:
+                                    datasetId == DatasetIds.cellularPermits
+                                    ? 1
+                                    : 0,
+                                initialSelectedId: docId,
+                              ),
+                            ),
+                          );
+                        } else {
+                          _openDataset(context, datasetId);
+                        }
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
 
             // Hero Mission Card
             GlassmorphicCard(

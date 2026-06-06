@@ -14,11 +14,13 @@ import '../widgets/map_controls_overlay.dart';
 class CellularAntennasScreen extends StatefulWidget {
   final AppStateNotifier appState;
   final int initialFilterIndex;
+  final String? initialSelectedId;
 
   const CellularAntennasScreen({
     super.key,
     required this.appState,
     this.initialFilterIndex = 0,
+    this.initialSelectedId,
   });
 
   @override
@@ -41,6 +43,7 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
   AnimationController? _mapAnimationController;
+  bool _deepLinkHandled = false;
 
   @override
   void initState() {
@@ -60,10 +63,15 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     );
     widget.appState.initAntennaListener();
     widget.appState.initPermitMetadataListener();
+    if (widget.initialSelectedId != null) {
+      widget.appState.addListener(_handleDeepLink);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
+    }
   }
 
   @override
   void dispose() {
+    widget.appState.removeListener(_handleDeepLink);
     widget.appState.cancelAntennaListener();
     widget.appState.cancelPermitMetadataListener();
     _radarController.dispose();
@@ -71,6 +79,88 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     _mapAnimationController?.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _handleDeepLink() {
+    if (_deepLinkHandled || widget.initialSelectedId == null) return;
+
+    final antennasLoading =
+        widget.appState.isLoadingAntennas &&
+        widget.appState.antennaRecords.isEmpty;
+    final permitsLoading =
+        widget.appState.isLoadingPermits &&
+        widget.appState.permitRecords.isEmpty;
+    if (antennasLoading && permitsLoading) return;
+
+    Map<String, dynamic>? targetAntenna;
+    for (final rec in widget.appState.antennaRecords) {
+      final id = rec['antennaId']?.toString() ?? rec['id']?.toString() ?? '';
+      if (id == widget.initialSelectedId) {
+        targetAntenna = rec;
+        break;
+      }
+    }
+
+    Map<String, dynamic>? targetPermit;
+    for (final rec in widget.appState.permitRecords) {
+      final id =
+          rec['referenceNumber']?.toString() ?? rec['id']?.toString() ?? '';
+      if (id == widget.initialSelectedId) {
+        targetPermit = rec;
+        break;
+      }
+    }
+
+    if (targetAntenna != null) {
+      _deepLinkHandled = true;
+      widget.appState.removeListener(_handleDeepLink);
+      setState(() {
+        _selectedFilterIndex = 0;
+        _selectedRecordId = widget.initialSelectedId;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToAndMoveMap(targetAntenna!);
+      });
+    } else if (targetPermit != null) {
+      _deepLinkHandled = true;
+      widget.appState.removeListener(_handleDeepLink);
+      setState(() {
+        _selectedFilterIndex = 1;
+        _selectedRecordId = widget.initialSelectedId;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToAndMoveMap(targetPermit!);
+      });
+    }
+  }
+
+  void _scrollToAndMoveMap(Map<String, dynamic> record) {
+    final coords = record['coordinates'];
+    if (coords is GeoPoint) {
+      _animatedMapMove(LatLng(coords.latitude, coords.longitude), 16.0);
+    }
+
+    final filtered = _getFilteredRecords();
+    final index = filtered.indexWhere((rec) {
+      final id =
+          rec['antennaId']?.toString() ??
+          rec['referenceNumber']?.toString() ??
+          rec['id']?.toString() ??
+          '';
+      return id == widget.initialSelectedId;
+    });
+
+    if (index != -1) {
+      try {
+        _itemScrollController.scrollTo(
+          index: index,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      } catch (e) {
+        // Safe fallback if controller is not attached yet
+      }
+    }
   }
 
   List<Map<String, dynamic>> _filterRecords(

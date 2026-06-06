@@ -9,9 +9,14 @@ import '../widgets/vehicle_recall_detail_drawer.dart';
 class VehicleRecallsScreen extends StatefulWidget {
   /// The global app state notifier.
   final AppStateNotifier appState;
+  final String? initialSelectedId;
 
   /// Constructor
-  const VehicleRecallsScreen({super.key, required this.appState});
+  const VehicleRecallsScreen({
+    super.key,
+    required this.appState,
+    this.initialSelectedId,
+  });
 
   @override
   State<VehicleRecallsScreen> createState() => _VehicleRecallsScreenState();
@@ -23,6 +28,7 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
   String _searchQuery = '';
   String _selectedManufacturer =
       'All'; // 'All' represents no manufacturer filtering
+  bool _deepLinkHandled = false;
 
   @override
   void initState() {
@@ -30,14 +36,44 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
     // Register the dataset in recent history
     widget.appState.addRecent(DatasetIds.vehicleRecalls);
     widget.appState.initRecallsListener();
+    if (widget.initialSelectedId != null) {
+      widget.appState.addListener(_handleDeepLink);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
+    }
   }
 
   @override
   void dispose() {
+    widget.appState.removeListener(_handleDeepLink);
     widget.appState.cancelRecallsListener();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _handleDeepLink() {
+    if (_deepLinkHandled || widget.initialSelectedId == null) return;
+    if (widget.appState.isLoadingRecalls) return;
+
+    final records = widget.appState.recallRecords;
+    if (records.isEmpty) return;
+
+    VehicleRecallRecordModel? targetRecord;
+    for (final r in records) {
+      if (r.id == widget.initialSelectedId ||
+          r.recallId.toString() == widget.initialSelectedId) {
+        targetRecord = r;
+        break;
+      }
+    }
+
+    if (targetRecord != null) {
+      _deepLinkHandled = true;
+      widget.appState.removeListener(_handleDeepLink);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showDetails(targetRecord!);
+      });
+    }
   }
 
   /// Extracts unique manufacturer names present in the records to build filter chips.

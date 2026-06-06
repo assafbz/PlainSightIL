@@ -9,9 +9,14 @@ import '../widgets/travel_warning_detail_drawer.dart';
 class TravelWarningsScreen extends StatefulWidget {
   /// The global app state notifier.
   final AppStateNotifier appState;
+  final String? initialSelectedId;
 
   /// Constructor
-  const TravelWarningsScreen({super.key, required this.appState});
+  const TravelWarningsScreen({
+    super.key,
+    required this.appState,
+    this.initialSelectedId,
+  });
 
   @override
   State<TravelWarningsScreen> createState() => _TravelWarningsScreenState();
@@ -22,6 +27,7 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   String _selectedContinent = 'All'; // 'All' represents no continent filtering
+  bool _deepLinkHandled = false;
 
   @override
   void initState() {
@@ -29,14 +35,44 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
     // Register the dataset in recent history
     widget.appState.addRecent(DatasetIds.travelWarnings);
     widget.appState.initTravelWarningsListener();
+    if (widget.initialSelectedId != null) {
+      widget.appState.addListener(_handleDeepLink);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
+    }
   }
 
   @override
   void dispose() {
+    widget.appState.removeListener(_handleDeepLink);
     widget.appState.cancelTravelWarningsListener();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _handleDeepLink() {
+    if (_deepLinkHandled || widget.initialSelectedId == null) return;
+    if (widget.appState.isLoadingWarnings) return;
+
+    final records = widget.appState.warningRecords;
+    if (records.isEmpty) return;
+
+    TravelWarningRecordModel? targetRecord;
+    for (final r in records) {
+      if (r.id == widget.initialSelectedId ||
+          r.country == widget.initialSelectedId) {
+        targetRecord = r;
+        break;
+      }
+    }
+
+    if (targetRecord != null) {
+      _deepLinkHandled = true;
+      widget.appState.removeListener(_handleDeepLink);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showDetails(targetRecord!);
+      });
+    }
   }
 
   /// Extracts unique continent names present in the records to build filter chips.
