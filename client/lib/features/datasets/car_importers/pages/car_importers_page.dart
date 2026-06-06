@@ -149,8 +149,6 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.appState.locale == 'he';
-    final list = _getFilteredRecords();
-    final makers = _getUniqueMakers();
 
     return Scaffold(
       backgroundColor: AppColors.baseBg,
@@ -287,194 +285,238 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Makers Horizontal Chips Row
-                  if (makers.length > 1)
-                    SizedBox(
-                      height: 40,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: makers.length,
-                        itemBuilder: (context, index) =>
-                            _buildFilterChip(makers[index]),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // 4. Main Results list
+                  // 3 & 4. ListenableBuilder containing Filter Chips & Results List
                   Expanded(
                     child: ListenableBuilder(
                       listenable: widget.appState,
                       builder: (context, _) {
-                        if (widget.appState.isLoadingCarImporters) {
-                          return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
+                        final list = _getFilteredRecords();
+                        final makers = _getUniqueMakers();
 
-                        if (list.isEmpty) {
-                          return Center(
-                            child: Text(
-                              widget.appState.translate('no_results'),
-                              style: AppTypography.bodyLg(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: list.length,
-                          itemBuilder: (context, index) {
-                            final item = list[index];
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceLow.withAlpha(120),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.glassBorder,
-                                  width: 1.0,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (makers.length > 1) ...[
+                              SizedBox(
+                                height: 40,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: makers.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildFilterChip(makers[index]),
                                 ),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  onTap: () => _showDetails(item),
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      border: BorderDirectional(
-                                        start: BorderSide(
-                                          color: Color(0xFF00ACC1),
-                                          width: 4,
+                              const SizedBox(height: 16),
+                            ],
+                            Expanded(
+                              child: widget.appState.isLoadingCarImporters
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : list.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        widget.appState.translate('no_results'),
+                                        style: AppTypography.bodyLg(
+                                          context,
+                                          color: AppColors.textTertiary,
                                         ),
                                       ),
-                                    ),
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Header Row: Commercial name & Price
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.commercialName.isNotEmpty
-                                                    ? item.commercialName
-                                                    : item.modelName,
-                                                style:
-                                                    AppTypography.bodyLg(
-                                                      context,
-                                                      color:
-                                                          AppColors.textPrimary,
-                                                    ).copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            if (item.price != null)
-                                              Text(
-                                                isRtl
-                                                    ? '${item.price} ₪'
-                                                    : '₪${item.price}',
-                                                style:
-                                                    AppTypography.bodyLg(
-                                                      context,
-                                                      color: AppColors.success,
-                                                    ).copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontFamily: 'Outfit',
-                                                    ),
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
+                                    )
+                                  : ListView.builder(
+                                      controller: _scrollController,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: list.length,
+                                      itemBuilder: (context, index) {
+                                        final item = list[index];
 
-                                        // Subtitle: Maker Name and Importer Name
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              item.makerName,
-                                              style: AppTypography.bodySm(
-                                                context,
-                                                color: AppColors.textSecondary,
-                                              ),
+                                        return Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 12.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceLow
+                                                .withAlpha(120),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
                                             ),
-                                            if (item.productionYear != null)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFF00ACC1,
-                                                  ).withAlpha(20),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                    color: const Color(
-                                                      0xFF00ACC1,
-                                                    ).withAlpha(50),
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  item.productionYear
-                                                      .toString(),
-                                                  style: AppTypography.labelXs(
-                                                    context,
-                                                    color: const Color(
-                                                      0xFF00ACC1,
+                                            border: Border.all(
+                                              color: AppColors.glassBorder,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            child: InkWell(
+                                              onTap: () => _showDetails(item),
+                                              child: Container(
+                                                decoration: const BoxDecoration(
+                                                  border: BorderDirectional(
+                                                    start: BorderSide(
+                                                      color: Color(0xFF00ACC1),
+                                                      width: 4,
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-
-                                        // Footer: Importer Name
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.importerName,
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: AppColors.textTertiary,
+                                                padding: const EdgeInsets.all(
+                                                  16.0,
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Header Row: Commercial name & Price
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            item
+                                                                    .commercialName
+                                                                    .isNotEmpty
+                                                                ? item.commercialName
+                                                                : item.modelName,
+                                                            style:
+                                                                AppTypography.bodyLg(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .textPrimary,
+                                                                ).copyWith(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        if (item.price != null)
+                                                          Text(
+                                                            isRtl
+                                                                ? '${item.price} ₪'
+                                                                : '₪${item.price}',
+                                                            style:
+                                                                AppTypography.bodyLg(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .success,
+                                                                ).copyWith(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontFamily:
+                                                                      'Outfit',
+                                                                ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 8),
+
+                                                    // Subtitle: Maker Name and Importer Name
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      children: [
+                                                        Text(
+                                                          item.makerName,
+                                                          style: AppTypography.bodySm(
+                                                            context,
+                                                            color: AppColors
+                                                                .textSecondary,
+                                                          ),
+                                                        ),
+                                                        if (item.productionYear !=
+                                                            null)
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 8,
+                                                                  vertical: 2,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF00ACC1,
+                                                                  ).withAlpha(
+                                                                    20,
+                                                                  ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
+                                                              border: Border.all(
+                                                                color:
+                                                                    const Color(
+                                                                      0xFF00ACC1,
+                                                                    ).withAlpha(
+                                                                      50,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              item.productionYear
+                                                                  .toString(),
+                                                              style: AppTypography.labelXs(
+                                                                context,
+                                                                color:
+                                                                    const Color(
+                                                                      0xFF00ACC1,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 8),
+
+                                                    // Footer: Importer Name
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            item.importerName,
+                                                            style: AppTypography.labelXs(
+                                                              context,
+                                                              color: AppColors
+                                                                  .textTertiary,
+                                                            ),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            maxLines: 1,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                      ],
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                            ),
+                          ],
                         );
                       },
                     ),

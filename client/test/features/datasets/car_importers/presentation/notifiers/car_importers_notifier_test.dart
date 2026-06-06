@@ -44,6 +44,9 @@ class FakeCollectionReference
     if (invocation.memberName == #snapshots) {
       return _stream;
     }
+    if (invocation.memberName == #orderBy || invocation.memberName == #limit) {
+      return this;
+    }
     return super.noSuchMethod(invocation);
   }
 }

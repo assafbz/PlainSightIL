@@ -64,32 +64,31 @@ class CarImporterRecordModel {
     this.lastUpdated,
   });
 
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
   /// Factory constructor to parse a Firestore document mapping into the model.
   factory CarImporterRecordModel.fromMap(Map<String, dynamic> map) {
     return CarImporterRecordModel(
-      id: map['id'] as String? ?? '',
-      idNum: (map['_id'] as num? ?? 0).toInt(),
-      importerCode: map['importerCode'] != null
-          ? (map['importerCode'] as num).toInt()
-          : null,
-      importerName: map['importerName'] as String? ?? '',
-      modelType: map['modelType'] as String? ?? '',
-      makerCode: map['makerCode'] != null
-          ? (map['makerCode'] as num).toInt()
-          : null,
-      makerName: map['makerName'] as String? ?? '',
-      modelCode: map['modelCode'] != null
-          ? (map['modelCode'] as num).toInt()
-          : null,
-      modelName: map['modelName'] as String? ?? '',
-      productionYear: map['productionYear'] != null
-          ? (map['productionYear'] as num).toInt()
-          : null,
-      price: map['price'] != null ? (map['price'] as num).toInt() : null,
-      commercialName: map['commercialName'] as String? ?? '',
-      createdAt: map['createdAt'] as String?,
-      updatedAt: map['updatedAt'] as String?,
-      lastUpdated: map['lastUpdated'] as String?,
+      id: map['id']?.toString() ?? '',
+      idNum: _parseInt(map['_id']) ?? 0,
+      importerCode: _parseInt(map['importerCode']),
+      importerName: map['importerName']?.toString() ?? '',
+      modelType: map['modelType']?.toString() ?? '',
+      makerCode: _parseInt(map['makerCode']),
+      makerName: map['makerName']?.toString() ?? '',
+      modelCode: _parseInt(map['modelCode']),
+      modelName: map['modelName']?.toString() ?? '',
+      productionYear: _parseInt(map['productionYear']),
+      price: _parseInt(map['price']),
+      commercialName: map['commercialName']?.toString() ?? '',
+      createdAt: map['createdAt']?.toString(),
+      updatedAt: map['updatedAt']?.toString(),
+      lastUpdated: map['lastUpdated']?.toString(),
     );
   }
 
