@@ -401,6 +401,18 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                               item.warningLevel,
                             );
 
+                            final dateToShow =
+                                (item.date != null &&
+                                    item.date!.trim().isNotEmpty)
+                                ? item.date!
+                                : (item.lastUpdated != null &&
+                                      item.lastUpdated!.trim().isNotEmpty)
+                                ? item.lastUpdated!
+                                : (item.createdAt != null &&
+                                      item.createdAt!.trim().isNotEmpty)
+                                ? item.createdAt!
+                                : '';
+
                             // Clean HTML from recommendation summary to display plain text
                             final cleanRecSummary = item.recommendations
                                 .replaceAll(RegExp(r'<[^>]*>'), '')
@@ -520,15 +532,14 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 8),
-                                            if (item.date != null &&
-                                                item.date!.isNotEmpty)
+                                            if (dateToShow.isNotEmpty)
                                               Text(
-                                                item.date!.length >= 10
-                                                    ? item.date!.substring(
+                                                dateToShow.length >= 10
+                                                    ? dateToShow.substring(
                                                         0,
                                                         10,
                                                       )
-                                                    : item.date!,
+                                                    : dateToShow,
                                                 style:
                                                     AppTypography.labelXs(
                                                       context,

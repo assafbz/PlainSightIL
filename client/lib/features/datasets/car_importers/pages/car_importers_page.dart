@@ -23,6 +23,18 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
   String _searchQuery = '';
   String _selectedMaker = 'All';
 
+  /// Formats pricing to a localized string with commas.
+  String _formatPrice(int? price) {
+    if (price == null) return '';
+    final isRtl = widget.appState.locale == 'he';
+    final reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    final formatted = price.toString().replaceAllMapped(
+      reg,
+      (Match m) => '${m[1]},',
+    );
+    return isRtl ? '$formatted ₪' : '₪$formatted';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -436,9 +448,9 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
                                                         ),
                                                         if (item.price != null)
                                                           Text(
-                                                            isRtl
-                                                                ? '${item.price} ₪'
-                                                                : '₪${item.price}',
+                                                            _formatPrice(
+                                                              item.price,
+                                                            ),
                                                             style:
                                                                 AppTypography.bodyLg(
                                                                   context,
@@ -462,16 +474,25 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
                                                           MainAxisAlignment
                                                               .spaceBetween,
                                                       children: [
-                                                        Text(
-                                                          item.makerName,
-                                                          style: AppTypography.bodySm(
-                                                            context,
-                                                            color: AppColors
-                                                                .textSecondary,
+                                                        Expanded(
+                                                          child: Text(
+                                                            item.makerName,
+                                                            style: AppTypography.bodySm(
+                                                              context,
+                                                              color: AppColors
+                                                                  .textSecondary,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
                                                           ),
                                                         ),
                                                         if (item.productionYear !=
-                                                            null)
+                                                            null) ...[
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
                                                           Container(
                                                             padding:
                                                                 const EdgeInsets.symmetric(
@@ -510,6 +531,7 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
                                                               ),
                                                             ),
                                                           ),
+                                                        ],
                                                       ],
                                                     ),
                                                     const SizedBox(height: 8),

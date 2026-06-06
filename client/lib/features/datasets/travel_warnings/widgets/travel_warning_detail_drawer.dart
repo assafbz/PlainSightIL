@@ -130,6 +130,14 @@ class TravelWarningDetailDrawer extends StatelessWidget {
         .replaceAll('&nbsp;', ' ')
         .trim();
 
+    final dateToShow = (record.date != null && record.date!.trim().isNotEmpty)
+        ? record.date!
+        : (record.lastUpdated != null && record.lastUpdated!.trim().isNotEmpty)
+        ? record.lastUpdated!
+        : (record.createdAt != null && record.createdAt!.trim().isNotEmpty)
+        ? record.createdAt!
+        : '';
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.glassBg,
@@ -245,14 +253,14 @@ class TravelWarningDetailDrawer extends StatelessWidget {
                     label: appState.translate('office_label'),
                     value: record.office.isNotEmpty ? record.office : 'לא ידוע',
                   ),
-                  if (record.date != null && record.date!.isNotEmpty)
+                  if (dateToShow.isNotEmpty)
                     _buildDetailRow(
                       context,
                       icon: Icons.calendar_today_outlined,
                       label: appState.translate('date_label'),
-                      value: record.date!.length >= 10
-                          ? record.date!.substring(0, 10)
-                          : record.date!,
+                      value: dateToShow.length >= 10
+                          ? dateToShow.substring(0, 10)
+                          : dateToShow,
                     ),
 
                   const SizedBox(height: 20),
