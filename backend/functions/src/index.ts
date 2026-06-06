@@ -775,7 +775,11 @@ export const aiSemanticSearch = functions
       return;
     }
 
-    const cleanQuery = query.trim().replace(/<[^>]*>/g, ""); // strip simple HTML tags
+    const cleanQuery = query
+      .trim()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
     const cleanLang = lang === "en" ? "en" : "he";
 
     try {
