@@ -117,7 +117,8 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
   const specialtyName = record["שם התמחות"] ? String(record["שם התמחות"]).trim() : null;
 
   const sourceCreatedAt = licenseRegistrationDate || new Date().toISOString();
-  const sourceUpdatedAt = specialtyRegistrationDate || licenseRegistrationDate || new Date().toISOString();
+  const sourceUpdatedAt =
+    specialtyRegistrationDate || licenseRegistrationDate || new Date().toISOString();
 
   return {
     id,

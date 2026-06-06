@@ -470,8 +470,16 @@ export abstract class BaseScraper<
           r.sourceCreatedAt = existingData.sourceCreatedAt || existingData.lastUpdated || nowStr;
           r.sourceUpdatedAt = existingData.sourceUpdatedAt || existingData.lastUpdated || nowStr;
         } else {
-          r.sourceCreatedAt = originalIncomingSourceCreatedAt || existingData.sourceCreatedAt || existingData.lastUpdated || nowStr;
-          r.sourceUpdatedAt = originalIncomingSourceUpdatedAt || existingData.sourceUpdatedAt || existingData.lastUpdated || nowStr;
+          r.sourceCreatedAt =
+            originalIncomingSourceCreatedAt ||
+            existingData.sourceCreatedAt ||
+            existingData.lastUpdated ||
+            nowStr;
+          r.sourceUpdatedAt =
+            originalIncomingSourceUpdatedAt ||
+            existingData.sourceUpdatedAt ||
+            existingData.lastUpdated ||
+            nowStr;
         }
       } else {
         r.createdAt = nowStr;
@@ -553,7 +561,9 @@ export abstract class BaseScraper<
       {
         id: this.datasetId,
         activeCollection: this.targetCollection,
-        createdAt: metaDoc.exists ? (metaDoc.data()?.createdAt || metaDoc.data()?.lastUpdated || nowStr) : nowStr,
+        createdAt: metaDoc.exists
+          ? metaDoc.data()?.createdAt || metaDoc.data()?.lastUpdated || nowStr
+          : nowStr,
         updatedAt: nowStr,
         lastUpdated: nowStr, // Keep for backward compatibility
         recordCount: totalRecords,

@@ -138,7 +138,8 @@ export class MetadataScraper extends BaseScraper<CKANPackage, DatasetMetadata> {
     const notes = sanitizeNotes(raw.notes);
     const publisher = (raw.organization?.title ?? "לא ידוע").trim();
     const resourceCount = raw.num_resources ?? 0;
-    const sourceCreatedAt = raw.metadata_created ?? raw.metadata_modified ?? new Date().toISOString();
+    const sourceCreatedAt =
+      raw.metadata_created ?? raw.metadata_modified ?? new Date().toISOString();
     const sourceUpdatedAt = raw.metadata_modified ?? new Date().toISOString();
     const tags = (raw.tags ?? []).map((t) => (t.name ?? "").trim()).filter(Boolean);
 
