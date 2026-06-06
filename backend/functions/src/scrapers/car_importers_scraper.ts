@@ -1,9 +1,10 @@
 import * as admin from "firebase-admin";
-import { AppLogger as logger } from "../utils/logger";
-import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
+/**
+ * Raw record format received from data.gov.il CKAN datastore API.
+ */
 export interface HebrewCarImporterRecord {
   _id: number;
   semel_yevuan?: number | string | null;
@@ -18,6 +19,9 @@ export interface HebrewCarImporterRecord {
   kinuy_mishari?: string | null;
 }
 
+/**
+ * Normalized and sanitized record written to Firestore.
+ */
 export interface CarImporterRecord {
   id: string;
   _id: number;
@@ -36,6 +40,12 @@ export interface CarImporterRecord {
   updatedAt?: string;
 }
 
+/**
+ * Maps a raw Hebrew car importer record into the clean, typed CarImporterRecord format.
+ *
+ * @param record Raw record from the API.
+ * @returns Mapped record, or null if key fields are missing or invalid.
+ */
 export function parseCarImporterRecord(record: HebrewCarImporterRecord): CarImporterRecord | null {
   const rawId = record._id;
   if (rawId === undefined || rawId === null) {
@@ -83,124 +93,44 @@ export function parseCarImporterRecord(record: HebrewCarImporterRecord): CarImpo
   };
 }
 
+/**
+ * Scraper class for Car Importers dataset.
+ */
+export class CarImportersScraper extends BaseScraper<HebrewCarImporterRecord, CarImporterRecord> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.CAR_IMPORTERS;
+  override readonly updateIntervalHours = 168; // weekly
+
+  constructor(resourceId = DATASET_IDS.CAR_IMPORTERS) {
+    super();
+    this.datasetId = resourceId;
+  }
+
+  /**
+   * Parses a raw car importer record.
+   *
+   * @param raw The raw record.
+   * @returns Mapped record, or null if invalid.
+   */
+  parseRecord(raw: HebrewCarImporterRecord): CarImporterRecord | null {
+    return parseCarImporterRecord(raw);
+  }
+}
+
+/**
+ * Scrapes car importers from data.gov.il datastore API and syncs them in-place.
+ * Backward-compatible wrapper function.
+ *
+ * @param db Firestore database instance.
+ * @param resourceId Official resource identifier from data.gov.il.
+ * @param options Synchronizer options.
+ * @returns Execution outcome metrics.
+ */
 export async function scrapeAndSyncCarImporters(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.CAR_IMPORTERS,
-  options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = DATASET_IDS.CAR_IMPORTERS;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
-  try {
-    const targetCollection = DATASET_IDS.CAR_IMPORTERS;
-    logger.info(`Starting car importers sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    const forceFullSync = options?.forceFullSync === true;
-    let offset = 0;
-    const limit = isEmulator && !forceFullSync ? 100 : 10000;
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
-      logger.info(`Fetching car importers data from: ${url}`);
-
-      const response = await axios.get(url, { timeout: 15000 });
-      const records: HebrewCarImporterRecord[] = response.data?.result?.records ?? [];
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const parsedRecords: CarImporterRecord[] = [];
-      for (const rec of records) {
-        const parsed = parseCarImporterRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-        }
-      }
-
-      for (let i = 0; i < parsedRecords.length; i += 500) {
-        const chunk = parsedRecords.slice(i, i + 500);
-        const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingMap = new Map<string, admin.firestore.DocumentData>();
-        for (const snap of snapshots) {
-          const data = snap.data();
-          if (snap.exists && data) {
-            existingMap.set(snap.id, data);
-          }
-        }
-
-        const batch = db.batch();
-        let hasWrites = false;
-
-        for (const r of chunk) {
-          const docRef = targetRef.doc(r.id);
-          const existingData = existingMap.get(r.id);
-
-          r.lastUpdated = r.lastUpdated || now;
-          if (existingData) {
-            const isIdentical = areRecordsEqual(existingData, r);
-            if (isIdentical) {
-              processedCount++;
-              continue;
-            }
-            r.createdAt = existingData.createdAt || now;
-            r.updatedAt = now;
-          } else {
-            r.createdAt = now;
-            r.updatedAt = now;
-          }
-
-          batch.set(docRef, r);
-          hasWrites = true;
-          processedCount++;
-          changedCount++;
-        }
-
-        if (hasWrites) {
-          await batch.commit();
-        }
-      }
-
-      if (isEmulator && !forceFullSync) {
-        hasMore = false;
-        break;
-      }
-
-      offset += limit;
-    }
-
-    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
-
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated car importers metadata. Ingestion complete.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Car importers scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new CarImportersScraper(resourceId);
+  return scraper.scrape(db, options);
 }

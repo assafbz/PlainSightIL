@@ -96,6 +96,7 @@ describe("Car Importers Ingest Sync Process", () => {
   let mockCollection: any;
   let mockDoc: any;
   let mockMetadataSet: any;
+  let mockMetadataGet: any;
   let mockCountGet: any;
   let mockGetAll: any;
 
@@ -103,10 +104,15 @@ describe("Car Importers Ingest Sync Process", () => {
     vi.clearAllMocks();
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
+    mockMetadataGet = vi.fn().mockResolvedValue({
+      exists: false,
+      data: () => ({}),
+    });
 
     mockDoc = vi.fn().mockImplementation((id) => {
       if (id === DATASET_IDS.CAR_IMPORTERS) {
         return {
+          get: mockMetadataGet,
           set: mockMetadataSet,
         };
       }

@@ -179,7 +179,7 @@ describe("scrapeAndSyncDatasetMetadata", () => {
     // 1. Mock isFirstSync = false
     const mockGet = vi.fn().mockResolvedValue({
       exists: true,
-      data: () => ({ lastUpdated: "2026-06-05T00:00:00Z" }),
+      data: () => ({ lastUpdated: "2026-06-05T00:00:00Z", recordCount: 3 }),
     });
 
     mockDoc = vi.fn().mockImplementation((docId) => {

@@ -105,6 +105,7 @@ describe("Companies Liquidation Scraper Ingestion", () => {
   let mockCollection: any;
   let mockDoc: any;
   let mockMetadataSet: any;
+  let mockMetadataGet: any;
   let mockCountGet: any;
   let mockGetAll: any;
 
@@ -114,10 +115,15 @@ describe("Companies Liquidation Scraper Ingestion", () => {
     vi.clearAllMocks();
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
+    mockMetadataGet = vi.fn().mockResolvedValue({
+      exists: false,
+      data: () => ({}),
+    });
 
     mockDoc = vi.fn().mockImplementation((id) => {
       if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
         return {
+          get: mockMetadataGet,
           set: mockMetadataSet,
         };
       }

@@ -1,9 +1,10 @@
 import * as admin from "firebase-admin";
-import { AppLogger as logger } from "../utils/logger";
-import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
+/**
+ * Interface representing the raw record layout received from data.gov.il CKAN datastore API.
+ */
 export interface HebrewVehicleRecallRecord {
   _id: number;
   RECALL_ID?: number | string;
@@ -23,6 +24,9 @@ export interface HebrewVehicleRecallRecord {
   WEBSITE?: string;
 }
 
+/**
+ * Interface representing the normalized and sanitized record written to Firestore.
+ */
 export interface VehicleRecallRecord {
   id: string;
   _id: number;
@@ -69,6 +73,12 @@ function parseDateString(rawDate: unknown): string {
   return "";
 }
 
+/**
+ * Translates and normalizes raw Hebrew recall type.
+ *
+ * @param rawValue The raw Hebrew recall type.
+ * @returns Localized recall type object.
+ */
 export function getTranslatedRecallType(rawValue: string): { he: string; en: string } {
   const normalized = (rawValue || "").trim();
   let english = "Recall";
@@ -82,6 +92,13 @@ export function getTranslatedRecallType(rawValue: string): { he: string; en: str
   return { he: normalized, en: english };
 }
 
+/**
+ * Maps a raw Hebrew database record into the clean, typed VehicleRecallRecord format.
+ * Sanitizes input and enforces numeric checks.
+ *
+ * @param record The raw record from the API.
+ * @returns Mapped record, or null if key fields are missing or invalid.
+ */
 export function parseRecallRecord(record: HebrewVehicleRecallRecord): VehicleRecallRecord | null {
   const rawRecallId = record.RECALL_ID;
   const rawId = record._id;
@@ -137,164 +154,93 @@ export function parseRecallRecord(record: HebrewVehicleRecallRecord): VehicleRec
   };
 }
 
+/**
+ * Scraper class for Vehicle Recalls dataset.
+ */
+export class VehicleRecallsScraper extends BaseScraper<
+  HebrewVehicleRecallRecord,
+  VehicleRecallRecord
+> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.VEHICLE_RECALLS;
+  override readonly updateIntervalHours = 168; // weekly
+
+  constructor(resourceId = DATASET_IDS.VEHICLE_RECALLS) {
+    super();
+    this.datasetId = resourceId;
+  }
+
+  /**
+   * Parses a raw vehicle recall record.
+   *
+   * @param raw The raw record.
+   * @returns Mapped record, or null if invalid.
+   */
+  parseRecord(raw: HebrewVehicleRecallRecord): VehicleRecallRecord | null {
+    return parseRecallRecord(raw);
+  }
+
+  /**
+   * Returns mock records for emulator seeding.
+   *
+   * @returns Array of mock records.
+   */
+  protected override getMockRecords(): HebrewVehicleRecallRecord[] {
+    return [
+      {
+        _id: 1,
+        RECALL_ID: 11020,
+        TOZAR_CD: 1,
+        TOZAR_TEUR: "TOYOTA",
+        DEGEM: "AVENSIS",
+        SHNAT_RECALL: 2011,
+        BUILD_BEGIN_A: "2000-01-02",
+        BUILD_END_A: "2008-12-31",
+        SUG_RECALL: "תקלה סידרתית בטיחותית",
+        SUG_TAKALA: "מנוע ומערכותיו",
+        TEUR_TAKALA: "שסתום צינור דלק אוונסיס",
+        OFEN_TIKUN: "החלפה",
+        TKINA_EU: "M1",
+        YEVUAN_TEUR: "יוניון מוטורס בעמ",
+        TELEPHONE: "1-800-22-1514",
+        WEBSITE: "WWW.TOYOTA.CO.IL/SERVICE-AND-ACCESSORIES/RECALL",
+      },
+      {
+        _id: 3,
+        RECALL_ID: 11029,
+        TOZAR_CD: 105,
+        TOZAR_TEUR: "SUZUKI MOTORCYCLES",
+        DEGEM: "EXEL  SUZUK",
+        SHNAT_RECALL: 2011,
+        BUILD_BEGIN_A: "2010-01-03",
+        BUILD_END_A: "2010-12-31",
+        SUG_RECALL: "קמפיין שרות טכני",
+        SUG_TAKALA: "מנוע ומערכותיו",
+        TEUR_TAKALA: "וסת מתח",
+        OFEN_TIKUN: "החלפה",
+        TKINA_EU: "L1",
+        YEVUAN_TEUR: "אבניר חברה לרכב בעמ",
+        TELEPHONE: "03-5158856/7",
+        WEBSITE: "WWW.OFERAVNIR.CO.IL/RECALLS",
+      },
+    ];
+  }
+}
+
+/**
+ * Scrapes vehicle recalls from data.gov.il datastore API and syncs them in-place to Firestore.
+ * Backward-compatible wrapper function.
+ *
+ * @param db The Firestore database reference.
+ * @param resourceId The resource ID for data.gov.il API.
+ * @param options Synchronizer options.
+ * @returns Success status and count of processed records.
+ */
 export async function scrapeAndSyncVehicleRecalls(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.VEHICLE_RECALLS,
-  options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = resourceId;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-  try {
-    const targetCollection = DATASET_IDS.VEHICLE_RECALLS;
-    logger.info(`Starting vehicle recalls sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    const forceFullSync = options?.forceFullSync === true;
-    let offset = 0;
-    const limit = isEmulator ? 100 : 10000;
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
-      logger.info(`Fetching vehicle recalls data from: ${url}`);
-
-      let records: HebrewVehicleRecallRecord[] = [];
-      if (isEmulator && !forceFullSync) {
-        records = [
-          {
-            _id: 1,
-            RECALL_ID: 11020,
-            TOZAR_CD: 1,
-            TOZAR_TEUR: "TOYOTA",
-            DEGEM: "AVENSIS",
-            SHNAT_RECALL: 2011,
-            BUILD_BEGIN_A: "2000-01-02",
-            BUILD_END_A: "2008-12-31",
-            SUG_RECALL: "תקלה סידרתית בטיחותית",
-            SUG_TAKALA: "מנוע ומערכותיו",
-            TEUR_TAKALA: "שסתום צינור דלק אוונסיס",
-            OFEN_TIKUN: "החלפה",
-            TKINA_EU: "M1",
-            YEVUAN_TEUR: "יוניון מוטורס בעמ",
-            TELEPHONE: "1-800-22-1514",
-            WEBSITE: "WWW.TOYOTA.CO.IL/SERVICE-AND-ACCESSORIES/RECALL",
-          },
-          {
-            _id: 3,
-            RECALL_ID: 11029,
-            TOZAR_CD: 105,
-            TOZAR_TEUR: "SUZUKI MOTORCYCLES",
-            DEGEM: "EXEL  SUZUK",
-            SHNAT_RECALL: 2011,
-            BUILD_BEGIN_A: "2010-01-03",
-            BUILD_END_A: "2010-12-31",
-            SUG_RECALL: "קמפיין שרות טכני",
-            SUG_TAKALA: "מנוע ומערכותיו",
-            TEUR_TAKALA: "וסת מתח",
-            OFEN_TIKUN: "החלפה",
-            TKINA_EU: "L1",
-            YEVUAN_TEUR: "אבניר חברה לרכב בעמ",
-            TELEPHONE: "03-5158856/7",
-            WEBSITE: "WWW.OFERAVNIR.CO.IL/RECALLS",
-          },
-        ];
-      } else {
-        const response = await axios.get(url, { timeout: 15000 });
-        records = response.data?.result?.records ?? [];
-      }
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const parsedRecords: VehicleRecallRecord[] = [];
-      for (const rec of records) {
-        const parsed = parseRecallRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-        }
-      }
-
-      for (let i = 0; i < parsedRecords.length; i += 500) {
-        const chunk = parsedRecords.slice(i, i + 500);
-        const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-        // Lookup existing documents in batch to retain their original createdAt timestamp
-        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingMap = new Map<string, admin.firestore.DocumentData>();
-        for (const snap of snapshots) {
-          const data = snap.data();
-          if (snap.exists && data) {
-            existingMap.set(snap.id, data);
-          }
-        }
-
-        const batch = db.batch();
-        let hasWrites = false;
-        for (const r of chunk) {
-          const docRef = targetRef.doc(r.id);
-          const existingData = existingMap.get(r.id);
-
-          r.lastUpdated = r.lastUpdated || now;
-          if (existingData) {
-            const isIdentical = areRecordsEqual(existingData, r);
-            if (isIdentical) {
-              processedCount++;
-              continue;
-            }
-            r.createdAt = existingData.createdAt || now;
-            r.updatedAt = now;
-          } else {
-            r.createdAt = now;
-            r.updatedAt = now;
-          }
-
-          batch.set(docRef, r);
-          hasWrites = true;
-          processedCount++;
-          changedCount++;
-        }
-        if (hasWrites) {
-          await batch.commit();
-        }
-      }
-
-      if (isEmulator && !forceFullSync) {
-        hasMore = false;
-        break;
-      }
-
-      offset += limit;
-    }
-
-    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
-
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated vehicle recalls metadata. Ingestion complete.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Vehicle recalls scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new VehicleRecallsScraper(resourceId);
+  return scraper.scrape(db, options);
 }

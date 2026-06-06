@@ -82,6 +82,7 @@ describe("Travel Warnings Ingest Sync Process", () => {
   let mockCollection: any;
   let mockDoc: any;
   let mockMetadataSet: any;
+  let mockMetadataGet: any;
   let mockCountGet: any;
   let mockGetAll: any;
 
@@ -89,10 +90,15 @@ describe("Travel Warnings Ingest Sync Process", () => {
     vi.clearAllMocks();
 
     mockMetadataSet = vi.fn().mockResolvedValue(true);
+    mockMetadataGet = vi.fn().mockResolvedValue({
+      exists: false,
+      data: () => ({}),
+    });
 
     mockDoc = vi.fn().mockImplementation((id) => {
       if (id === DATASET_IDS.TRAVEL_WARNINGS) {
         return {
+          get: mockMetadataGet,
           set: mockMetadataSet,
         };
       }

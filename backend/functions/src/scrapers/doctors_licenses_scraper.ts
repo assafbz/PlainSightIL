@@ -1,8 +1,6 @@
 import * as admin from "firebase-admin";
-import { AppLogger as logger } from "../utils/logger";
-import axios from "axios";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
 /**
  * Interface representing the raw record layout received from data.gov.il CKAN datastore API.
@@ -41,8 +39,8 @@ export interface DoctorLicenseRecord {
  * Restores leading zeros if they are missing (e.g. 2121993 -> 02121993).
  * Converts to ISO-8601 string format (e.g. 1993-12-02T00:00:00.000Z).
  *
- * @param val The raw input value from the datastore API
- * @returns Mapped ISO string or empty string if invalid
+ * @param val The raw input value from the datastore API.
+ * @returns Mapped ISO string or empty string if invalid.
  */
 export function parseDDMMYYYY(val: unknown): string {
   if (val === undefined || val === null) return "";
@@ -76,8 +74,8 @@ export function parseDDMMYYYY(val: unknown): string {
  * Maps a raw Hebrew database record into the clean, typed DoctorLicenseRecord format.
  * Sanitizes input and enforces numeric checks.
  *
- * @param record The raw record from the API
- * @returns Mapped record, or null if key fields are missing or invalid
+ * @param record The raw record from the API.
+ * @returns Mapped record, or null if key fields are missing or invalid.
  */
 export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseRecord | null {
   const rawId = record._id;
@@ -134,133 +132,44 @@ export function parseDoctorRecord(record: HebrewDoctorRecord): DoctorLicenseReco
 }
 
 /**
+ * Scraper class for Doctors Licenses dataset.
+ */
+export class DoctorsLicensesScraper extends BaseScraper<HebrewDoctorRecord, DoctorLicenseRecord> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.DOCTORS_LICENSES;
+  override readonly updateIntervalHours = 168; // weekly
+  override readonly lastUpdatedSource = "parsed";
+
+  constructor(resourceId = DATASET_IDS.DOCTORS_LICENSES) {
+    super();
+    this.datasetId = resourceId;
+  }
+
+  /**
+   * Parses a raw doctor license record.
+   *
+   * @param raw The raw record.
+   * @returns Mapped record, or null if invalid.
+   */
+  parseRecord(raw: HebrewDoctorRecord): DoctorLicenseRecord | null {
+    return parseDoctorRecord(raw);
+  }
+}
+
+/**
  * Scrapes doctors licenses from data.gov.il datastore API and syncs them in-place to Firestore.
- * Performs paginated queries to handle the >63,000 document records size.
+ * Backward-compatible wrapper function.
  *
- * @param db The Firestore database reference
- * @param resourceId The resource ID for data.gov.il API (defaults to 9c64c522-bbc2-48fe-96fb-3b2a8626f59e)
- * @returns Success status and count of processed records
+ * @param db The Firestore database reference.
+ * @param resourceId The resource ID for data.gov.il API.
+ * @param options Synchronizer options.
+ * @returns Success status and count of processed records.
  */
 export async function scrapeAndSyncDoctorsLicenses(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.DOCTORS_LICENSES,
-  options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = DATASET_IDS.DOCTORS_LICENSES;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
-  try {
-    const targetCollection = DATASET_IDS.DOCTORS_LICENSES;
-    logger.info(`Starting doctors licenses sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    const forceFullSync = options?.forceFullSync === true;
-    let offset = 0;
-    const limit = isEmulator && !forceFullSync ? 100 : 10000;
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-
-    // Loop and page through the datastore
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
-      logger.info(`Fetching doctors licenses data from: ${url}`);
-
-      const response = await axios.get(url, { timeout: 15000 });
-      const records: HebrewDoctorRecord[] = response.data?.result?.records ?? [];
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const parsedRecords: DoctorLicenseRecord[] = [];
-      for (const rec of records) {
-        const parsed = parseDoctorRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-        }
-      }
-
-      // Batch set documents in chunks of 500
-      for (let i = 0; i < parsedRecords.length; i += 500) {
-        const chunk = parsedRecords.slice(i, i + 500);
-        const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-        // Read existing entries to retain their original createdAt timestamp
-        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingMap = new Map<string, admin.firestore.DocumentData>();
-        for (const snap of snapshots) {
-          const data = snap.data();
-          if (snap.exists && data) {
-            existingMap.set(snap.id, data);
-          }
-        }
-
-        const batch = db.batch();
-        let hasWrites = false;
-        for (const r of chunk) {
-          const docRef = targetRef.doc(r.id);
-          const existingData = existingMap.get(r.id);
-
-          r.lastUpdated = r.lastUpdated || now;
-          if (existingData) {
-            const isIdentical = areRecordsEqual(existingData, r);
-            if (isIdentical) {
-              processedCount++;
-              continue;
-            }
-            r.createdAt = existingData.createdAt || now;
-            r.updatedAt = now;
-          } else {
-            r.createdAt = now;
-            r.updatedAt = now;
-          }
-
-          batch.set(docRef, r);
-          hasWrites = true;
-          processedCount++;
-          changedCount++;
-        }
-        if (hasWrites) {
-          await batch.commit();
-        }
-      }
-
-      if (isEmulator && !forceFullSync) {
-        hasMore = false;
-        break;
-      }
-
-      offset += limit;
-    }
-
-    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
-
-    // Update document total record counts dynamically
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated doctors licenses metadata. Ingestion complete.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Doctors licenses scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new DoctorsLicensesScraper(resourceId);
+  return scraper.scrape(db, options);
 }

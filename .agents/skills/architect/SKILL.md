@@ -102,5 +102,4 @@ graph TD
 
 ### Key Architectural Guidelines
 1. **ChangeNotifier State Scoping**: Scoped notifiers should inherit/manage specific features rather than bloating the global `AppStateNotifier`.
-2. **Double Buffering / Blue-Green Datasets**: For scrapers and local syncing, use unique dataset identifiers (e.g. `d8715392-287f-49b7-9ae3-f21ec5bf55f3.ts` for scrapers and test suites) to ensure modularity and ease of dataset swaps.
-3. **No Direct imports across Features**: Presentational and data components in feature `A` must never import files from feature `B`. Shared services should be moved to `client/lib/core/`.
+2. **No Direct imports across Features**: Presentational and data components in feature `A` must never import files from feature `B`. Shared services should be moved to `client/lib/core/`.

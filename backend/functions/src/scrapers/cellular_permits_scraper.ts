@@ -1,11 +1,9 @@
 import * as admin from "firebase-admin";
 import { GeoPoint } from "firebase-admin/firestore";
-import { AppLogger as logger } from "../utils/logger";
-import axios from "axios";
 import proj4 from "proj4";
 import { encodeGeohash } from "../utils/geohash";
 import { DATASET_IDS } from "../utils/constants";
-import { areRecordsEqual } from "../utils/equality";
+import { BaseScraper, ScraperOptions, ScraperResult } from "./base_scraper";
 
 // Pre-compiled projection converter for ITM (EPSG:2039) to WGS84 (EPSG:4326)
 proj4.defs(
@@ -14,6 +12,13 @@ proj4.defs(
 );
 const itmToWgs84Converter = proj4("EPSG:2039", "EPSG:4326");
 
+/**
+ * Converts Israel Transverse Mercator (ITM) coordinates to WGS84 latitude/longitude.
+ *
+ * @param xItm ITM X coordinate.
+ * @param yItm ITM Y coordinate.
+ * @returns Object with latitude and longitude.
+ */
 export function convertItmToWgs84(
   xItm: number,
   yItm: number,
@@ -22,6 +27,13 @@ export function convertItmToWgs84(
   return { latitude, longitude };
 }
 
+/**
+ * Validates whether the coordinates fall inside Israel's approximate bounding box.
+ *
+ * @param latitude Latitude in WGS84.
+ * @param longitude Longitude in WGS84.
+ * @returns True if coordinates are valid, false otherwise.
+ */
 export function isValidIsraelCoordinates(latitude: number, longitude: number): boolean {
   return latitude >= 29.3 && latitude <= 33.4 && longitude >= 34.2 && longitude <= 35.9;
 }
@@ -35,12 +47,21 @@ const OPERATOR_TRANSLATIONS: Record<string, string> = {
   "הוט מובייל": "HOT Mobile",
 };
 
+/**
+ * Normalizes and translates the cellular operator name to English.
+ *
+ * @param rawValue Raw Hebrew operator name.
+ * @returns Localized operator name object.
+ */
 export function getTranslatedOperator(rawValue: string): { he: string; en: string } {
   const normalized = (rawValue || "").trim();
   const english = OPERATOR_TRANSLATIONS[normalized] || normalized;
   return { he: normalized, en: english };
 }
 
+/**
+ * Raw record format received from cellular permits API.
+ */
 export interface HebrewPermitRecord {
   ID?: number | string;
   _id?: number;
@@ -57,6 +78,9 @@ export interface HebrewPermitRecord {
   "תחום שיפוט"?: string;
 }
 
+/**
+ * Normalized and sanitized cellular permit application record written to Firestore.
+ */
 export interface CellularPermitApplication {
   id: string;
   submissionDate: string;
@@ -75,6 +99,12 @@ export interface CellularPermitApplication {
   updatedAt?: string;
 }
 
+/**
+ * Maps a raw Hebrew permit record into the clean, typed CellularPermitApplication format.
+ *
+ * @param record The raw record from the API.
+ * @returns Mapped record, or null if key fields are missing or invalid.
+ */
 export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApplication | null {
   const rawId = record.ID ?? record._id;
   const rawRef = record["מס' סימוכין"];
@@ -135,130 +165,48 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
   };
 }
 
+/**
+ * Scraper class for Cellular Permit Applications dataset.
+ */
+export class CellularPermitsScraper extends BaseScraper<
+  HebrewPermitRecord,
+  CellularPermitApplication
+> {
+  readonly datasetId: string;
+  readonly targetCollection = DATASET_IDS.CELLULAR_PERMITS;
+  override readonly updateIntervalHours = 168; // weekly
+  override readonly lastUpdatedSource = "parsed";
+
+  constructor(resourceId = DATASET_IDS.CELLULAR_PERMITS) {
+    super();
+    this.datasetId = resourceId;
+  }
+
+  /**
+   * Parses a raw cellular permit record.
+   *
+   * @param raw The raw record.
+   * @returns Mapped record, or null if invalid.
+   */
+  parseRecord(raw: HebrewPermitRecord): CellularPermitApplication | null {
+    return parsePermitRecord(raw);
+  }
+}
+
+/**
+ * Scrapes Cellular Permit Applications from data.gov.il API and syncs them to Firestore.
+ * Backward-compatible wrapper function.
+ *
+ * @param db Firestore database instance.
+ * @param resourceId Resource ID.
+ * @param options Synchronizer options.
+ * @returns Execution outcome metrics.
+ */
 export async function scrapeAndSyncPermitApplications(
   db: admin.firestore.Firestore,
   resourceId = DATASET_IDS.CELLULAR_PERMITS,
-  options?: { forceFullSync?: boolean },
-): Promise<{ success: boolean; count: number; changedCount: number }> {
-  const datasetId = DATASET_IDS.CELLULAR_PERMITS;
-  const metadataRef = db.collection("dataset_metadata").doc(datasetId);
-
-  try {
-    const targetCollection = DATASET_IDS.CELLULAR_PERMITS;
-    logger.info(`Starting sync. Target collection: ${targetCollection}`);
-
-    const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-    const forceFullSync = options?.forceFullSync === true;
-    // Paginated API fetch from data.gov.il datastore search
-    let offset = 0;
-    const limit = isEmulator && !forceFullSync ? 100 : 10000;
-    let hasMore = true;
-    let processedCount = 0;
-    let changedCount = 0;
-
-    const targetRef = db.collection(targetCollection);
-    const now = new Date().toISOString();
-
-    while (hasMore) {
-      const baseUrl = process.env.DATA_GOV_IL_BASE_URL || "https://data.gov.il";
-      const url = `${baseUrl}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
-      logger.info(`Fetching data from: ${url}`);
-      const response = await axios.get(url, { timeout: 15000 });
-      const records: HebrewPermitRecord[] = response.data?.result?.records ?? [];
-
-      if (records.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      // Collect parsed records for this page
-      const parsedRecords: CellularPermitApplication[] = [];
-      for (const rec of records) {
-        const parsed = parsePermitRecord(rec);
-        if (parsed) {
-          parsedRecords.push(parsed);
-        }
-      }
-
-      // Process parsed records in chunks of 500
-      for (let i = 0; i < parsedRecords.length; i += 500) {
-        const chunk = parsedRecords.slice(i, i + 500);
-
-        // Get doc refs for the chunk
-        const docRefs = chunk.map((r) => targetRef.doc(r.id));
-
-        // Lookup existing documents in batch
-        const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
-        const existingMap = new Map<string, admin.firestore.DocumentData>();
-        for (const snap of snapshots) {
-          const data = snap.data();
-          if (snap.exists && data) {
-            existingMap.set(snap.id, data);
-          }
-        }
-
-        // Prepare and write chunk
-        const batch = db.batch();
-        let hasWrites = false;
-        for (const r of chunk) {
-          const docRef = targetRef.doc(r.id);
-          const existingData = existingMap.get(r.id);
-
-          r.lastUpdated = r.lastUpdated || now;
-          if (existingData) {
-            const isIdentical = areRecordsEqual(existingData, r);
-            if (isIdentical) {
-              processedCount++;
-              continue;
-            }
-            r.createdAt = existingData.createdAt || now;
-            r.updatedAt = now;
-          } else {
-            r.createdAt = now;
-            r.updatedAt = now;
-          }
-
-          batch.set(docRef, r);
-          hasWrites = true;
-          processedCount++;
-          changedCount++;
-        }
-        if (hasWrites) {
-          await batch.commit();
-        }
-      }
-
-      if (isEmulator && !forceFullSync) {
-        hasMore = false;
-        break;
-      }
-
-      offset += limit;
-    }
-
-    logger.info(`Successfully parsed and updated ${processedCount} records in ${targetCollection}`);
-
-    // Retrieve total count of documents in the collection
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
-
-    // Atomic update of active collection pointer and count
-    await metadataRef.set(
-      {
-        id: datasetId,
-        activeCollection: targetCollection,
-        lastUpdated: now,
-        recordCount: totalRecords,
-        status: "idle",
-      },
-      { merge: true },
-    );
-
-    logger.info("Updated metadata. Ingestion complete.");
-    return { success: true, count: processedCount, changedCount };
-  } catch (error) {
-    logger.error("Scraper failed:", error);
-    await metadataRef.set({ status: "error" }, { merge: true });
-    throw error;
-  }
+  options?: ScraperOptions,
+): Promise<ScraperResult> {
+  const scraper = new CellularPermitsScraper(resourceId);
+  return scraper.scrape(db, options);
 }

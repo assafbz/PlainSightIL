@@ -5,81 +5,34 @@ import { AppLogger as logger } from "./utils/logger";
 import axios from "axios";
 import { PubSub } from "@google-cloud/pubsub";
 
-import { scrapeAndSyncAntennas } from "./scrapers/cellular_antennas_scraper";
-import { scrapeAndSyncPermitApplications } from "./scrapers/cellular_permits_scraper";
-import { scrapeAndSyncDatasetMetadata } from "./scrapers/metadata_scraper";
-import { scrapeAndSyncCompaniesLiquidation } from "./scrapers/companies_liquidation_scraper";
-import { scrapeAndSyncDoctorsLicenses } from "./scrapers/doctors_licenses_scraper";
-import { scrapeAndSyncBankAtms } from "./scrapers/bank_atms_scraper";
-import { scrapeAndSyncPatentClassifications } from "./scrapers/patent_classifications_scraper";
-import { scrapeAndSyncTravelWarnings } from "./scrapers/travel_warnings_scraper";
-import { scrapeAndSyncVehicleRecalls } from "./scrapers/vehicle_recalls_scraper";
-import { scrapeAndSyncCarImporters } from "./scrapers/car_importers_scraper";
-import { scrapeAndSyncLocalMarketBonds } from "./scrapers/local_market_bonds_scraper";
+import { CellularAntennasScraper } from "./scrapers/cellular_antennas_scraper";
+import { CellularPermitsScraper } from "./scrapers/cellular_permits_scraper";
+import { MetadataScraper } from "./scrapers/metadata_scraper";
+import { CompaniesLiquidationScraper } from "./scrapers/companies_liquidation_scraper";
+import { DoctorsLicensesScraper } from "./scrapers/doctors_licenses_scraper";
+import { BankAtmsScraper } from "./scrapers/bank_atms_scraper";
+import { PatentClassificationsScraper } from "./scrapers/patent_classifications_scraper";
+import { TravelWarningsScraper } from "./scrapers/travel_warnings_scraper";
+import { VehicleRecallsScraper } from "./scrapers/vehicle_recalls_scraper";
+import { CarImportersScraper } from "./scrapers/car_importers_scraper";
+import { LocalMarketBondsScraper } from "./scrapers/local_market_bonds_scraper";
 import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
-import { notifySubscribers } from "./utils/alerts";
 import { processAiSearch } from "./services/ai_search_service";
+import { BaseScraper } from "./scrapers/base_scraper";
 
-export async function checkAndAlertForScraper(
-  db: admin.firestore.Firestore,
-  datasetId: string,
-  result: { count: number; changedCount?: number },
-  isFirstSync: boolean,
-): Promise<void> {
-  if (isFirstSync) {
-    logger.info(`Bypassing subscriber alerts for ${datasetId} (first sync).`);
-    return;
-  }
-  const changedCount = result.changedCount ?? 0;
-  if (changedCount > 0) {
-    logger.info(`Triggering subscriber alerts for ${datasetId}: ${changedCount} changed records.`);
-    const dirDoc = await db.collection("datasets_metadata").doc(datasetId).get();
-    const title = dirDoc.exists ? dirDoc.data()?.title || datasetId : datasetId;
-
-    await notifySubscribers(db, datasetId, {
-      type: "new_records",
-      datasetId,
-      recordCount: changedCount,
-      title: {
-        he: `נקלטו רשומות חדשות ב${title}`,
-        en: `New Records Ingested in ${title}`,
-      },
-      description: {
-        he: `נקלטו ${changedCount} רשומות חדשות במאגר '${title}'.`,
-        en: `Ingested ${changedCount} new records into '${title}' dataset.`,
-      },
-    });
-  } else {
-    logger.info(`No changed records for ${datasetId}. Alert skipped.`);
-  }
-}
-
-const scraperRegistry: Record<
-  string,
-  (
-    db: admin.firestore.Firestore,
-    options?: { forceFullSync?: boolean },
-  ) => Promise<{ count: number; changedCount?: number }>
-> = {
-  [DATASET_IDS.CELLULAR_ANTENNAS]: (db, opts) =>
-    scrapeAndSyncAntennas(db, DATASET_IDS.CELLULAR_ANTENNAS, opts),
-  [DATASET_IDS.CELLULAR_PERMITS]: (db, opts) =>
-    scrapeAndSyncPermitApplications(db, DATASET_IDS.CELLULAR_PERMITS, opts),
-  [DATASET_IDS.COMPANIES_LIQUIDATION]: (db, opts) =>
-    scrapeAndSyncCompaniesLiquidation(db, DATASET_IDS.COMPANIES_LIQUIDATION, opts),
-  [DATASET_IDS.DOCTORS_LICENSES]: (db, opts) =>
-    scrapeAndSyncDoctorsLicenses(db, DATASET_IDS.DOCTORS_LICENSES, opts),
-  [DATASET_IDS.BANK_ATMS]: (db, opts) => scrapeAndSyncBankAtms(db, DATASET_IDS.BANK_ATMS, opts),
-  [DATASET_IDS.PATENT_CLASSIFICATIONS]: (db) => scrapeAndSyncPatentClassifications(db),
-  [DATASET_IDS.TRAVEL_WARNINGS]: (db, opts) =>
-    scrapeAndSyncTravelWarnings(db, DATASET_IDS.TRAVEL_WARNINGS, opts),
-  [DATASET_IDS.VEHICLE_RECALLS]: (db, opts) =>
-    scrapeAndSyncVehicleRecalls(db, DATASET_IDS.VEHICLE_RECALLS, opts),
-  [DATASET_IDS.CAR_IMPORTERS]: (db, opts) =>
-    scrapeAndSyncCarImporters(db, DATASET_IDS.CAR_IMPORTERS, opts),
-  [DATASET_IDS.LOCAL_MARKET_BONDS]: (db) => scrapeAndSyncLocalMarketBonds(db),
-  datasets_metadata: (db) => scrapeAndSyncDatasetMetadata(db),
+const scraperRegistry: Record<string, BaseScraper<any, any>> = {
+  [DATASET_IDS.CELLULAR_ANTENNAS]: new CellularAntennasScraper(),
+  [DATASET_IDS.CELLULAR_PERMITS]: new CellularPermitsScraper(),
+  [DATASET_IDS.COMPANIES_LIQUIDATION]: new CompaniesLiquidationScraper(),
+  [DATASET_IDS.DOCTORS_LICENSES]: new DoctorsLicensesScraper(),
+  [DATASET_IDS.BANK_ATMS]: new BankAtmsScraper(),
+  [DATASET_IDS.PATENT_CLASSIFICATIONS]: new PatentClassificationsScraper(),
+  [DATASET_IDS.TRAVEL_WARNINGS]: new TravelWarningsScraper(),
+  [DATASET_IDS.VEHICLE_RECALLS]: new VehicleRecallsScraper(),
+  [DATASET_IDS.CAR_IMPORTERS]: new CarImportersScraper(),
+  [DATASET_IDS.LOCAL_MARKET_BONDS]: new LocalMarketBondsScraper(),
+  datasets_metadata: new MetadataScraper(),
 };
 
 const defaultIntervals: Record<string, number> = {
@@ -381,37 +334,18 @@ export const runScraperPubSub = functions
       return;
     }
 
-    const tracker = ScraperTelemetryTracker.start(datasetId);
     try {
-      // Read metadata first to determine if it is the first sync
-      const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
-      const isFirstSync =
-        !metaDoc.exists || !metaDoc.data()?.lastUpdated || (metaDoc.data()?.recordCount || 0) === 0;
-
-      // Ensure status is set to syncing in database
-      await db
-        .collection("dataset_metadata")
-        .doc(datasetId)
-        .set({ status: "syncing", syncStartedAt: new Date().toISOString() }, { merge: true });
-
-      const result = await scraper(db, { forceFullSync: true });
+      const result = await scraper.scrape(db, { forceFullSync: true });
       logger.info(`runScraperPubSub completed for dataset: ${datasetId}`, {
         count: result.count,
         changedCount: result.changedCount,
       });
-      await tracker.complete(db, result.count);
-      await updateSchedulerOnComplete(db, datasetId, "idle");
-
-      // Notify subscribers if not first sync and changedCount > 0
-      await checkAndAlertForScraper(db, datasetId, result, isFirstSync);
     } catch (error) {
       const err = error as Error;
       logger.error(`runScraperPubSub failed for dataset: ${datasetId}`, {
         error: err.message,
         stack: err.stack,
       });
-      await updateSchedulerOnComplete(db, datasetId, "error");
-      await tracker.fail(db, err);
     }
   });
 
@@ -548,35 +482,18 @@ function createManualSyncHandler(
       }
     }
 
-    const tracker = ScraperTelemetryTracker.start(datasetId);
     try {
-      // Read metadata first to determine if it is the first sync
-      const metaDoc = await db.collection("dataset_metadata").doc(datasetId).get();
-      const isFirstSync =
-        !metaDoc.exists || !metaDoc.data()?.lastUpdated || (metaDoc.data()?.recordCount || 0) === 0;
-
-      // Set status to syncing in Firestore immediately
-      await db
-        .collection("dataset_metadata")
-        .doc(datasetId)
-        .set({ status: "syncing", syncStartedAt: new Date().toISOString() }, { merge: true });
-
       const scraper = scraperRegistry[datasetId];
       if (!scraper) {
         throw new Error(`No scraper found registered for dataset: ${datasetId}`);
       }
 
       const forceFullSync = auth.uid !== "emulator-seeder";
-      const result = await scraper(db, { forceFullSync });
+      const result = await scraper.scrape(db, { forceFullSync });
       logger.info(`manualSync for ${datasetId} sync completed successfully`, {
         count: result.count,
         changedCount: result.changedCount,
       });
-      await tracker.complete(db, result.count);
-      await updateSchedulerOnComplete(db, datasetId, "idle");
-
-      // Notify subscribers if not first sync and changedCount > 0
-      await checkAndAlertForScraper(db, datasetId, result, isFirstSync);
 
       res.status(200).json({
         message: "Sync completed successfully",
@@ -589,8 +506,6 @@ function createManualSyncHandler(
         error: err.message,
         stack: err.stack,
       });
-      await updateSchedulerOnComplete(db, datasetId, "error");
-      await tracker.fail(db, err);
       res.status(500).json({
         message: "Sync failed",
         error: err.message || String(error),
