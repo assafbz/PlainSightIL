@@ -769,7 +769,7 @@ void main() {
           testRequestsStream: requestsController.stream,
         );
 
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
 
         expect(notifier.isLoadingAdminMetadata, isTrue);
@@ -1357,7 +1357,7 @@ void main() {
           isTesting: false,
           testFirestore: mockFirestore,
         );
-        notifier.initAdminMetadataListener();
+        notifier.initAdminMetadataListener(isAdmin: true);
         notifier.initDirectoryListener();
 
         telemetryMetadataController.add(
