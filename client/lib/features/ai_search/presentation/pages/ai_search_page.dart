@@ -438,7 +438,7 @@ class _AiSearchPageState extends State<AiSearchPage> {
                                           Icons.history_rounded,
                                           size: 40,
                                           color: AppColors.textTertiary
-                                              .withOpacity(0.4),
+                                              .withValues(alpha: 0.4),
                                         ),
                                         const SizedBox(height: 12),
                                         Text(

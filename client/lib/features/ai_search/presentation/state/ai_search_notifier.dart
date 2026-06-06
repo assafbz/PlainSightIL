@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_initializing_formals
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -85,25 +86,25 @@ class AiSearchNotifier extends ChangeNotifier {
     if (AppStateNotifier.isTesting) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       final q = trimmed.toLowerCase();
-      if (q.contains("toyota") || q.contains("טויוטה")) {
+      if (q.contains('toyota') || q.contains('טויוטה')) {
         _searchResult = AiSearchResultModel(
           answer: appState.locale == 'he'
-              ? "נמצאו קריאות פעילות לתיקון עבור רכבי טויוטה [cit-01]. התקלה נובעת משסתום צינור דלק במנוע."
-              : "Active recalls found for Toyota vehicles [cit-01]. The defect is in the engine fuel pipe valve.",
+              ? 'נמצאו קריאות פעילות לתיקון עבור רכבי טויוטה [cit-01]. התקלה נובעת משסתום צינור דלק במנוע.'
+              : 'Active recalls found for Toyota vehicles [cit-01]. The defect is in the engine fuel pipe valve.',
           citations: [
             CitationModel(
-              id: "cit-01",
+              id: 'cit-01',
               datasetId: DatasetIds.vehicleRecalls,
-              docId: "11020",
-              title: "טויוטה אוונסיס 2011",
+              docId: '11020',
+              title: 'טויוטה אוונסיס 2011',
             ),
           ],
         );
       } else {
         _searchResult = AiSearchResultModel(
           answer: appState.locale == 'he'
-              ? "לא נמצאו רשומות רלוונטיות במאגרי המידע."
-              : "No relevant records found in the database.",
+              ? 'לא נמצאו רשומות רלוונטיות במאגרי המידע.'
+              : 'No relevant records found in the database.',
           citations: [],
         );
       }
@@ -126,7 +127,7 @@ class AiSearchNotifier extends ChangeNotifier {
       }
 
       final String functionUrl =
-          "${appState.telemetryNotifier.functionsBaseUrl}/aiSemanticSearch";
+          '${appState.telemetryNotifier.functionsBaseUrl}/aiSemanticSearch';
       final response = _client != null
           ? await _client.post(
               Uri.parse(functionUrl),
@@ -161,7 +162,7 @@ class AiSearchNotifier extends ChangeNotifier {
         _errorMessage =
             (decoded?['message'] as String?) ??
             (decoded?['error'] as String?) ??
-            "Failed to execute AI search (code: ${response.statusCode})";
+            'Failed to execute AI search (code: ${response.statusCode})';
       }
     } catch (e) {
       AppLogger.error('AI search failed', e);
