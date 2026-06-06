@@ -15,14 +15,19 @@ import '../../data/models/ai_search_result_model.dart';
 class AiSearchNotifier extends ChangeNotifier {
   final AppStateNotifier appState;
   final http.Client? _client;
+  final FirebaseAuth? _auth;
 
   bool _isLoading = false;
   String? _errorMessage;
   AiSearchResultModel? _searchResult;
   List<String> _history = [];
 
-  AiSearchNotifier({required this.appState, http.Client? client})
-    : _client = client;
+  AiSearchNotifier({
+    required this.appState,
+    http.Client? client,
+    FirebaseAuth? auth,
+  }) : _client = client,
+       _auth = auth;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -119,7 +124,8 @@ class AiSearchNotifier extends ChangeNotifier {
       String? token;
       if (appState.isFirebaseInitialized) {
         try {
-          final currentUser = FirebaseAuth.instance.currentUser;
+          final auth = _auth ?? FirebaseAuth.instance;
+          final currentUser = auth.currentUser;
           if (currentUser != null) {
             token = await currentUser.getIdToken();
           }
