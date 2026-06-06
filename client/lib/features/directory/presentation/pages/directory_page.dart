@@ -141,7 +141,7 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
               DoctorsLicensesScreen(appState: widget.appState),
         ),
       );
-    } else if (dataset.id == '21fde05f-62e3-401b-81cf-5c385862026d') {
+    } else if (dataset.id == DatasetIds.bankAtms) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => BankAtmsScreen(appState: widget.appState),

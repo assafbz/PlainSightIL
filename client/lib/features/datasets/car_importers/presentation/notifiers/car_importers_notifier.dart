@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/car_importer_record_model.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles car importers collection streams,
@@ -132,7 +133,7 @@ class CarImportersNotifier extends ChangeNotifier {
 
     try {
       _carImportersSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('39f455bf-6db0-4926-859d-017f34eacbcb')
+          .collection(DatasetIds.carImporters)
           .orderBy('_id', descending: true)
           .limit(200)
           .snapshots()

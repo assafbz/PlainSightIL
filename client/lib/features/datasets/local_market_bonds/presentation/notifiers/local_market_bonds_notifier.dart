@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/local_market_bond_model.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
 
@@ -153,7 +154,7 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
 
     try {
       final collectionRef = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('c92fdda2-0939-4110-8ebc-edfcf35e8723');
+          .collection(DatasetIds.localMarketBonds);
 
       Query query = collectionRef;
 

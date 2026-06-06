@@ -13,6 +13,9 @@ class DatasetIds {
   /// Doctors Licenses dataset ID.
   static const String doctorsLicenses = '9c64c522-bbc2-48fe-96fb-3b2a8626f59e';
 
+  /// Bank ATMs dataset ID.
+  static const String bankAtms = '21fde05f-62e3-401b-81cf-5c385862026d';
+
   /// Patent Applications CPC Classifications dataset ID.
   static const String patentClassifications =
       'b2c59e21-c345-4b02-b071-2890a3d431d6';
@@ -35,6 +38,7 @@ class DatasetIds {
     cellularPermits,
     companiesLiquidation,
     doctorsLicenses,
+    bankAtms,
     patentClassifications,
     travelWarnings,
     vehicleRecalls,

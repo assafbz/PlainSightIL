@@ -158,8 +158,8 @@ class TelemetryNotifier extends ChangeNotifier {
           'lastUpdated': '2026-06-02T17:00:00Z',
           'status': 'idle',
         },
-        '21fde05f-62e3-401b-81cf-5c385862026d': {
-          'id': '21fde05f-62e3-401b-81cf-5c385862026d',
+        DatasetIds.bankAtms: {
+          'id': DatasetIds.bankAtms,
           'recordCount': 3019,
           'lastUpdated': '2026-06-02T09:00:00Z',
           'status': 'idle',
@@ -511,7 +511,7 @@ class TelemetryNotifier extends ChangeNotifier {
           isSupported: true,
         ),
         DatasetMetadataModel(
-          id: '21fde05f-62e3-401b-81cf-5c385862026d',
+          id: DatasetIds.bankAtms,
           datasetId: '67759a6a-4167-439b-af53-0eb792321264',
           name: 'automated-devices',
           title: 'מכשירים אוטומטיים – ATMs',
@@ -788,7 +788,7 @@ class TelemetryNotifier extends ChangeNotifier {
         functionName = 'manualSyncCompaniesLiquidation';
       } else if (datasetId == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
         functionName = 'manualSyncDoctorsLicenses';
-      } else if (datasetId == '21fde05f-62e3-401b-81cf-5c385862026d') {
+      } else if (datasetId == DatasetIds.bankAtms) {
         functionName = 'manualSyncBankAtms';
       } else if (datasetId == 'datasets_metadata') {
         functionName = 'manualSyncMetadata';

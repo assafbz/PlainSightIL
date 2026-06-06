@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles cellular construction permits metadata streams,
@@ -157,7 +158,7 @@ class PermitsNotifier extends ChangeNotifier {
       _permitMetadataSubscription =
           (testFirestore ?? FirebaseFirestore.instance)
               .collection('dataset_metadata')
-              .doc('ff398c7e-c522-4ee8-a53a-312b188a573d')
+              .doc(DatasetIds.cellularPermits)
               .snapshots()
               .listen(
                 (metaSnapshot) {

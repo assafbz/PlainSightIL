@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/liquidation_record_model.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles companies in liquidation collection streams,
@@ -127,7 +128,7 @@ class LiquidationNotifier extends ChangeNotifier {
 
     try {
       _liquidationSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('d8715392-287f-49b7-9ae3-f21ec5bf55f3')
+          .collection(DatasetIds.companiesLiquidation)
           .snapshots()
           .listen(
             (snapshot) {

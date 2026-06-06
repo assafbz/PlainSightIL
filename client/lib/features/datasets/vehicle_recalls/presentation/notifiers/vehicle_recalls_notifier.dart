@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/vehicle_recall_model.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles vehicle recalls collection streams,
@@ -93,7 +94,7 @@ class VehicleRecallsNotifier extends ChangeNotifier {
 
     try {
       _recallsSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('2c33523f-87aa-44ec-a736-edbb0a82975e')
+          .collection(DatasetIds.vehicleRecalls)
           .snapshots()
           .listen(
             (snapshot) {

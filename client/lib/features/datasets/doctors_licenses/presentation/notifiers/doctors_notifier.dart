@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/doctor_license_model.dart';
 
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
 
 /// Scoped state notifier that handles doctors licenses collection streams,
@@ -119,7 +120,7 @@ class DoctorsNotifier extends ChangeNotifier {
 
     try {
       _doctorsSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection('9c64c522-bbc2-48fe-96fb-3b2a8626f59e')
+          .collection(DatasetIds.doctorsLicenses)
           .snapshots()
           .listen(
             (snapshot) {

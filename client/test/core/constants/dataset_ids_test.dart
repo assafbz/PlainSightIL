@@ -25,6 +25,7 @@ void main() {
         DatasetIds.doctorsLicenses,
         '9c64c522-bbc2-48fe-96fb-3b2a8626f59e',
       );
+      expect(DatasetIds.bankAtms, '21fde05f-62e3-401b-81cf-5c385862026d');
       expect(
         DatasetIds.patentClassifications,
         'b2c59e21-c345-4b02-b071-2890a3d431d6',
@@ -34,9 +35,10 @@ void main() {
 
       // Verify the all getter list
       final allIds = DatasetIds.all;
-      expect(allIds.length, 9);
+      expect(allIds.length, 10);
       expect(allIds.contains(DatasetIds.carImporters), isTrue);
       expect(allIds.contains(DatasetIds.cellularAntennas), isTrue);
+      expect(allIds.contains(DatasetIds.bankAtms), isTrue);
       expect(allIds.contains(DatasetIds.localMarketBonds), isTrue);
       expect(allIds.contains(DatasetIds.travelWarnings), isTrue);
       expect(allIds.contains(DatasetIds.vehicleRecalls), isTrue);

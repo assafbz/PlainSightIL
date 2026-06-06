@@ -13,6 +13,7 @@ import 'package:plainsight/core/errors/exceptions.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/antennas_notifier.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/presentation/notifiers/permits_notifier.dart';
@@ -1070,7 +1071,7 @@ void main() {
           return FakeCollectionReference(stream: liquidationController.stream);
         } else if (path == '9c64c522-bbc2-48fe-96fb-3b2a8626f59e') {
           return FakeCollectionReference(stream: doctorsController.stream);
-        } else if (path == '21fde05f-62e3-401b-81cf-5c385862026d') {
+        } else if (path == DatasetIds.bankAtms) {
           return FakeCollectionReference(stream: bankAtmsController.stream);
         } else if (path == '2a01d234-b2b0-4d46-baa0-cec05c401e7d') {
           return FakeCollectionReference(
