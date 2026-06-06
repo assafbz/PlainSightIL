@@ -77,6 +77,19 @@ void main() {
       expect(find.text('Cellular Antennas'), findsOneWidget);
       expect(find.text('Companies in Liquidation'), findsOneWidget);
 
+      // Type query "Travel" in Search Field
+      await tester.enterText(find.byType(TextField), 'Travel');
+      await tester.pumpAndSettle();
+
+      // Verify list is filtered to Travel Warnings
+      expect(find.text('Dataset Directory'), findsNothing);
+      expect(find.text('Cellular Antennas'), findsNothing);
+      expect(find.text('Travel Warnings'), findsOneWidget);
+
+      // Clear search query again
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+
       // Filter by Error status (by default mock datasets are status 'idle')
       await tester.tap(find.text('Error'));
       await tester.pumpAndSettle();
