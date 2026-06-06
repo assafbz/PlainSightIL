@@ -61,6 +61,14 @@ jobs:
             package-lock.json
             backend/functions/package-lock.json
 
+      - name: Cache Firebase Emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('backend/functions/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -73,6 +81,14 @@ jobs:
       - name: Install Backend Dependencies
         run: npm ci
         working-directory: backend/functions
+
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-cache-${{ hashFiles('client/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-cache-
 
       - name: Install Client Dependencies
         run: flutter pub get
@@ -90,7 +106,15 @@ jobs:
             ${{ runner.os }}-flutter-build-${{ hashFiles('client/pubspec.lock') }}-
             ${{ runner.os }}-flutter-build-
 
+      - name: Cache Flutter Web Build
+        uses: actions/cache@v4
+        id: flutter-web-cache
+        with:
+          path: client/build/web
+          key: ${{ runner.os }}-flutter-web-build-${{ hashFiles('client/pubspec.lock', 'client/lib/**', 'client/web/**', 'client/analysis_options.yaml') }}
+
       - name: Build Flutter Client (Release)
+        if: steps.flutter-web-cache.outputs.cache-hit != 'true'
         run: flutter build web --release
         working-directory: client
 

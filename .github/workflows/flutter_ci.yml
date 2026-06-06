@@ -54,6 +54,14 @@ jobs:
             ${{ runner.os }}-flutter-build-${{ hashFiles('client/pubspec.lock') }}-
             ${{ runner.os }}-flutter-build-
 
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-cache-${{ hashFiles('client/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-cache-
+
       - name: Install Dependencies
         run: flutter pub get
         working-directory: client
