@@ -35,6 +35,7 @@ describe("Local Market Bonds Date and Type Parsers", () => {
   it("should parse DD/MM/YYYY dates to ISO strings", () => {
     expect(parseDDMMYYYY("31/10/2035")).toBe("2035-10-31T00:00:00.000Z");
     expect(parseDDMMYYYY("02/06/2026")).toBe("2026-06-02T00:00:00.000Z");
+    expect(parseDDMMYYYY("invalid-date-format")).toBe("");
     expect(parseDDMMYYYY("")).toBe("");
     expect(parseDDMMYYYY(null)).toBe("");
   });
@@ -42,6 +43,7 @@ describe("Local Market Bonds Date and Type Parsers", () => {
   it("should parse issuance dates to ISO strings", () => {
     expect(parseIssuanceDate("2026-06-02T00:00:00")).toBe("2026-06-02T00:00:00.000Z");
     expect(parseIssuanceDate("2026-06-02T00:00:00.000Z")).toBe("2026-06-02T00:00:00.000Z");
+    expect(parseIssuanceDate("2026-06-02")).toBe("2026-06-02");
     expect(parseIssuanceDate("")).toBe("");
     expect(parseIssuanceDate(null)).toBe("");
   });
@@ -210,5 +212,103 @@ describe("Local Market Bonds Ingest Sync Process", () => {
       }),
       { merge: true },
     );
+  });
+
+  it("should handle existing identical records and skip them, or update changed records", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-06T09:00:00.000Z"));
+
+    const apiResponse = {
+      data: {
+        result: {
+          records: [
+            {
+              _id: 105,
+              ISSUANCEDATE: "2026-06-02T00:00:00",
+              BONDS: "ממשלתית",
+              SERIES: 1227784,
+              REDEMTIONDATE: "31/10/2035",
+            },
+            {
+              _id: 106,
+              ISSUANCEDATE: "2026-06-02T00:00:00",
+              BONDS: "ממשלתית",
+              SERIES: 9999999,
+              REDEMTIONDATE: "31/10/2035",
+            },
+          ],
+        },
+      },
+    };
+
+    const parsed105 = parseLocalMarketBondRecord({
+      _id: 105,
+      ISSUANCEDATE: "2026-06-02T00:00:00",
+      BONDS: "ממשלתית",
+      SERIES: 1227784,
+      REDEMTIONDATE: "31/10/2035",
+    })!;
+    parsed105.lastUpdated = "2026-06-06T09:00:00.000Z";
+
+    // Mock existing records in database: 105 is identical, 106 is different
+    mockGetAll.mockResolvedValueOnce([
+      {
+        exists: true,
+        id: "105",
+        data: () => parsed105,
+      },
+      {
+        exists: true,
+        id: "106",
+        data: () => ({
+          _id: 106,
+          issuanceDate: "2026-06-02T00:00:00.000Z",
+          bondType: { he: "ממשלתית", en: "Government" },
+          series: 8888888, // Different series
+          actualTermToMaturity: 0,
+          originalTermToMaturity: 0,
+          redemptionDate: "2035-10-31T00:00:00.000Z",
+          coupon: 0,
+          offeredQuantity: 0,
+          purchasedQuantity: 0,
+          additionalPurchased: 0,
+          averagePrice: 0,
+          cutoffPrice: 0,
+          totalFunding: 0,
+          demandedAmount: 0,
+          coverRatio: 0,
+          grossAvgYield: 0,
+          grossCutoffYield: 0,
+          lastUpdated: "2026-06-06T09:00:00.000Z",
+          createdAt: "2026-06-01T00:00:00.000Z",
+        }),
+      },
+    ]);
+
+    vi.mocked(axios.get).mockResolvedValueOnce(apiResponse);
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncLocalMarketBonds(mockDb);
+    expect(result.success).toBe(true);
+    // Wrote 1 record (106 differed, 105 was identical and skipped)
+    expect(mockBatch.set).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it("should handle empty API response", async () => {
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { result: { records: [] } } });
+
+    const result = await scrapeAndSyncLocalMarketBonds(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+    expect(mockBatch.set).not.toHaveBeenCalled();
+  });
+
+  it("should handle scraper errors and update metadata status to error", async () => {
+    vi.mocked(axios.get).mockRejectedValueOnce(new Error("API Timeout"));
+
+    await expect(scrapeAndSyncLocalMarketBonds(mockDb)).rejects.toThrow("API Timeout");
+    expect(mockMetadataSet).toHaveBeenCalledWith({ status: "error" }, { merge: true });
   });
 });
