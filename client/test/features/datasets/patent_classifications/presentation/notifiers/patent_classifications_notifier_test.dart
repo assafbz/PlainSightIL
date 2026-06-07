@@ -1,16 +1,30 @@
 // ignore_for_file: subtype_of_sealed_class, unnecessary_no_such_method, depend_on_referenced_packages
+import 'dart:io';
+import 'package:hive_ce/hive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/patent_classifications/data/models/patent_classification_model.dart';
 
 void main() {
-  group('PatentClassificationsNotifier Tests', () {
-    setUp(() {
-      AppStateNotifier.isTesting = true;
-    });
+  late Directory tempDir;
 
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('hive_test');
+    Hive.init(tempDir.path);
+    AppStateNotifier.isTesting = true;
+  });
+
+  tearDown(() async {
+    await Hive.close();
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
+  group('PatentClassificationsNotifier Tests', () {
     test('should initialize with empty records and loading false', () {
       final notifier = PatentClassificationsNotifier();
       expect(notifier.patentRecords, isEmpty);
@@ -207,10 +221,53 @@ void main() {
       'verifies searching, filtering and pagination on production delegation paths',
       () async {
         final notifier = PatentClassificationsNotifier(testFirestore: null);
-
-        // Initialize with mockData directly on sync manager
         final manager = notifier.syncManagerForTesting;
-        await manager.initialize(mockData: MockData.patents, isTesting: true);
+
+        // Generate 25 mock records
+        final mockRecords = List.generate(
+          25,
+          (i) => PatentClassificationRecordModel(
+            id: 'id_$i',
+            idNum: i,
+            applicationNumber: i == 0 ? 327015 : (300000 + i),
+            titleHebrew: i < 3 ? 'שילוב $i' : 'Hebrew $i',
+            titleEnglish: i < 3 ? 'DRUG $i' : 'English $i',
+            cpcClassification: i < 3 ? 'A61P35/00' : 'G01N21/$i',
+            isPrimary: i % 2 == 0,
+            sourceCreatedAt: '2026-06-03T18:00:00Z',
+            sourceUpdatedAt: '2026-06-03T18:00:00Z',
+            createdAt: '2026-06-03T18:00:00Z',
+            updatedAt: '2026-06-03T18:00:00Z',
+            lastUpdated: '2026-06-03T18:00:00Z',
+          ),
+        );
+
+        // Open the Hive box and save mock data directly to simulate cached records
+        final box = await Hive.openLazyBox<dynamic>(
+          'dataset_cache_${manager.datasetId}',
+        );
+        final Map<String, dynamic> recordsMap = {};
+        for (final r in mockRecords) {
+          recordsMap[manager.getRecordId(r)] = manager.toMap(r);
+        }
+        await box.putAll(recordsMap);
+        final List<String> sortedKeys = mockRecords
+            .map((r) => manager.getRecordId(r))
+            .toList();
+        await box.put('__sorted_keys__', sortedKeys);
+
+        // Helper to wait for the async cache load to complete
+        Future<void> waitForLoad() async {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          final end = DateTime.now().add(const Duration(seconds: 3));
+          while (notifier.isLoadingPatents && DateTime.now().isBefore(end)) {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+        }
+
+        // Initialize the notifier (production mode loads cache)
+        notifier.initPatentClassificationsListener();
+        await waitForLoad();
 
         // Verify basic loading state delegation
         expect(notifier.isLoadingPatents, isFalse);
@@ -218,6 +275,7 @@ void main() {
 
         // Test filtering on 'Primary'
         notifier.setPrimaryFilter('Primary');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -228,6 +286,7 @@ void main() {
 
         // Test filtering on 'Secondary'
         notifier.setPrimaryFilter('Secondary');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -238,13 +297,12 @@ void main() {
 
         // Reset filter
         notifier.setPrimaryFilter('All');
-        expect(
-          notifier.patentRecords.length,
-          MockData.patents.length > 20 ? 20 : MockData.patents.length,
-        );
+        await waitForLoad();
+        expect(notifier.patentRecords.length, 20);
 
         // Test text searching by CPC classification
         notifier.setSearchQuery('A61P35/00');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -255,6 +313,7 @@ void main() {
 
         // Test text searching by Hebrew title
         notifier.setSearchQuery('שילוב');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -265,6 +324,7 @@ void main() {
 
         // Test text searching by English title
         notifier.setSearchQuery('DRUG');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -275,6 +335,7 @@ void main() {
 
         // Test numeric application number searching
         notifier.setSearchQuery('327015');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -286,17 +347,19 @@ void main() {
         // Test hasMorePatents when records length is <= page size vs when pagination runs
         notifier.setSearchQuery('');
         notifier.setPrimaryFilter('All');
-        expect(notifier.hasMorePatents, MockData.patents.length > 20);
+        await waitForLoad();
+        expect(notifier.hasMorePatents, isTrue);
 
         // Test fetchNextPage pagination loading more
         if (notifier.hasMorePatents) {
           final initialLength = notifier.patentRecords.length;
           await notifier.fetchNextPage();
           expect(notifier.patentRecords.length > initialLength, isTrue);
+          expect(notifier.patentRecords.length, 25);
         }
 
         // Test getRecordLastUpdated, toMap, getRecordId callbacks on the manager
-        final record = MockData.patents.first;
+        final record = mockRecords.first;
         expect(manager.getRecordLastUpdated(record), record.lastUpdated ?? '');
         expect(manager.toMap(record).isNotEmpty, isTrue);
         expect(manager.getRecordId(record), record.id);
@@ -334,6 +397,10 @@ void main() {
         // 2. _isTesting is false, testFirestore is null path in initPatentClassificationsListener
         final notifierProd = PatentClassificationsNotifier(testFirestore: null);
         notifierProd.initPatentClassificationsListener();
+        final end = DateTime.now().add(const Duration(seconds: 2));
+        while (notifierProd.isLoadingPatents && DateTime.now().isBefore(end)) {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+        }
         notifierProd.dispose();
       },
     );
