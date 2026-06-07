@@ -25,6 +25,10 @@ typedef ModelGetLastUpdated<T> = String Function(T record);
 /// Designed to load cached data instantly first, then query only the documents
 /// modified since the last sync to minimize read/write costs and eliminate UI thread blocking.
 class DatasetSyncManager<T> {
+  /// Public override for testing web serialization bypasses on native VM.
+  @visibleForTesting
+  static bool isWebOverride = kIsWeb;
+
   /// Unique dataset identifier GUID matching [DatasetIds]
   final String datasetId;
 
@@ -254,7 +258,9 @@ class DatasetSyncManager<T> {
       final List<Map<String, dynamic>> rawMaps = _records
           .map((r) => toMap(r))
           .toList();
-      final String encodedJson = await compute(jsonEncode, rawMaps);
+      final String encodedJson = isWebOverride
+          ? jsonEncode(rawMaps)
+          : await compute(jsonEncode, rawMaps);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('dataset_cache_$datasetId', encodedJson);
     } catch (e) {
@@ -274,8 +280,9 @@ class DatasetSyncManager<T> {
       final prefs = await SharedPreferences.getInstance();
       final cachedJson = prefs.getString('dataset_cache_$datasetId');
       if (cachedJson != null && cachedJson.isNotEmpty) {
-        final List<dynamic> decodedList =
-            await compute(jsonDecode, cachedJson) as List<dynamic>;
+        final List<dynamic> decodedList = isWebOverride
+            ? jsonDecode(cachedJson) as List<dynamic>
+            : await compute(jsonDecode, cachedJson) as List<dynamic>;
         _records = decodedList
             .map((e) => fromMap(Map<String, dynamic>.from(e as Map)))
             .toList();

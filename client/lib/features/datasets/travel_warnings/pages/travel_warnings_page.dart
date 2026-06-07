@@ -218,9 +218,6 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final list = _getFilteredRecords();
-    final continents = _getUniqueContinents();
-
     return Scaffold(
       backgroundColor: AppColors.baseBg,
       body: Stack(
@@ -387,219 +384,276 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Continent Horizontal Chips Row
-                  if (continents.length > 1)
-                    SizedBox(
-                      height: 40,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: continents.length,
-                        itemBuilder: (context, index) =>
-                            _buildFilterChip(continents[index]),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // 4. Main Results list
+                  // 3 & 4. ListenableBuilder containing Filter Chips & Results List
                   Expanded(
                     child: ListenableBuilder(
                       listenable: widget.appState,
                       builder: (context, _) {
-                        if (widget.appState.isLoadingWarnings) {
-                          return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
+                        final list = _getFilteredRecords();
+                        final continents = _getUniqueContinents();
 
-                        if (list.isEmpty) {
-                          return Center(
-                            child: Text(
-                              widget.appState.translate('no_results'),
-                              style: AppTypography.bodyLg(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: list.length,
-                          itemBuilder: (context, index) {
-                            final item = list[index];
-                            final levelColor = _getWarningLevelColor(
-                              item.warningLevel,
-                            );
-                            final levelLabel = _getWarningLevelLabel(
-                              item.warningLevel,
-                            );
-
-                            final dateToShow =
-                                (item.sourceUpdatedAt != null &&
-                                    item.sourceUpdatedAt!.trim().isNotEmpty)
-                                ? item.sourceUpdatedAt!
-                                : (item.sourceCreatedAt != null &&
-                                      item.sourceCreatedAt!.trim().isNotEmpty)
-                                ? item.sourceCreatedAt!
-                                : (item.date != null &&
-                                      item.date!.trim().isNotEmpty)
-                                ? item.date!
-                                : (item.lastUpdated != null &&
-                                      item.lastUpdated!.trim().isNotEmpty)
-                                ? item.lastUpdated!
-                                : (item.createdAt != null &&
-                                      item.createdAt!.trim().isNotEmpty)
-                                ? item.createdAt!
-                                : '';
-
-                            // Clean HTML from recommendation summary to display plain text
-                            final cleanRecSummary = item.recommendations
-                                .replaceAll(RegExp(r'<[^>]*>'), '')
-                                .replaceAll('&nbsp;', ' ')
-                                .trim();
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceLow.withAlpha(120),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.glassBorder,
-                                  width: 1.0,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (continents.length > 1) ...[
+                              SizedBox(
+                                height: 40,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: continents.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildFilterChip(continents[index]),
                                 ),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  onTap: () => _showDetails(item),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: BorderDirectional(
-                                        start: BorderSide(
-                                          color: levelColor,
-                                          width: 4,
+                              const SizedBox(height: 16),
+                            ],
+                            Expanded(
+                              child: widget.appState.isLoadingWarnings
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : list.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        widget.appState.translate('no_results'),
+                                        style: AppTypography.bodyLg(
+                                          context,
+                                          color: AppColors.textTertiary,
                                         ),
                                       ),
-                                    ),
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Header Row: Country & Warning Level Badge
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.country,
-                                                style:
-                                                    AppTypography.bodyLg(
-                                                      context,
-                                                      color:
-                                                          AppColors.textPrimary,
-                                                    ).copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: levelColor.withAlpha(20),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: levelColor.withAlpha(
-                                                    80,
-                                                  ),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                levelLabel,
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: levelColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
+                                    )
+                                  : ListView.builder(
+                                      controller: _scrollController,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: list.length,
+                                      itemBuilder: (context, index) {
+                                        final item = list[index];
+                                        final levelColor =
+                                            _getWarningLevelColor(
+                                              item.warningLevel,
+                                            );
+                                        final levelLabel =
+                                            _getWarningLevelLabel(
+                                              item.warningLevel,
+                                            );
 
-                                        // Recommendations summary text
-                                        Text(
-                                          cleanRecSummary,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: AppTypography.bodySm(
-                                            context,
-                                            color: AppColors.textSecondary,
+                                        final dateToShow =
+                                            (item.sourceUpdatedAt != null &&
+                                                item.sourceUpdatedAt!
+                                                    .trim()
+                                                    .isNotEmpty)
+                                            ? item.sourceUpdatedAt!
+                                            : (item.sourceCreatedAt != null &&
+                                                  item.sourceCreatedAt!
+                                                      .trim()
+                                                      .isNotEmpty)
+                                            ? item.sourceCreatedAt!
+                                            : (item.date != null &&
+                                                  item.date!.trim().isNotEmpty)
+                                            ? item.date!
+                                            : (item.lastUpdated != null &&
+                                                  item.lastUpdated!
+                                                      .trim()
+                                                      .isNotEmpty)
+                                            ? item.lastUpdated!
+                                            : (item.createdAt != null &&
+                                                  item.createdAt!
+                                                      .trim()
+                                                      .isNotEmpty)
+                                            ? item.createdAt!
+                                            : '';
+
+                                        // Clean HTML from recommendation summary to display plain text
+                                        final cleanRecSummary = item
+                                            .recommendations
+                                            .replaceAll(RegExp(r'<[^>]*>'), '')
+                                            .replaceAll('&nbsp;', ' ')
+                                            .trim();
+
+                                        return Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 12.0,
                                           ),
-                                        ),
-                                        const SizedBox(height: 12),
-
-                                        // Footer Row: Publisher / Date
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.office.isNotEmpty
-                                                    ? item.office
-                                                    : widget.appState.translate(
-                                                        'travel_warnings_publisher',
-                                                      ),
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: AppColors.textTertiary,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceLow
+                                                .withAlpha(120),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            border: Border.all(
+                                              color: AppColors.glassBorder,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            child: InkWell(
+                                              onTap: () => _showDetails(item),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  border: BorderDirectional(
+                                                    start: BorderSide(
+                                                      color: levelColor,
+                                                      width: 4,
+                                                    ),
+                                                  ),
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
+                                                padding: const EdgeInsets.all(
+                                                  16.0,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Header Row: Country & Warning Level Badge
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            item.country,
+                                                            style:
+                                                                AppTypography.bodyLg(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .textPrimary,
+                                                                ).copyWith(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 2,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: levelColor
+                                                                .withAlpha(20),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                            border: Border.all(
+                                                              color: levelColor
+                                                                  .withAlpha(
+                                                                    80,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                          child: Text(
+                                                            levelLabel,
+                                                            style:
+                                                                AppTypography.labelXs(
+                                                                  context,
+                                                                  color:
+                                                                      levelColor,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 8),
+
+                                                    // Recommendations summary text
+                                                    Text(
+                                                      cleanRecSummary,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style:
+                                                          AppTypography.bodySm(
+                                                            context,
+                                                            color: AppColors
+                                                                .textSecondary,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(height: 12),
+
+                                                    // Footer Row: Publisher / Date
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            item
+                                                                    .office
+                                                                    .isNotEmpty
+                                                                ? item.office
+                                                                : widget
+                                                                      .appState
+                                                                      .translate(
+                                                                        'travel_warnings_publisher',
+                                                                      ),
+                                                            style: AppTypography.labelXs(
+                                                              context,
+                                                              color: AppColors
+                                                                  .textTertiary,
+                                                            ),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            maxLines: 1,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        if (dateToShow
+                                                            .isNotEmpty)
+                                                          Text(
+                                                            dateToShow.length >=
+                                                                    10
+                                                                ? dateToShow
+                                                                      .substring(
+                                                                        0,
+                                                                        10,
+                                                                      )
+                                                                : dateToShow,
+                                                            style:
+                                                                AppTypography.labelXs(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .textTertiary,
+                                                                ).copyWith(
+                                                                  fontFamily:
+                                                                      'Outfit',
+                                                                ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                            const SizedBox(width: 8),
-                                            if (dateToShow.isNotEmpty)
-                                              Text(
-                                                dateToShow.length >= 10
-                                                    ? dateToShow.substring(
-                                                        0,
-                                                        10,
-                                                      )
-                                                    : dateToShow,
-                                                style:
-                                                    AppTypography.labelXs(
-                                                      context,
-                                                      color: AppColors
-                                                          .textTertiary,
-                                                    ).copyWith(
-                                                      fontFamily: 'Outfit',
-                                                    ),
-                                              ),
-                                          ],
-                                        ),
-                                      ],
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                            ),
+                          ],
                         );
                       },
                     ),
