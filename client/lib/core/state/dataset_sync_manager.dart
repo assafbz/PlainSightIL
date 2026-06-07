@@ -406,16 +406,6 @@ class DatasetSyncManager<T> {
       );
     }
 
-    if (!isFirebaseInitialized) {
-      _isLoading = false;
-      _isSyncing = false;
-      onStateChanged();
-      AppLogger.warning(
-        'DatasetSyncManager ($datasetId): Sync skipped (Firebase not initialized)',
-      );
-      return;
-    }
-
     try {
       final collectionRef = (testFirestore ?? FirebaseFirestore.instance)
           .collection(collectionPath ?? datasetId);

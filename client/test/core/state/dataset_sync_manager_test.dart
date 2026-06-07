@@ -753,6 +753,10 @@ void main() {
       // 5. Cover lines 469, 504, 515, 518, 519 in loadMore
       // Line 469: loadMore called when _records.length >= stringKeys.length
       // Already fully loaded
+      manager1.records.addAll([
+        TestRecord(id: '5', lastUpdated: '2026-06-05', val: 'A'),
+        TestRecord(id: '6', lastUpdated: '2026-06-06', val: 'A'),
+      ]);
       await manager1.loadMore(10);
       expect(manager1.hasReachedCacheEnd, isTrue);
 
@@ -794,9 +798,11 @@ void main() {
       expect(manager5.hasReachedCacheEnd, isTrue);
 
       // Line 518, 519: openLazyBox throws error inside loadMore
-      // We can trigger this by closing the Hive database temporarily or using a box name that fails
-      // Let's close Hive before loadMore
       await Hive.close();
+      final blockedFile = File('${tempDir.path}/blocked');
+      await blockedFile.create();
+      Hive.init(blockedFile.path);
+
       final manager6 = DatasetSyncManager<TestRecord>(
         datasetId: 'invalid_dataset_id_trigger_error',
         fromMap: TestRecord.fromMap,

@@ -9,22 +9,22 @@ import 'package:plainsight/features/datasets/patent_classifications/presentation
 import 'package:plainsight/features/datasets/patent_classifications/data/models/patent_classification_model.dart';
 
 void main() {
+  late Directory tempDir;
+
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('hive_test');
+    Hive.init(tempDir.path);
+    AppStateNotifier.isTesting = true;
+  });
+
+  tearDown(() async {
+    await Hive.close();
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
   group('PatentClassificationsNotifier Tests', () {
-    late Directory tempDir;
-
-    setUp(() {
-      tempDir = Directory.systemTemp.createTempSync('hive_test');
-      Hive.init(tempDir.path);
-      AppStateNotifier.isTesting = true;
-    });
-
-    tearDown(() async {
-      await Hive.close();
-      if (tempDir.existsSync()) {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
-
     test('should initialize with empty records and loading false', () {
       final notifier = PatentClassificationsNotifier();
       expect(notifier.patentRecords, isEmpty);
@@ -258,10 +258,10 @@ void main() {
 
         // Helper to wait for the async cache load to complete
         Future<void> waitForLoad() async {
-          await Future<void>.delayed(const Duration(milliseconds: 5));
-          final end = DateTime.now().add(const Duration(seconds: 2));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          final end = DateTime.now().add(const Duration(seconds: 3));
           while (notifier.isLoadingPatents && DateTime.now().isBefore(end)) {
-            await Future<void>.delayed(const Duration(milliseconds: 5));
+            await Future<void>.delayed(const Duration(milliseconds: 10));
           }
         }
 
