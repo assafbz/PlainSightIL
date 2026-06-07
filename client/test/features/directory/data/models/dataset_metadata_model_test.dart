@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 
+// Stub class representing a Timestamp-like object to cover the contains('Timestamp') check in DatasetMetadataModel
 class MockTimestamp {
   final DateTime _date;
   MockTimestamp(this._date);
