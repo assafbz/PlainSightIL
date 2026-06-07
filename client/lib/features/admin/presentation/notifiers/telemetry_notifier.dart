@@ -494,7 +494,7 @@ class TelemetryNotifier extends ChangeNotifier {
             final Map<String, Map<String, dynamic>> requests = {};
             final Map<String, int> counts = {};
             for (final doc in snapshot.docs) {
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
               requests[doc.id] = data;
               counts[doc.id] = (data['requestCount'] as num? ?? 0).toInt();
             }

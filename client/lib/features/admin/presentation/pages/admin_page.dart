@@ -2338,7 +2338,9 @@ class _AdminPageState extends State<AdminPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: AppColors.danger,
-              content: Text(res['message'] ?? 'Error running AI analysis'),
+              content: Text(
+                (res['message'] as String?) ?? 'Error running AI analysis',
+              ),
             ),
           );
         }
