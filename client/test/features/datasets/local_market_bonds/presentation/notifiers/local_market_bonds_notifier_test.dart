@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
-import 'package:plainsight/features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 
 // --- Fake Firestore chain for query-based notifier testing ---
