@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 
 // --- Fake Firestore chain for query-based notifier testing ---
 
@@ -585,22 +586,59 @@ void main() {
         final notifier = LocalMarketBondsNotifier(testFirestore: null);
         final manager = notifier.syncManagerForTesting;
 
+        // Generate 25 mock records
+        final mockRecords = List.generate(
+          25,
+          (i) => LocalMarketBondRecordModel(
+            id: 'id_$i',
+            idNum: i,
+            issuanceDate: '2026-06-02T00:00:00.000Z',
+            bondType: i < 10
+                ? const {'he': 'ממשלתית', 'en': 'Government'}
+                : i == 10
+                ? const {'he': 'ממשלתית צמודה', 'en': 'CPI-Linked Government'}
+                : i == 11 || i == 12
+                ? const {
+                    'he': 'ממשלתית בריבית משתנה',
+                    'en': 'Floating Rate Government',
+                  }
+                : const {'he': 'קונצרני', 'en': 'Corporate'},
+            series: i == 11 ? 1227784 : (1000000 + i),
+            actualTermToMaturity: 5.0,
+            originalTermToMaturity: 10.0,
+            redemptionDate: '2036-01-01',
+            coupon: 3.0,
+            offeredQuantity: 100.0,
+            purchasedQuantity: 90.0,
+            additionalPurchased: -10.0,
+            averagePrice: 100.0,
+            cutoffPrice: 99.0,
+            totalFunding: 90.0,
+            demandedAmount: 90.0,
+            coverRatio: 0.9,
+            grossAvgYield: 3.0,
+            grossCutoffYield: 2.9,
+            lastUpdated: '2026-06-04T12:00:00Z',
+          ),
+        );
+
         // Open the Hive box and save mock data directly to simulate cached records
         final box = await Hive.openLazyBox<dynamic>(
           'dataset_cache_${manager.datasetId}',
         );
         final Map<String, dynamic> recordsMap = {};
-        for (final r in MockData.bonds) {
+        for (final r in mockRecords) {
           recordsMap[manager.getRecordId(r)] = manager.toMap(r);
         }
         await box.putAll(recordsMap);
-        final List<String> sortedKeys = MockData.bonds
+        final List<String> sortedKeys = mockRecords
             .map((r) => manager.getRecordId(r))
             .toList();
         await box.put('__sorted_keys__', sortedKeys);
 
         // Helper to wait for the async cache load to complete
         Future<void> waitForLoad() async {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
           final end = DateTime.now().add(const Duration(seconds: 2));
           while (notifier.isLoadingBonds && DateTime.now().isBefore(end)) {
             await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -651,10 +689,7 @@ void main() {
         // Reset filter
         notifier.setFilter('All');
         await waitForLoad();
-        expect(
-          notifier.bondRecords.length,
-          MockData.bonds.length > 20 ? 20 : MockData.bonds.length,
-        );
+        expect(notifier.bondRecords.length, 20);
 
         // Test text searching
         notifier.setSearchQuery('Floating');
@@ -685,17 +720,18 @@ void main() {
         notifier.setSearchQuery('');
         notifier.setFilter('All');
         await waitForLoad();
-        expect(notifier.hasMoreBonds, MockData.bonds.length > 20);
+        expect(notifier.hasMoreBonds, isTrue);
 
         // Test fetchNextPage pagination loading more
         if (notifier.hasMoreBonds) {
           final initialLength = notifier.bondRecords.length;
           await notifier.fetchNextPage();
           expect(notifier.bondRecords.length > initialLength, isTrue);
+          expect(notifier.bondRecords.length, 25);
         }
 
         // Test getRecordLastUpdated, toMap, getRecordId callbacks on the manager
-        final record = MockData.bonds.first;
+        final record = mockRecords.first;
         expect(manager.getRecordLastUpdated(record), record.lastUpdated ?? '');
         expect(manager.toMap(record).isNotEmpty, isTrue);
         expect(manager.getRecordId(record), record.id);

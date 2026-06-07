@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/mock_data.dart';
 import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/patent_classifications/data/models/patent_classification_model.dart';
 
 void main() {
   group('PatentClassificationsNotifier Tests', () {
@@ -222,22 +223,42 @@ void main() {
         final notifier = PatentClassificationsNotifier(testFirestore: null);
         final manager = notifier.syncManagerForTesting;
 
+        // Generate 25 mock records
+        final mockRecords = List.generate(
+          25,
+          (i) => PatentClassificationRecordModel(
+            id: 'id_$i',
+            idNum: i,
+            applicationNumber: i == 0 ? 327015 : (300000 + i),
+            titleHebrew: i < 3 ? 'שילוב $i' : 'Hebrew $i',
+            titleEnglish: i < 3 ? 'DRUG $i' : 'English $i',
+            cpcClassification: i < 3 ? 'A61P35/00' : 'G01N21/$i',
+            isPrimary: i % 2 == 0,
+            sourceCreatedAt: '2026-06-03T18:00:00Z',
+            sourceUpdatedAt: '2026-06-03T18:00:00Z',
+            createdAt: '2026-06-03T18:00:00Z',
+            updatedAt: '2026-06-03T18:00:00Z',
+            lastUpdated: '2026-06-03T18:00:00Z',
+          ),
+        );
+
         // Open the Hive box and save mock data directly to simulate cached records
         final box = await Hive.openLazyBox<dynamic>(
           'dataset_cache_${manager.datasetId}',
         );
         final Map<String, dynamic> recordsMap = {};
-        for (final r in MockData.patents) {
+        for (final r in mockRecords) {
           recordsMap[manager.getRecordId(r)] = manager.toMap(r);
         }
         await box.putAll(recordsMap);
-        final List<String> sortedKeys = MockData.patents
+        final List<String> sortedKeys = mockRecords
             .map((r) => manager.getRecordId(r))
             .toList();
         await box.put('__sorted_keys__', sortedKeys);
 
         // Helper to wait for the async cache load to complete
         Future<void> waitForLoad() async {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
           final end = DateTime.now().add(const Duration(seconds: 2));
           while (notifier.isLoadingPatents && DateTime.now().isBefore(end)) {
             await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -277,10 +298,7 @@ void main() {
         // Reset filter
         notifier.setPrimaryFilter('All');
         await waitForLoad();
-        expect(
-          notifier.patentRecords.length,
-          MockData.patents.length > 20 ? 20 : MockData.patents.length,
-        );
+        expect(notifier.patentRecords.length, 20);
 
         // Test text searching by CPC classification
         notifier.setSearchQuery('A61P35/00');
@@ -330,17 +348,18 @@ void main() {
         notifier.setSearchQuery('');
         notifier.setPrimaryFilter('All');
         await waitForLoad();
-        expect(notifier.hasMorePatents, MockData.patents.length > 20);
+        expect(notifier.hasMorePatents, isTrue);
 
         // Test fetchNextPage pagination loading more
         if (notifier.hasMorePatents) {
           final initialLength = notifier.patentRecords.length;
           await notifier.fetchNextPage();
           expect(notifier.patentRecords.length > initialLength, isTrue);
+          expect(notifier.patentRecords.length, 25);
         }
 
         // Test getRecordLastUpdated, toMap, getRecordId callbacks on the manager
-        final record = MockData.patents.first;
+        final record = mockRecords.first;
         expect(manager.getRecordLastUpdated(record), record.lastUpdated ?? '');
         expect(manager.toMap(record).isNotEmpty, isTrue);
         expect(manager.getRecordId(record), record.id);

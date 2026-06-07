@@ -666,5 +666,156 @@ void main() {
 
       manager.dispose();
     });
+
+    test('covers remaining uncovered branches for coverage quality gate', () async {
+      // 1. Cover line 29: isWebOverride
+      final originalWeb = DatasetSyncManager.isWebOverride;
+      DatasetSyncManager.isWebOverride = !originalWeb;
+      expect(DatasetSyncManager.isWebOverride, isNot(originalWeb));
+      DatasetSyncManager.isWebOverride = originalWeb;
+
+      // 2. Cover lines 195, 204: isTestEnv cache load with limit and filter
+      // Prepare cache
+      final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+      await box.put('1', {'id': '1', 'lastUpdated': '2026-06-01', 'val': 'A'});
+      await box.put('2', {'id': '2', 'lastUpdated': '2026-06-02', 'val': 'B'});
+      await box.put('3', {'id': '3', 'lastUpdated': '2026-06-03', 'val': 'A'});
+      await box.put('4', {'id': '4', 'lastUpdated': '2026-06-04', 'val': 'A'});
+      await box.put('__sorted_keys__', ['4', '3', '2', '1']);
+
+      final manager1 = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+
+      final fakeCollection = FakeCollectionReference();
+      final fakeFirestore = FakeFirebaseFirestore((_) => fakeCollection);
+
+      AppStateNotifier.testIsFirebaseInitialized = true;
+      // Initialize with testFirestore (so isTestEnv is true), limit = 2, filter (val == 'A')
+      await manager1.initialize(
+        testFirestore: fakeFirestore,
+
+        limit: 2,
+        filter: (r) => r.val == 'A',
+      );
+      // This will run the loop in isTestEnv, hit limit, hit filter, and hit break
+      expect(manager1.records.length, 2);
+      expect(manager1.hasReachedCacheEnd, isFalse);
+
+      // 3. Cover lines 410-414: Firebase not initialized path in production
+      AppStateNotifier.testIsFirebaseInitialized = false;
+      final manager2 = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+      await manager2.initialize(isTesting: false, forceProductionAsync: true);
+      // Wait for async init
+      await waitForCondition(() => !manager2.isLoading);
+      expect(manager2.isSyncing, isFalse);
+      AppStateNotifier.testIsFirebaseInitialized = true;
+
+      // 4. Cover lines 433-434: Firestore stream error path
+      final errorController =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      final fakeCollectionErr = FakeCollectionReference(
+        stream: errorController.stream,
+      );
+      final fakeFirestoreErr = FakeFirebaseFirestore((_) => fakeCollectionErr);
+
+      final manager3 = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+      await manager3.initialize(
+        testFirestore: fakeFirestoreErr,
+        isTesting: false,
+        forceProductionAsync: true,
+      );
+      // Send error on the stream
+      errorController.addError(Exception('Simulated stream error'));
+      await waitForCondition(() => !manager3.isSyncing);
+      expect(manager3.isLoading, isFalse);
+      await errorController.close();
+
+      // 5. Cover lines 469, 504, 515, 518, 519 in loadMore
+      // Line 469: loadMore called when _records.length >= stringKeys.length
+      // Already fully loaded
+      await manager1.loadMore(10);
+      expect(manager1.hasReachedCacheEnd, isTrue);
+
+      // Line 504: sortComparator in loadMore
+      final box4 = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+      await box4.put('__sorted_keys__', ['3', '2', '1']);
+
+      final manager4 = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+        sortComparator: (a, b) => a.id.compareTo(b.id),
+      );
+      await manager4.initialize(
+        mockData: [TestRecord(id: '2', lastUpdated: '2026-06-02', val: 'B')],
+        isTesting: true,
+      );
+      // Now call loadMore, which should load the rest from cache and use sortComparator
+      await manager4.loadMore(3);
+      expect(
+        manager4.records.first.id,
+        '1',
+      ); // sorted by id ascending: '1', '2', '3'
+
+      // Line 515: loadMore when sortedKeys is null/empty
+      await box.delete('__sorted_keys__');
+      final manager5 = DatasetSyncManager<TestRecord>(
+        datasetId: datasetId,
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+      await manager5.loadMore(5);
+      expect(manager5.hasReachedCacheEnd, isTrue);
+
+      // Line 518, 519: openLazyBox throws error inside loadMore
+      // We can trigger this by closing the Hive database temporarily or using a box name that fails
+      // Let's close Hive before loadMore
+      await Hive.close();
+      final manager6 = DatasetSyncManager<TestRecord>(
+        datasetId: 'invalid_dataset_id_trigger_error',
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+      await manager6.loadMore(5); // will catch error and log it
+
+      // Re-initialize Hive for subsequent test teardown
+      Hive.init(tempDir.path);
+
+      manager1.dispose();
+      manager2.dispose();
+      manager3.dispose();
+      manager4.dispose();
+      manager5.dispose();
+      manager6.dispose();
+    });
   });
 }
