@@ -1,4 +1,5 @@
 // ignore_for_file: avoid_print
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -605,6 +606,35 @@ void main() {
       state.dispose();
       LocalStorage.impl = LocalStorageIO();
     });
+
+    test('handles malformed JSON during sync localized strings loading', () {
+      final enFile = File('assets/lang/en.json');
+      final originalContent = enFile.readAsStringSync();
+      try {
+        enFile.writeAsStringSync('{invalid json}');
+        final testState = AppStateNotifier();
+        testState.dispose();
+      } finally {
+        enFile.writeAsStringSync(originalContent);
+      }
+    });
+
+    test(
+      'handles malformed JSON during async localized strings loading in test',
+      () async {
+        final enFile = File('assets/lang/en.json');
+        final originalContent = enFile.readAsStringSync();
+        try {
+          enFile.writeAsStringSync('{invalid json}');
+          AppStateNotifier.isTesting = true;
+          final testState = AppStateNotifier();
+          await testState.loadLocalizedStrings();
+          testState.dispose();
+        } finally {
+          enFile.writeAsStringSync(originalContent);
+        }
+      },
+    );
   });
 }
 
