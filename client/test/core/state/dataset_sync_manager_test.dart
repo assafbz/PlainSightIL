@@ -816,12 +816,58 @@ void main() {
       // Re-initialize Hive for subsequent test teardown
       Hive.init(tempDir.path);
 
+      // 6. Cover lines 223, 224: JSON parsing exception in test cache load
+      final boxJson = await Hive.openLazyBox<dynamic>(
+        'dataset_cache_json_error',
+      );
+      await boxJson.put('1', 'not_a_map_this_is_a_string');
+      await boxJson.put('__sorted_keys__', ['1']);
+
+      final managerJson = DatasetSyncManager<TestRecord>(
+        datasetId: 'json_error',
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => r.toMap(),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+      await managerJson.initialize(testFirestore: fakeFirestore, limit: 10);
+
+      // 7. Cover lines 335, 336: serialization / write local storage cache exception
+      final managerWriteErr = DatasetSyncManager<TestRecord>(
+        datasetId: 'write_error',
+        fromMap: TestRecord.fromMap,
+        toMap: (r) => throw Exception('Simulated serialization error'),
+        getRecordId: (r) => r.id,
+        getRecordLastUpdated: (r) => r.lastUpdated,
+        onStateChanged: () {},
+      );
+      final streamControllerWriteErr =
+          StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      await managerWriteErr.initialize(
+        isTesting: false,
+        testFirestoreStream: streamControllerWriteErr.stream,
+      );
+      streamControllerWriteErr.add(
+        FakeQuerySnapshot([
+          FakeQueryDocumentSnapshot('1', {
+            'id': '1',
+            'lastUpdated': '2026-06-01',
+            'val': 'A',
+          }),
+        ]),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await streamControllerWriteErr.close();
+
       manager1.dispose();
       manager2.dispose();
       manager3.dispose();
       manager4.dispose();
       manager5.dispose();
       manager6.dispose();
+      managerJson.dispose();
+      managerWriteErr.dispose();
     });
   });
 }
