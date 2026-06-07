@@ -366,4 +366,35 @@ describe("BaseScraper Class", () => {
     expect(mockDoc).toHaveBeenCalledWith("2_subcollection_escape");
     expect(mockDoc).not.toHaveBeenCalledWith("2/subcollection_escape");
   });
+
+  it("should deduplicate record IDs in chunks to prevent duplicate docRefs in db.getAll()", async () => {
+    scraper.mockRawPages = [
+      [
+        { _id: 101, name: "Antenna A" },
+        { _id: 101, name: "Antenna A Duplicate" },
+        { _id: 102, name: "Antenna B" },
+      ],
+    ];
+
+    const result = await scraper.scrape(mockDb);
+
+    expect(result.success).toBe(true);
+    // Only 2 unique records should be counted and changed
+    expect(result.count).toBe(2);
+    expect(result.changedCount).toBe(2);
+
+    // Verify mockGetAll was called with only unique references (length 2)
+    expect(mockGetAll).toHaveBeenCalled();
+    const calls = mockGetAll.mock.calls;
+    const passedRefs = calls[0];
+    expect(passedRefs.length).toBe(2);
+    expect(passedRefs.map((r: any) => r.id)).toEqual(["101", "102"]);
+
+    // Verify that the duplicate record in the batch uses the latest (last) data in the chunk
+    expect(mockBatch.set).toHaveBeenCalledTimes(2);
+    const setCalls = mockBatch.set.mock.calls;
+    const record101Call = setCalls.find((call: any) => call[0].id === "101");
+    expect(record101Call).toBeDefined();
+    expect(record101Call[1].name).toBe("Antenna A Duplicate");
+  });
 });
