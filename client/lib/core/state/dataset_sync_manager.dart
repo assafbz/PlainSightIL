@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -27,6 +28,8 @@ class DatasetSyncManager<T> {
   /// Public override for testing web serialization bypasses on native VM.
   @visibleForTesting
   static bool isWebOverride = kIsWeb;
+
+  static bool _isGlobalFallbackActive = false;
 
   /// Unique dataset identifier GUID matching [DatasetIds]
   final String datasetId;
@@ -181,7 +184,10 @@ class DatasetSyncManager<T> {
 
       // Check cache in test environment if present
       try {
-        final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+        final box = await _openLazyBoxSafe('dataset_cache_$datasetId');
+        if (_isGlobalFallbackActive) {
+          await box.clear();
+        }
         final sortedKeys = await box.get('__sorted_keys__') as List<dynamic>?;
         if (sortedKeys != null && sortedKeys.isNotEmpty) {
           final List<String> stringKeys = sortedKeys.cast<String>();
@@ -289,7 +295,7 @@ class DatasetSyncManager<T> {
 
   Future<void> _saveToCacheAsync(List<T> updatedRecords) async {
     try {
-      final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+      final box = await _openLazyBoxSafe('dataset_cache_$datasetId');
 
       // 1. Save all updated records
       final Map<String, dynamic> recordsMap = {};
@@ -341,7 +347,7 @@ class DatasetSyncManager<T> {
   ) async {
     // 1. Load cached records from Hive LazyBox
     try {
-      final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+      final box = await _openLazyBoxSafe('dataset_cache_$datasetId');
       final sortedKeys = await box.get('__sorted_keys__') as List<dynamic>?;
       if (sortedKeys != null && sortedKeys.isNotEmpty) {
         final List<String> stringKeys = sortedKeys.cast<String>();
@@ -387,7 +393,7 @@ class DatasetSyncManager<T> {
     // Determine the lastSyncTime based on the maximum lastUpdated timestamp in existing records
     String lastSyncTime = '';
     try {
-      final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+      final box = await _openLazyBoxSafe('dataset_cache_$datasetId');
       final sortedKeys = await box.get('__sorted_keys__') as List<dynamic>?;
       if (sortedKeys != null && sortedKeys.isNotEmpty) {
         final newestKey = sortedKeys.first as String;
@@ -451,7 +457,7 @@ class DatasetSyncManager<T> {
     if (matchedCount >= newLimit) return;
 
     try {
-      final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+      final box = await _openLazyBoxSafe('dataset_cache_$datasetId');
       final sortedKeys = await box.get('__sorted_keys__') as List<dynamic>?;
       if (sortedKeys != null && sortedKeys.isNotEmpty) {
         final List<String> stringKeys = sortedKeys.cast<String>();
@@ -524,6 +530,23 @@ class DatasetSyncManager<T> {
     if (_subscription != null) {
       await _subscription!.cancel();
       _subscription = null;
+    }
+  }
+
+  Future<LazyBox<dynamic>> _openLazyBoxSafe(String name) async {
+    try {
+      return await Hive.openLazyBox<dynamic>(name);
+    } catch (e) {
+      if (e.toString().contains('initialize Hive') ||
+          e.toString().contains('provide a path')) {
+        try {
+          final tempDir = Directory.systemTemp.createTempSync('hive_fallback');
+          Hive.init(tempDir.path);
+          _isGlobalFallbackActive = true;
+        } catch (_) {}
+        return await Hive.openLazyBox<dynamic>(name);
+      }
+      rethrow;
     }
   }
 
