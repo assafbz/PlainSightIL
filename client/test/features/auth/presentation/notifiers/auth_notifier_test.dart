@@ -1,3 +1,4 @@
+// ignore_for_file: depend_on_referenced_packages
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,7 +47,7 @@ void main() {
         expect(notifier.userProfile?.firstName, 'Assaf New');
 
         // Guest Mode Toggle
-        notifier.setGuestMode(true);
+        await notifier.setGuestMode(true);
         expect(notifier.isGuestMode, isTrue);
 
         // Sign In with Google
@@ -109,8 +110,6 @@ void main() {
         expect(notifier.isAuthenticated, isFalse);
 
         // trigger auth stream exception path
-        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
-
         streamController.addError('Connection failed');
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
@@ -197,7 +196,7 @@ void main() {
 
         await notifier.toggleFavorite('fav-dataset');
         await notifier.addRecent('recent-dataset');
-        notifier.setGuestMode(true);
+        await notifier.setGuestMode(true);
 
         // Restore platform
         SharedPreferencesStorePlatform.instance = originalPlatform;

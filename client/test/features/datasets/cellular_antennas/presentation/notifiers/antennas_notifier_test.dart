@@ -68,9 +68,6 @@ void main() {
     test(
       'AntennasNotifier handles real Firestore streams and error path',
       () async {
-        final mockFirestore = FakeFirebaseFirestore((path) {
-          return FakeCollectionReference();
-        });
         final antennaController =
             StreamController<QuerySnapshot<Map<String, dynamic>>>.broadcast();
 
