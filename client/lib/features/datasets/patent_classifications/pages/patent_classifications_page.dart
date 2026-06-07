@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
+import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
 import '../data/models/patent_classification_model.dart';
 import '../widgets/patent_detail_drawer.dart';
 
@@ -26,12 +30,66 @@ class _PatentClassificationsScreenState
   Timer? _debounce;
   String _activeFilter = 'All'; // 'All', 'Primary', 'Secondary'
 
+  T _getNotifier<T>({bool listen = false}) {
+    try {
+      return Provider.of<T>(context, listen: listen);
+    } catch (_) {
+      if (T == PatentClassificationsNotifier) {
+        return widget.appState.patentClassificationsNotifier as T;
+      }
+      if (T == AuthNotifier) {
+        return widget.appState.authNotifier as T;
+      }
+      if (T == AlertsNotifier) {
+        return widget.appState.alertsNotifier as T;
+      }
+      throw Exception('Notifier not found in AppStateNotifier for type $T');
+    }
+  }
+
+  Widget _buildConsumer<T>({
+    required Widget Function(BuildContext context, T notifier, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final notifier = Provider.of<T>(context);
+      return builder(context, notifier, child);
+    } catch (_) {
+      final notifier = _getNotifier<T>();
+      return ListenableBuilder(
+        listenable: notifier as Listenable,
+        builder: (context, _) => builder(context, notifier, child),
+      );
+    }
+  }
+
+  Widget _buildConsumer2<T1, T2>({
+    required Widget Function(BuildContext context, T1 n1, T2 n2, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final n1 = Provider.of<T1>(context);
+      final n2 = Provider.of<T2>(context);
+      return builder(context, n1, n2, child);
+    } catch (_) {
+      final n1 = _getNotifier<T1>();
+      final n2 = _getNotifier<T2>();
+      return ListenableBuilder(
+        listenable: Listenable.merge([n1 as Listenable, n2 as Listenable]),
+        builder: (context, _) => builder(context, n1, n2, child),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Track in history and trigger initial fetch
     widget.appState.addRecent(DatasetIds.patentClassifications);
-    widget.appState.initPatentClassificationsListener();
+    _getNotifier<PatentClassificationsNotifier>()
+        .initPatentClassificationsListener();
     _scrollController.addListener(_onScroll);
   }
 
@@ -41,21 +99,22 @@ class _PatentClassificationsScreenState
     _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
-    widget.appState.cancelPatentClassificationsListener();
+    _getNotifier<PatentClassificationsNotifier>()
+        .cancelPatentClassificationsListener();
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      widget.appState.fetchNextPatentPage();
+      _getNotifier<PatentClassificationsNotifier>().fetchNextPage();
     }
   }
 
   void _onSearchChanged(String val) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      widget.appState.setPatentSearchQuery(val);
+      _getNotifier<PatentClassificationsNotifier>().setSearchQuery(val);
     });
   }
 
@@ -63,7 +122,7 @@ class _PatentClassificationsScreenState
     setState(() {
       _activeFilter = filter;
     });
-    widget.appState.setPatentPrimaryFilter(filter);
+    _getNotifier<PatentClassificationsNotifier>().setPrimaryFilter(filter);
   }
 
   /// Opens the detail drawer bottom sheet for the selected record.
@@ -118,419 +177,457 @@ class _PatentClassificationsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final list = widget.appState.patentRecords;
+    return _buildConsumer<PatentClassificationsNotifier>(
+      builder: (context, patentNotifier, _) {
+        final list = patentNotifier.patentRecords;
 
-    return Scaffold(
-      backgroundColor: AppColors.baseBg,
-      body: Stack(
-        children: [
-          // Background Atmospheric Radial Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.6, -0.6),
-                  radius: 1.2,
-                  colors: [
-                    const Color(
-                      0x1F9C27B0,
-                    ), // subtle purple glow for patent/legal accent
-                    AppColors.baseBg,
-                  ],
+        return Scaffold(
+          backgroundColor: AppColors.baseBg,
+          body: Stack(
+            children: [
+              // Background Atmospheric Radial Gradient
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.6, -0.6),
+                      radius: 1.2,
+                      colors: [
+                        const Color(
+                          0x1F9C27B0,
+                        ), // subtle purple glow for patent/legal accent
+                        AppColors.baseBg,
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Navigation Header
-                  Row(
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        tooltip: 'Back',
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.appState.translate(
-                            'patent_classifications_title',
-                          ),
-                          style: AppTypography.headlineLg(
-                            context,
-                            color: AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      ListenableBuilder(
-                        listenable: widget.appState,
-                        builder: (context, _) {
-                          final isFav = widget.appState.isFavorite(
-                            DatasetIds.patentClassifications,
-                          );
-                          final isSubbed = widget.appState.isSubscribed(
-                            DatasetIds.patentClassifications,
-                          );
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                tooltip: widget.appState.translate(
-                                  isSubbed
-                                      ? 'unsubscribe_tooltip'
-                                      : 'subscribe_tooltip',
-                                ),
-                                icon: Icon(
-                                  isSubbed
-                                      ? Icons.notifications_active
-                                      : Icons.notifications_none,
-                                  color: isSubbed
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary,
-                                ),
-                                onPressed: () =>
-                                    widget.appState.toggleSubscription(
-                                      DatasetIds.patentClassifications,
-                                    ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  isFav
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: isFav
-                                      ? AppColors.danger
-                                      : AppColors.textSecondary,
-                                ),
-                                onPressed: () => widget.appState.toggleFavorite(
-                                  DatasetIds.patentClassifications,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. Glassmorphic Search Bar
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLow.withAlpha(100),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.glassBorder,
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Icon(
-                            Icons.search,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: _onSearchChanged,
-                            style: AppTypography.bodySm(
-                              context,
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: widget.appState.translate(
-                                'patent_classifications_search_placeholder',
-                              ),
-                              hintStyle: AppTypography.bodySm(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                        if (_searchController.text.isNotEmpty)
+                      // 1. Navigation Header
+                      Row(
+                        children: [
                           IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.close,
-                              color: AppColors.textSecondary,
-                              size: 18,
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
                             ),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onSearchChanged('');
-                            },
+                            tooltip: 'Back',
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 3. Filters Chips Row
-                  SizedBox(
-                    height: 40,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        _buildFilterChip(
-                          'All',
-                          widget.appState.translate('patent_primary_chip_all'),
-                        ),
-                        _buildFilterChip(
-                          'Primary',
-                          widget.appState.translate(
-                            'patent_primary_chip_primary',
-                          ),
-                        ),
-                        _buildFilterChip(
-                          'Secondary',
-                          widget.appState.translate(
-                            'patent_primary_chip_secondary',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 4. Main Results list
-                  Expanded(
-                    child: ListenableBuilder(
-                      listenable: widget.appState,
-                      builder: (context, _) {
-                        if (widget.appState.isLoadingPatents) {
-                          return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
-
-                        if (list.isEmpty) {
-                          return Center(
+                          const SizedBox(width: 8),
+                          Expanded(
                             child: Text(
-                              widget.appState.translate('no_results'),
-                              style: AppTypography.bodyLg(
+                              widget.appState.translate(
+                                'patent_classifications_title',
+                              ),
+                              style: AppTypography.headlineLg(
                                 context,
-                                color: AppColors.textTertiary,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          _buildConsumer2<AuthNotifier, AlertsNotifier>(
+                            builder:
+                                (context, authNotifier, alertsNotifier, _) {
+                                  final isFav = authNotifier.isFavorite(
+                                    DatasetIds.patentClassifications,
+                                  );
+                                  final isSubbed = alertsNotifier.isSubscribed(
+                                    DatasetIds.patentClassifications,
+                                  );
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: widget.appState.translate(
+                                          isSubbed
+                                              ? 'unsubscribe_tooltip'
+                                              : 'subscribe_tooltip',
+                                        ),
+                                        icon: Icon(
+                                          isSubbed
+                                              ? Icons.notifications_active
+                                              : Icons.notifications_none,
+                                          color: isSubbed
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: () =>
+                                            alertsNotifier.toggleSubscription(
+                                              DatasetIds.patentClassifications,
+                                              authNotifier.currentUser?.uid ??
+                                                  (AppStateNotifier.isTesting
+                                                      ? 'mock_uid'
+                                                      : ''),
+                                            ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(
+                                          isFav
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color: isFav
+                                              ? AppColors.danger
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: () =>
+                                            authNotifier.toggleFavorite(
+                                              DatasetIds.patentClassifications,
+                                            ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 2. Glassmorphic Search Bar
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLow.withAlpha(100),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.glassBorder,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                color: AppColors.textSecondary,
+                                size: 20,
                               ),
                             ),
-                          );
-                        }
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: _onSearchChanged,
+                                style: AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: widget.appState.translate(
+                                    'patent_classifications_search_placeholder',
+                                  ),
+                                  hintStyle: AppTypography.bodySm(
+                                    context,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            if (_searchController.text.isNotEmpty)
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppColors.textSecondary,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _onSearchChanged('');
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                        final showLoadMore = widget.appState.hasMorePatents;
-
-                        return ListView.builder(
-                          controller: _scrollController,
+                      // 3. Filters Chips Row
+                      SizedBox(
+                        height: 40,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
-                          itemCount: list.length + (showLoadMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == list.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16.0),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                          children: [
+                            _buildFilterChip(
+                              'All',
+                              widget.appState.translate(
+                                'patent_primary_chip_all',
+                              ),
+                            ),
+                            _buildFilterChip(
+                              'Primary',
+                              widget.appState.translate(
+                                'patent_primary_chip_primary',
+                              ),
+                            ),
+                            _buildFilterChip(
+                              'Secondary',
+                              widget.appState.translate(
+                                'patent_primary_chip_secondary',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 4. Main Results list
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            if (patentNotifier.isLoadingPatents) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              );
+                            }
+
+                            if (list.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  widget.appState.translate('no_results'),
+                                  style: AppTypography.bodyLg(
+                                    context,
+                                    color: AppColors.textTertiary,
                                   ),
                                 ),
                               );
                             }
 
-                            final item = list[index];
+                            final showLoadMore = patentNotifier.hasMorePatents;
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceLow.withAlpha(120),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.glassBorder,
-                                  width: 1.0,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  onTap: () => _showDetails(item),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: BorderDirectional(
-                                        start: BorderSide(
-                                          color: item.isPrimary
-                                              ? AppColors.primary
-                                              : AppColors.secondary,
-                                          width: 4,
-                                        ),
+                            return ListView.builder(
+                              controller: _scrollController,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: list.length + (showLoadMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == list.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 16.0,
+                                    ),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
                                       ),
                                     ),
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Header Row: CPC classification code & Badge
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                  );
+                                }
+
+                                final item = list[index];
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12.0),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceLow.withAlpha(120),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: AppColors.glassBorder,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: InkWell(
+                                      onTap: () => _showDetails(item),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          border: BorderDirectional(
+                                            start: BorderSide(
+                                              color: item.isPrimary
+                                                  ? AppColors.primary
+                                                  : AppColors.secondary,
+                                              width: 4,
+                                            ),
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.cpcClassification,
+                                            // Header Row: CPC classification code & Badge
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    item.cpcClassification,
+                                                    style:
+                                                        AppTypography.bodyLg(
+                                                          context,
+                                                          color: AppColors
+                                                              .textPrimary,
+                                                        ).copyWith(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily: 'Outfit',
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 2,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        (item.isPrimary
+                                                                ? AppColors
+                                                                      .primary
+                                                                : AppColors
+                                                                      .secondary)
+                                                            .withAlpha(20),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color:
+                                                          (item.isPrimary
+                                                                  ? AppColors
+                                                                        .primary
+                                                                  : AppColors
+                                                                        .secondary)
+                                                              .withAlpha(80),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    item.isPrimary
+                                                        ? widget.appState.translate(
+                                                            'patent_is_primary',
+                                                          )
+                                                        : widget.appState.translate(
+                                                            'patent_is_secondary',
+                                                          ),
+                                                    style:
+                                                        AppTypography.labelXs(
+                                                          context,
+                                                          color: item.isPrimary
+                                                              ? AppColors
+                                                                    .primary
+                                                              : AppColors
+                                                                    .secondary,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+
+                                            // Title displays
+                                            if (item.titleHebrew.isNotEmpty)
+                                              Text(
+                                                item.titleHebrew,
                                                 style:
-                                                    AppTypography.bodyLg(
+                                                    AppTypography.bodySm(
                                                       context,
                                                       color:
                                                           AppColors.textPrimary,
                                                     ).copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontFamily: 'Outfit',
+                                                      fontFamily: 'Assistant',
+                                                      height: 1.3,
                                                     ),
-                                                maxLines: 1,
+                                                maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
+                                            if (item
+                                                .titleEnglish
+                                                .isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                item.titleEnglish,
+                                                style:
+                                                    AppTypography.bodySm(
+                                                      context,
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ).copyWith(
+                                                      fontFamily: 'Outfit',
+                                                      height: 1.3,
+                                                    ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                            const SizedBox(height: 12),
+
+                                            // Footer Row: Application number & publisher label
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    widget.appState.translate(
+                                                      'patent_classifications_publisher',
+                                                    ),
+                                                    style:
+                                                        AppTypography.labelXs(
+                                                          context,
+                                                          color: AppColors
+                                                              .textTertiary,
+                                                        ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    (item.isPrimary
-                                                            ? AppColors.primary
-                                                            : AppColors
-                                                                  .secondary)
-                                                        .withAlpha(20),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color:
-                                                      (item.isPrimary
-                                                              ? AppColors
-                                                                    .primary
-                                                              : AppColors
-                                                                    .secondary)
-                                                          .withAlpha(80),
                                                 ),
-                                              ),
-                                              child: Text(
-                                                item.isPrimary
-                                                    ? widget.appState.translate(
-                                                        'patent_is_primary',
-                                                      )
-                                                    : widget.appState.translate(
-                                                        'patent_is_secondary',
+                                                Text(
+                                                  '${widget.appState.translate("patent_app_num_label")}${item.applicationNumber}',
+                                                  style:
+                                                      AppTypography.labelXs(
+                                                        context,
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      ).copyWith(
+                                                        fontFamily: 'Outfit',
                                                       ),
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: item.isPrimary
-                                                      ? AppColors.primary
-                                                      : AppColors.secondary,
                                                 ),
-                                              ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 8),
-
-                                        // Title displays
-                                        if (item.titleHebrew.isNotEmpty)
-                                          Text(
-                                            item.titleHebrew,
-                                            style:
-                                                AppTypography.bodySm(
-                                                  context,
-                                                  color: AppColors.textPrimary,
-                                                ).copyWith(
-                                                  fontFamily: 'Assistant',
-                                                  height: 1.3,
-                                                ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        if (item.titleEnglish.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            item.titleEnglish,
-                                            style:
-                                                AppTypography.bodySm(
-                                                  context,
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ).copyWith(
-                                                  fontFamily: 'Outfit',
-                                                  height: 1.3,
-                                                ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                        const SizedBox(height: 12),
-
-                                        // Footer Row: Application number & publisher label
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                widget.appState.translate(
-                                                  'patent_classifications_publisher',
-                                                ),
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: AppColors.textTertiary,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
-                                            ),
-                                            Text(
-                                              '${widget.appState.translate("patent_app_num_label")}${item.applicationNumber}',
-                                              style: AppTypography.labelXs(
-                                                context,
-                                                color: AppColors.textSecondary,
-                                              ).copyWith(fontFamily: 'Outfit'),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

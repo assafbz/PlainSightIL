@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/features/datasets/vehicle_recalls/data/models/vehicle_recall_model.dart';
 import 'package:plainsight/features/datasets/vehicle_recalls/presentation/notifiers/vehicle_recalls_notifier.dart';
 
 // Fake implementations for Firestore classes
@@ -222,6 +223,22 @@ void main() {
       notifier.notifyListeners();
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(listenerCalled, isTrue);
+      notifier.dispose();
+    });
+
+    test('getRecordLastUpdated extraction callback works', () {
+      final notifier = VehicleRecallsNotifier(isTesting: true);
+      final manager = notifier.syncManagerForTesting;
+      expect(
+        manager.getRecordLastUpdated(
+          VehicleRecallRecordModel.fromMap({'lastUpdated': '2026-06-02'}),
+        ),
+        '2026-06-02',
+      );
+      expect(
+        manager.getRecordLastUpdated(VehicleRecallRecordModel.fromMap({})),
+        '',
+      );
       notifier.dispose();
     });
   });

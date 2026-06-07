@@ -17,6 +17,10 @@ class VehicleRecallsNotifier extends ChangeNotifier {
   late final DatasetSyncManager<VehicleRecallRecordModel> _syncManager;
 
   @visibleForTesting
+  DatasetSyncManager<VehicleRecallRecordModel> get syncManagerForTesting =>
+      _syncManager;
+
+  @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
 
   @visibleForTesting

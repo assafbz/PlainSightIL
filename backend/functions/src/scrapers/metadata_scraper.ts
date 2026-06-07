@@ -18,6 +18,7 @@ export interface CKANPackage {
   };
   num_resources?: number;
   metadata_modified?: string;
+  metadata_created?: string;
   tags?: Array<{ name: string }>;
   resources?: Array<{ id: string; name?: string }>;
 }
@@ -33,7 +34,8 @@ export interface DatasetMetadata {
   notes: string;
   publisher: string;
   resourceCount: number;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   tags: string[];
   isSupported: boolean;
   createdAt?: string;
@@ -136,7 +138,9 @@ export class MetadataScraper extends BaseScraper<CKANPackage, DatasetMetadata> {
     const notes = sanitizeNotes(raw.notes);
     const publisher = (raw.organization?.title ?? "לא ידוע").trim();
     const resourceCount = raw.num_resources ?? 0;
-    const lastUpdated = raw.metadata_modified ?? new Date().toISOString();
+    const sourceCreatedAt =
+      raw.metadata_created ?? raw.metadata_modified ?? new Date().toISOString();
+    const sourceUpdatedAt = raw.metadata_modified ?? new Date().toISOString();
     const tags = (raw.tags ?? []).map((t) => (t.name ?? "").trim()).filter(Boolean);
 
     return {
@@ -147,7 +151,8 @@ export class MetadataScraper extends BaseScraper<CKANPackage, DatasetMetadata> {
       notes,
       publisher,
       resourceCount,
-      lastUpdated,
+      sourceCreatedAt,
+      sourceUpdatedAt,
       tags,
       isSupported,
     };

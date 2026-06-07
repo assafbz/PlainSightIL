@@ -94,7 +94,8 @@ export interface CellularPermitApplication {
   coordinates: GeoPoint;
   geohash: string;
   jurisdiction: string;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -161,7 +162,8 @@ export function parsePermitRecord(record: HebrewPermitRecord): CellularPermitApp
     geohash,
     jurisdiction,
     siteNumber,
-    lastUpdated: submissionDate,
+    sourceCreatedAt: submissionDate,
+    sourceUpdatedAt: submissionDate,
   };
 }
 

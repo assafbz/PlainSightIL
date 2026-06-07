@@ -152,8 +152,6 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.appState.locale == 'he';
-    final list = _getFilteredRecords();
-    final specialties = _getUniqueSpecialties();
 
     return Scaffold(
       backgroundColor: AppColors.baseBg,
@@ -321,216 +319,276 @@ class _DoctorsLicensesScreenState extends State<DoctorsLicensesScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Specialties Horizontal Chips Row
-                  if (specialties.length > 1)
-                    SizedBox(
-                      height: 40,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: specialties.length,
-                        itemBuilder: (context, index) =>
-                            _buildFilterChip(specialties[index]),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // 4. Main Results list
+                  // 3 & 4. ListenableBuilder containing Specialties Chips & Results List
                   Expanded(
                     child: ListenableBuilder(
                       listenable: widget.appState,
                       builder: (context, _) {
-                        if (widget.appState.isLoadingDoctors) {
-                          return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
+                        final list = _getFilteredRecords();
+                        final specialties = _getUniqueSpecialties();
 
-                        if (list.isEmpty) {
-                          return Center(
-                            child: Text(
-                              widget.appState.translate('no_results'),
-                              style: AppTypography.bodyLg(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: list.length,
-                          itemBuilder: (context, index) {
-                            final item = list[index];
-                            final hasSpecialty =
-                                item.specialtyName != null &&
-                                item.specialtyName!.isNotEmpty;
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceLow.withAlpha(120),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.glassBorder,
-                                  width: 1.0,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (specialties.length > 1) ...[
+                              SizedBox(
+                                height: 40,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: specialties.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildFilterChip(specialties[index]),
                                 ),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  onTap: () => _showDetails(item),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: BorderDirectional(
-                                        start: BorderSide(
-                                          color: AppColors.primary,
-                                          width: 4,
+                              const SizedBox(height: 16),
+                            ],
+                            Expanded(
+                              child: widget.appState.isLoadingDoctors
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : list.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        widget.appState.translate('no_results'),
+                                        style: AppTypography.bodyLg(
+                                          context,
+                                          color: AppColors.textTertiary,
                                         ),
                                       ),
-                                    ),
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Header Row: Doctor Name & License Active Badge
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                '${isRtl ? "ד\"ר" : "Dr."} ${item.firstName} ${item.lastName}',
-                                                style:
-                                                    AppTypography.bodyLg(
-                                                      context,
-                                                      color:
-                                                          AppColors.textPrimary,
-                                                    ).copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.success
-                                                    .withAlpha(20),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: AppColors.success
-                                                      .withAlpha(80),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                widget.appState.translate(
-                                                  'doctor_licensed',
-                                                ),
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: AppColors.success,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
+                                    )
+                                  : ListView.builder(
+                                      controller: _scrollController,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: list.length,
+                                      itemBuilder: (context, index) {
+                                        final item = list[index];
+                                        final hasSpecialty =
+                                            item.specialtyName != null &&
+                                            item.specialtyName!.isNotEmpty;
 
-                                        // Mapped Details
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              '${widget.appState.translate("license_num_label")}${item.licenseNumber}',
-                                              style: AppTypography.bodySm(
-                                                context,
-                                                color: AppColors.textSecondary,
-                                              ).copyWith(fontFamily: 'Outfit'),
+                                        return Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 12.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceLow
+                                                .withAlpha(120),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
                                             ),
-                                            if (hasSpecialty)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
+                                            border: Border.all(
+                                              color: AppColors.glassBorder,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            child: InkWell(
+                                              onTap: () => _showDetails(item),
+                                              child: Container(
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.secondary
-                                                      .withAlpha(20),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                    color: AppColors.secondary
-                                                        .withAlpha(50),
+                                                  border: BorderDirectional(
+                                                    start: BorderSide(
+                                                      color: AppColors.primary,
+                                                      width: 4,
+                                                    ),
                                                   ),
                                                 ),
-                                                child: Text(
-                                                  item.specialtyName!,
-                                                  style: AppTypography.labelXs(
-                                                    context,
-                                                    color: AppColors.secondary,
-                                                  ),
+                                                padding: const EdgeInsets.all(
+                                                  16.0,
                                                 ),
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Header Row: Doctor Name & License Active Badge
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            '${isRtl ? "ד\"ר" : "Dr."} ${item.firstName} ${item.lastName}',
+                                                            style:
+                                                                AppTypography.bodyLg(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .textPrimary,
+                                                                ).copyWith(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 2,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: AppColors
+                                                                .success
+                                                                .withAlpha(20),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                            border: Border.all(
+                                                              color: AppColors
+                                                                  .success
+                                                                  .withAlpha(
+                                                                    80,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                          child: Text(
+                                                            widget.appState
+                                                                .translate(
+                                                                  'doctor_licensed',
+                                                                ),
+                                                            style:
+                                                                AppTypography.labelXs(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .success,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 8),
 
-                                        // Footer Row: Metadata / License Reg Date
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                widget.appState.translate(
-                                                  'doctors_publisher',
+                                                    // Mapped Details
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      children: [
+                                                        Text(
+                                                          '${widget.appState.translate("license_num_label")}${item.licenseNumber}',
+                                                          style:
+                                                              AppTypography.bodySm(
+                                                                context,
+                                                                color: AppColors
+                                                                    .textSecondary,
+                                                              ).copyWith(
+                                                                fontFamily:
+                                                                    'Outfit',
+                                                              ),
+                                                        ),
+                                                        if (hasSpecialty)
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 8,
+                                                                  vertical: 2,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color: AppColors
+                                                                  .secondary
+                                                                  .withAlpha(
+                                                                    20,
+                                                                  ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
+                                                              border: Border.all(
+                                                                color: AppColors
+                                                                    .secondary
+                                                                    .withAlpha(
+                                                                      50,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              item.specialtyName!,
+                                                              style: AppTypography.labelXs(
+                                                                context,
+                                                                color: AppColors
+                                                                    .secondary,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 8),
+
+                                                    // Footer Row: Metadata / License Reg Date
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            widget.appState
+                                                                .translate(
+                                                                  'doctors_publisher',
+                                                                ),
+                                                            style: AppTypography.labelXs(
+                                                              context,
+                                                              color: AppColors
+                                                                  .textTertiary,
+                                                            ),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            maxLines: 1,
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          item
+                                                                      .licenseRegistrationDate
+                                                                      .length >=
+                                                                  10
+                                                              ? item.licenseRegistrationDate
+                                                                    .substring(
+                                                                      0,
+                                                                      10,
+                                                                    )
+                                                              : item.licenseRegistrationDate,
+                                                          style:
+                                                              AppTypography.labelXs(
+                                                                context,
+                                                                color: AppColors
+                                                                    .textTertiary,
+                                                              ).copyWith(
+                                                                fontFamily:
+                                                                    'Outfit',
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
                                                 ),
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: AppColors.textTertiary,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
                                               ),
                                             ),
-                                            Text(
-                                              item
-                                                          .licenseRegistrationDate
-                                                          .length >=
-                                                      10
-                                                  ? item.licenseRegistrationDate
-                                                        .substring(0, 10)
-                                                  : item.licenseRegistrationDate,
-                                              style: AppTypography.labelXs(
-                                                context,
-                                                color: AppColors.textTertiary,
-                                              ).copyWith(fontFamily: 'Outfit'),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                            ),
+                          ],
                         );
                       },
                     ),

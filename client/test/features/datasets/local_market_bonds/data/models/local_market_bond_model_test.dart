@@ -26,6 +26,8 @@ void main() {
         'grossCutoffYield': 3.73,
         'createdAt': '2026-06-04T12:00:00Z',
         'updatedAt': '2026-06-04T12:00:00Z',
+        'sourceCreatedAt': '2026-06-04T12:00:00Z',
+        'sourceUpdatedAt': '2026-06-04T12:00:00Z',
         'lastUpdated': '2026-06-04T12:00:00Z',
       };
 
@@ -51,6 +53,8 @@ void main() {
       expect(model.grossCutoffYield, 3.73);
       expect(model.createdAt, '2026-06-04T12:00:00Z');
       expect(model.updatedAt, '2026-06-04T12:00:00Z');
+      expect(model.sourceCreatedAt, '2026-06-04T12:00:00Z');
+      expect(model.sourceUpdatedAt, '2026-06-04T12:00:00Z');
       expect(model.lastUpdated, '2026-06-04T12:00:00Z');
     });
 
@@ -77,6 +81,8 @@ void main() {
         grossCutoffYield: 3.73,
         createdAt: '2026-06-04T12:00:00Z',
         updatedAt: '2026-06-04T12:00:00Z',
+        sourceCreatedAt: '2026-06-04T12:00:00Z',
+        sourceUpdatedAt: '2026-06-04T12:00:00Z',
         lastUpdated: '2026-06-04T12:00:00Z',
       );
 
@@ -102,6 +108,8 @@ void main() {
       expect(map['grossCutoffYield'], 3.73);
       expect(map['createdAt'], '2026-06-04T12:00:00Z');
       expect(map['updatedAt'], '2026-06-04T12:00:00Z');
+      expect(map['sourceCreatedAt'], '2026-06-04T12:00:00Z');
+      expect(map['sourceUpdatedAt'], '2026-06-04T12:00:00Z');
       expect(map['lastUpdated'], '2026-06-04T12:00:00Z');
     });
   });

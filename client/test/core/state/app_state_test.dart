@@ -288,6 +288,13 @@ void main() {
       appState.initBondsListener();
       appState.cancelBondsListener();
 
+      expect(appState.recallRecords, isEmpty);
+      expect(appState.isLoadingRecalls, isTrue);
+      appState.initRecallsListener();
+      expect(appState.isLoadingRecalls, isFalse);
+      appState.cancelRecallsListener();
+      expect(appState.isLoadingRecalls, isTrue);
+
       appState.initPermitMetadataListener();
       expect(appState.isLoadingAntennas, isFalse);
       expect(appState.isLoadingPermits, isFalse);
@@ -299,6 +306,7 @@ void main() {
       appState.initTelemetryListeners();
       appState.initBankAtmsListener();
       appState.initBondsListener();
+      appState.initRecallsListener();
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
@@ -308,6 +316,7 @@ void main() {
       expect(appState.isLoadingAtms, isFalse);
       expect(appState.isLoadingCarImporters, isFalse);
       expect(appState.isLoadingBonds, isFalse);
+      expect(appState.isLoadingRecalls, isFalse);
 
       expect(appState.antennaRecords.isNotEmpty, isTrue);
       expect(appState.permitRecords.isNotEmpty, isTrue);
@@ -316,6 +325,7 @@ void main() {
       expect(appState.atmRecords.isNotEmpty, isTrue);
       expect(appState.carImporterRecords.isNotEmpty, isTrue);
       expect(appState.bondRecords.isNotEmpty, isTrue);
+      expect(appState.recallRecords.isNotEmpty, isTrue);
       expect(appState.datasetMetadataMap.isNotEmpty, isTrue);
       expect(appState.apiHealth.isNotEmpty, isTrue);
       expect(appState.scraperRuns.isNotEmpty, isTrue);
@@ -329,6 +339,10 @@ void main() {
       appState.cancelBondsListener();
       expect(appState.bondRecords, isEmpty);
       expect(appState.isLoadingBonds, isFalse);
+
+      appState.cancelRecallsListener();
+      expect(appState.recallRecords, isEmpty);
+      expect(appState.isLoadingRecalls, isTrue);
 
       // Verify app version is populated
       await Future<void>.delayed(const Duration(milliseconds: 50));

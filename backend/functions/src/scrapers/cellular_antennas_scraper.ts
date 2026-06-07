@@ -107,7 +107,8 @@ export interface CellularAntenna {
   addressEnglish: string;
   createdAt?: string;
   updatedAt?: string;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
 }
 
 function parseFrequency(tech: string): number {
@@ -211,6 +212,15 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
   const rawDate = record["בדיקה תקופתית אחרונה"] ?? "";
   const lastTestDate = parseDdmmyyyyToISO(rawDate);
 
+  const rawSetupDate = record["תאריך היתר הקמה"] ?? "";
+  const rawActivationDate = record["תאריך היתר הפעלה"] ?? "";
+  const sourceCreatedAt = rawSetupDate
+    ? parseDdmmyyyyToISO(rawSetupDate)
+    : rawActivationDate
+      ? parseDdmmyyyyToISO(rawActivationDate)
+      : lastTestDate;
+  const sourceUpdatedAt = lastTestDate;
+
   const locality = (record.עיר ?? "לא ידוע").trim();
   const addressHebrew = (record["כתובת האתר"] ?? "").trim() || locality;
   const addressEnglish = translateAddress(addressHebrew);
@@ -229,7 +239,8 @@ export function parseRecord(record: HebrewAntennaRecord): CellularAntenna | null
     lastTestDate,
     addressHebrew,
     addressEnglish,
-    lastUpdated: lastTestDate,
+    sourceCreatedAt,
+    sourceUpdatedAt,
   };
 }
 

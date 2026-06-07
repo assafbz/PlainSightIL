@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 import '../data/models/local_market_bond_model.dart';
 import '../widgets/bond_detail_drawer.dart';
 
@@ -25,11 +29,64 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
   String _activeFilter =
       'All'; // 'All', 'Government', 'CPI-Linked', 'Floating Rate'
 
+  T _getNotifier<T>({bool listen = false}) {
+    try {
+      return Provider.of<T>(context, listen: listen);
+    } catch (_) {
+      if (T == LocalMarketBondsNotifier) {
+        return widget.appState.bondsNotifier as T;
+      }
+      if (T == AuthNotifier) {
+        return widget.appState.authNotifier as T;
+      }
+      if (T == AlertsNotifier) {
+        return widget.appState.alertsNotifier as T;
+      }
+      throw Exception('Notifier not found in AppStateNotifier for type $T');
+    }
+  }
+
+  Widget _buildConsumer<T>({
+    required Widget Function(BuildContext context, T notifier, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final notifier = Provider.of<T>(context);
+      return builder(context, notifier, child);
+    } catch (_) {
+      final notifier = _getNotifier<T>();
+      return ListenableBuilder(
+        listenable: notifier as Listenable,
+        builder: (context, _) => builder(context, notifier, child),
+      );
+    }
+  }
+
+  Widget _buildConsumer2<T1, T2>({
+    required Widget Function(BuildContext context, T1 n1, T2 n2, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final n1 = Provider.of<T1>(context);
+      final n2 = Provider.of<T2>(context);
+      return builder(context, n1, n2, child);
+    } catch (_) {
+      final n1 = _getNotifier<T1>();
+      final n2 = _getNotifier<T2>();
+      return ListenableBuilder(
+        listenable: Listenable.merge([n1 as Listenable, n2 as Listenable]),
+        builder: (context, _) => builder(context, n1, n2, child),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     widget.appState.addRecent(DatasetIds.localMarketBonds);
-    widget.appState.initBondsListener();
+    _getNotifier<LocalMarketBondsNotifier>().initBondsListener();
     _scrollController.addListener(_onScroll);
   }
 
@@ -39,21 +96,21 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
     _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
-    widget.appState.cancelBondsListener();
+    _getNotifier<LocalMarketBondsNotifier>().cancelBondsListener();
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      widget.appState.fetchNextBondsPage();
+      _getNotifier<LocalMarketBondsNotifier>().fetchNextPage();
     }
   }
 
   void _onSearchChanged(String val) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      widget.appState.setBondsSearchQuery(val);
+      _getNotifier<LocalMarketBondsNotifier>().setSearchQuery(val);
     });
   }
 
@@ -61,7 +118,7 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
     setState(() {
       _activeFilter = filter;
     });
-    widget.appState.setBondsFilter(filter);
+    _getNotifier<LocalMarketBondsNotifier>().setFilter(filter);
   }
 
   void _showDetails(LocalMarketBondRecordModel record) {
@@ -183,13 +240,12 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      ListenableBuilder(
-                        listenable: widget.appState,
-                        builder: (context, _) {
-                          final isFav = widget.appState.isFavorite(
+                      _buildConsumer2<AuthNotifier, AlertsNotifier>(
+                        builder: (context, authNotifier, alertsNotifier, _) {
+                          final isFav = authNotifier.isFavorite(
                             DatasetIds.localMarketBonds,
                           );
-                          final isSubbed = widget.appState.isSubscribed(
+                          final isSubbed = alertsNotifier.isSubscribed(
                             DatasetIds.localMarketBonds,
                           );
                           return Row(
@@ -210,8 +266,12 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
                                       : AppColors.textSecondary,
                                 ),
                                 onPressed: () =>
-                                    widget.appState.toggleSubscription(
+                                    alertsNotifier.toggleSubscription(
                                       DatasetIds.localMarketBonds,
+                                      authNotifier.currentUser?.uid ??
+                                          (AppStateNotifier.isTesting
+                                              ? 'mock_uid'
+                                              : ''),
                                     ),
                               ),
                               IconButton(
@@ -223,7 +283,7 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
                                       ? AppColors.danger
                                       : AppColors.textSecondary,
                                 ),
-                                onPressed: () => widget.appState.toggleFavorite(
+                                onPressed: () => authNotifier.toggleFavorite(
                                   DatasetIds.localMarketBonds,
                                 ),
                               ),
@@ -323,16 +383,15 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
 
                   // 4. Main Results List
                   Expanded(
-                    child: ListenableBuilder(
-                      listenable: widget.appState,
-                      builder: (context, _) {
-                        if (widget.appState.isLoadingBonds) {
+                    child: _buildConsumer<LocalMarketBondsNotifier>(
+                      builder: (context, bondsNotifier, _) {
+                        if (bondsNotifier.isLoadingBonds) {
                           return const Center(
                             child: CircularProgressIndicator(strokeWidth: 2),
                           );
                         }
 
-                        final list = widget.appState.bondRecords;
+                        final list = bondsNotifier.bondRecords;
                         if (list.isEmpty) {
                           return Center(
                             child: Text(
@@ -345,7 +404,7 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
                           );
                         }
 
-                        final showLoadMore = widget.appState.hasMoreBonds;
+                        final showLoadMore = bondsNotifier.hasMoreBonds;
 
                         return ListView.builder(
                           controller: _scrollController,

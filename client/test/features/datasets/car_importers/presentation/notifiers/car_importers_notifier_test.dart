@@ -136,6 +136,48 @@ void main() {
       notifier.dispose();
     });
 
+    test(
+      'syncManagerForTesting and getRecordLastUpdated extraction callback works',
+      () {
+        final notifier = CarImportersNotifier(isTesting: true);
+        final manager = notifier.syncManagerForTesting;
+        final record = CarImporterRecordModel(
+          id: '1',
+          idNum: 1,
+          importerCode: 1,
+          importerName: 'קרסו',
+          modelType: 'P',
+          makerCode: 928,
+          makerName: 'רנו',
+          modelCode: 1000,
+          modelName: 'Twingo',
+          productionYear: 1996,
+          price: 54950,
+          commercialName: 'Twingo 2.1',
+          lastUpdated: '2026-06-02',
+        );
+        expect(manager.getRecordLastUpdated(record), '2026-06-02');
+
+        final recordNoDate = CarImporterRecordModel(
+          id: '1',
+          idNum: 1,
+          importerCode: 1,
+          importerName: 'קרסו',
+          modelType: 'P',
+          makerCode: 928,
+          makerName: 'רנו',
+          modelCode: 1000,
+          modelName: 'Twingo',
+          productionYear: 1996,
+          price: 54950,
+          commercialName: 'Twingo 2.1',
+          lastUpdated: null,
+        );
+        expect(manager.getRecordLastUpdated(recordNoDate), '');
+        notifier.dispose();
+      },
+    );
+
     test('isFirebaseInitialized returns mock states correctly', () {
       final notifier = CarImportersNotifier();
       AppStateNotifier.testIsFirebaseInitialized = true;
