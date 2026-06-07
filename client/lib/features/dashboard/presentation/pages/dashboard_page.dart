@@ -2,15 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
-import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
-import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
-import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
-import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
-import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
-import 'package:plainsight/features/datasets/vehicle_recalls/pages/vehicle_recalls_page.dart';
-import 'package:plainsight/features/datasets/car_importers/pages/car_importers_page.dart';
-import 'package:plainsight/features/datasets/travel_warnings/pages/travel_warnings_page.dart';
-import 'package:plainsight/features/datasets/local_market_bonds/pages/local_market_bonds_page.dart';
+import 'package:plainsight/core/utils/route_registry.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
 import 'package:plainsight/features/ai_search/presentation/widgets/ai_search_bar.dart';
 import 'package:plainsight/features/ai_search/presentation/pages/ai_search_page.dart';
@@ -77,63 +69,10 @@ class DashboardScreen extends StatelessWidget {
   }
 
   void _openDataset(BuildContext context, String id) {
-    if (id == DatasetIds.cellularAntennas || id == DatasetIds.cellularPermits) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CellularAntennasScreen(
-            appState: appState,
-            initialFilterIndex: id == DatasetIds.cellularPermits ? 1 : 0,
-          ),
-        ),
-      );
-    } else if (id == DatasetIds.companiesLiquidation) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CompaniesLiquidationScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.doctorsLicenses) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => DoctorsLicensesScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.bankAtms) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => BankAtmsScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.patentClassifications) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => PatentClassificationsScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.vehicleRecalls) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => VehicleRecallsScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.carImporters) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CarImportersScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.travelWarnings) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => TravelWarningsScreen(appState: appState),
-        ),
-      );
-    } else if (id == DatasetIds.localMarketBonds) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => LocalMarketBondsScreen(appState: appState),
-        ),
-      );
+    try {
+      Navigator.of(context).push(RouteRegistry.getDatasetRoute(id, appState));
+    } on ArgumentError catch (_) {
+      // Ignore unknown dataset IDs
     }
   }
 
@@ -462,40 +401,16 @@ class DashboardScreen extends StatelessWidget {
                         Navigator.of(
                           context,
                         ).pop(); // Close search page overlay
-                        if (datasetId == DatasetIds.vehicleRecalls) {
+                        try {
                           Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) => VehicleRecallsScreen(
-                                appState: appState,
-                                initialSelectedId: docId,
-                              ),
+                            RouteRegistry.getDatasetRoute(
+                              datasetId,
+                              appState,
+                              initialSelectedId: docId,
                             ),
                           );
-                        } else if (datasetId == DatasetIds.travelWarnings) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) => TravelWarningsScreen(
-                                appState: appState,
-                                initialSelectedId: docId,
-                              ),
-                            ),
-                          );
-                        } else if (datasetId == DatasetIds.cellularAntennas ||
-                            datasetId == DatasetIds.cellularPermits) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) => CellularAntennasScreen(
-                                appState: appState,
-                                initialFilterIndex:
-                                    datasetId == DatasetIds.cellularPermits
-                                    ? 1
-                                    : 0,
-                                initialSelectedId: docId,
-                              ),
-                            ),
-                          );
-                        } else {
-                          _openDataset(context, datasetId);
+                        } on ArgumentError catch (_) {
+                          // Ignore unknown dataset IDs
                         }
                       },
                     ),
