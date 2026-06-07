@@ -146,7 +146,6 @@ class _CompaniesLiquidationScreenState
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.appState.locale == 'he';
-    final list = _getFilteredRecords();
 
     return Scaffold(
       backgroundColor: AppColors.baseBg,
@@ -333,6 +332,7 @@ class _CompaniesLiquidationScreenState
                     child: ListenableBuilder(
                       listenable: widget.appState,
                       builder: (context, _) {
+                        final list = _getFilteredRecords();
                         if (widget.appState.isLoadingLiquidation) {
                           return const Center(
                             child: CircularProgressIndicator(strokeWidth: 2),

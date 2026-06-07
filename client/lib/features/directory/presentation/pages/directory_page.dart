@@ -289,8 +289,6 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final list = _getFilteredDatasets();
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -389,6 +387,7 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
             child: ListenableBuilder(
               listenable: widget.appState,
               builder: (context, _) {
+                final list = _getFilteredDatasets();
                 if (widget.appState.isLoadingDirectory) {
                   return const Center(
                     child: CircularProgressIndicator(strokeWidth: 2),

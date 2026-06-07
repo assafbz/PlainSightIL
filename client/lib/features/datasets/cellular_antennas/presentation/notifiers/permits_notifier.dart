@@ -6,6 +6,7 @@ import 'package:plainsight/core/utils/app_logger.dart';
 
 import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/state/dataset_sync_manager.dart';
 
 /// Scoped state notifier that handles cellular construction permits metadata streams,
 /// double-buffering collection references, loader flags, and test mode data fallbacks.
@@ -14,13 +15,10 @@ class PermitsNotifier extends ChangeNotifier {
   bool get _isTesting => AppStateNotifier.isTesting;
 
   String _activePermitCollection = '';
-  List<Map<String, dynamic>> _permitRecords = [];
-  bool _isLoadingPermits = true;
   String _permitSyncStatus = 'idle';
-  StreamSubscription<QuerySnapshot>? _permitSubscription;
   StreamSubscription<DocumentSnapshot>? _permitMetadataSubscription;
+  late final DatasetSyncManager<Map<String, dynamic>> _syncManager;
 
-  @visibleForTesting
   @visibleForTesting
   Stream<DocumentSnapshot<Map<String, dynamic>>>? testMetadataStream;
   @visibleForTesting
@@ -28,11 +26,15 @@ class PermitsNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseFirestore? testFirestore;
 
+  @visibleForTesting
+  DatasetSyncManager<Map<String, dynamic>> get syncManagerForTesting =>
+      _syncManager;
+
   /// Returns cellular permit records list.
-  List<Map<String, dynamic>> get permitRecords => _permitRecords;
+  List<Map<String, dynamic>> get permitRecords => _syncManager.records;
 
   /// Checks if permits query is loading.
-  bool get isLoadingPermits => _isLoadingPermits;
+  bool get isLoadingPermits => _syncManager.isLoading;
 
   /// Gets the synchronization status flag (idle, syncing, error).
   String get permitSyncStatus => _permitSyncStatus;
@@ -55,7 +57,21 @@ class PermitsNotifier extends ChangeNotifier {
     this.testMetadataStream,
     this.testPermitsStream,
     this.testFirestore,
-  });
+  }) {
+    _syncManager = DatasetSyncManager<Map<String, dynamic>>(
+      datasetId: DatasetIds.cellularPermits,
+      fromMap: (map) => map,
+      toMap: (map) => map,
+      getRecordId: (map) =>
+          map['id']?.toString() ?? map['referenceNumber']?.toString() ?? '',
+      getRecordLastUpdated: (map) => map['lastUpdated']?.toString() ?? '',
+      onStateChanged: notifyListeners,
+      onError: (err) {
+        _permitSyncStatus = 'error';
+        notifyListeners();
+      },
+    );
+  }
 
   /// Initialize real-time metadata streams to retrieve active collection mappings.
   void initPermitMetadataListener() {
@@ -75,12 +91,12 @@ class PermitsNotifier extends ChangeNotifier {
               notifyListeners();
             }
           } else {
-            _isLoadingPermits = false;
+            // Emulate the syncManager loading state finished
+            _syncManager.initialize(mockData: [], isTesting: true);
             notifyListeners();
           }
         },
         onError: (Object err) {
-          _isLoadingPermits = false;
           _permitSyncStatus = 'error';
           notifyListeners();
           AppLogger.error('Firestore permit metadata listener error', err);
@@ -90,7 +106,7 @@ class PermitsNotifier extends ChangeNotifier {
     }
     if (_isTesting) {
       _permitSyncStatus = 'idle';
-      _permitRecords = [
+      final mockList = [
         {
           'id': '1',
           'referenceNumber': 2081659,
@@ -140,15 +156,14 @@ class PermitsNotifier extends ChangeNotifier {
           'coordinates': const GeoPoint(31.7833, 35.2167),
         },
       ];
-      _isLoadingPermits = false;
-      notifyListeners();
+      _syncManager.initialize(mockData: mockList, isTesting: true);
       return;
     }
 
     if (!isFirebaseInitialized) {
       _permitSyncStatus = 'error';
-      _isLoadingPermits = false;
-      notifyListeners();
+      // Initialize with empty list to stop loading state
+      _syncManager.initialize(mockData: [], isTesting: true);
       return;
     }
 
@@ -175,12 +190,11 @@ class PermitsNotifier extends ChangeNotifier {
                       notifyListeners();
                     }
                   } else {
-                    _isLoadingPermits = false;
+                    _syncManager.initialize(mockData: [], isTesting: true);
                     notifyListeners();
                   }
                 },
                 onError: (Object err) {
-                  _isLoadingPermits = false;
                   _permitSyncStatus = 'error';
                   notifyListeners();
                   AppLogger.error(
@@ -190,7 +204,6 @@ class PermitsNotifier extends ChangeNotifier {
                 },
               );
     } catch (e) {
-      _isLoadingPermits = false;
       _permitSyncStatus = 'error';
       notifyListeners();
       AppLogger.error(
@@ -202,71 +215,23 @@ class PermitsNotifier extends ChangeNotifier {
 
   void _bindActivePermitCollection(String newCollection) {
     _activePermitCollection = newCollection;
-    _isLoadingPermits = true;
     notifyListeners();
 
-    _permitSubscription?.cancel();
-    if (testPermitsStream != null) {
-      _permitSubscription = testPermitsStream!.listen(
-        (snapshot) {
-          _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
-          _isLoadingPermits = false;
-          notifyListeners();
-        },
-        onError: (Object err) {
-          _isLoadingPermits = false;
-          _permitSyncStatus = 'error';
-          notifyListeners();
-          AppLogger.error(
-            'Firestore permit collection listener error for $newCollection',
-            err,
-          );
-        },
-      );
-      return;
-    }
-    try {
-      _permitSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(newCollection)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              _permitRecords = snapshot.docs.map((doc) => doc.data()).toList();
-              _isLoadingPermits = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingPermits = false;
-              _permitSyncStatus = 'error';
-              notifyListeners();
-              AppLogger.error(
-                'Firestore permit collection listener error for $newCollection',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingPermits = false;
-      _permitSyncStatus = 'error';
-      notifyListeners();
-      AppLogger.error(
-        'Failed to bind Firestore collection $newCollection in PermitsNotifier',
-        e,
-      );
-    }
+    _syncManager.initialize(
+      isTesting: _isTesting,
+      testFirestore: testFirestore,
+      testFirestoreStream: testPermitsStream,
+      collectionPath: newCollection,
+    );
   }
 
   /// Cancels active permit subscriptions and resets paging states.
   void cancelPermitMetadataListener() {
-    _permitSubscription?.cancel();
-    _permitSubscription = null;
     _permitMetadataSubscription?.cancel();
     _permitMetadataSubscription = null;
-    _isLoadingPermits = true;
-    _permitRecords = [];
     _activePermitCollection = '';
     _permitSyncStatus = 'idle';
-    notifyListeners();
+    _syncManager.cancel();
   }
 
   bool _isDisposed = false;
@@ -285,8 +250,8 @@ class PermitsNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    _permitSubscription?.cancel();
     _permitMetadataSubscription?.cancel();
+    _syncManager.dispose();
     super.dispose();
   }
 }

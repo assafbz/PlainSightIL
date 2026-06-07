@@ -610,5 +610,69 @@ void main() {
       await streamController.close();
       manager.dispose();
     });
+
+    test(
+      'should bypass compute and use direct JSON encode/decode in Web mode',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        // Setup initial cache
+        const cachedJson =
+            '[{"id":"1","lastUpdated":"2026-06-01T00:00:00Z","val":"A"}]';
+        await prefs.setString('dataset_cache_$datasetId', cachedJson);
+
+        final streamController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final mockFirestore = FakeFirebaseFirestore((path) {
+          return FakeCollectionReference(stream: streamController.stream);
+        });
+
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {},
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        // Force Web mode
+        DatasetSyncManager.isWebOverride = true;
+
+        try {
+          await manager.initialize(
+            isTesting: false,
+            testFirestore: mockFirestore,
+            forceProductionAsync: true,
+          );
+
+          // Verify cached record loaded immediately
+          await waitForCondition(() => manager.records.length == 1);
+          expect(manager.records.first.val, 'A');
+
+          // Inject update snapshot to trigger saveToCache
+          final updateDocs = [
+            FakeQueryDocumentSnapshot('1', {
+              'id': '1',
+              'lastUpdated': '2026-06-03T00:00:00Z',
+              'val': 'A-Updated',
+            }),
+          ];
+          streamController.add(FakeQuerySnapshot(updateDocs));
+          await waitForCondition(
+            () => manager.records.first.val == 'A-Updated',
+          );
+
+          // Verify it writes back to cache (which runs in web mode too)
+          final newCache = prefs.getString('dataset_cache_$datasetId');
+          expect(newCache, contains('A-Updated'));
+        } finally {
+          // Reset Web override
+          DatasetSyncManager.isWebOverride = false;
+          await streamController.close();
+          manager.dispose();
+        }
+      },
+    );
   });
 }
