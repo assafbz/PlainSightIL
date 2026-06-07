@@ -434,12 +434,16 @@ export abstract class BaseScraper<
     isFirstSync: boolean,
     nowStr: string,
   ): Promise<{ processedCount: number; changedCount: number }> {
-    const docRefs = chunk.map((r) => {
+    const uniqueRecordsMap = new Map<string, ParsedRecord>();
+    for (const r of chunk) {
       // Sanitize record document ID to prevent NoSQL path injection
       const safeId = r.id.replace(/[/\s]/g, "_");
       r.id = safeId;
-      return targetRef.doc(safeId);
-    });
+      uniqueRecordsMap.set(safeId, r);
+    }
+    const deduplicatedChunk = Array.from(uniqueRecordsMap.values());
+
+    const docRefs = deduplicatedChunk.map((r) => targetRef.doc(r.id));
 
     const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
     const existingMap = new Map<string, admin.firestore.DocumentData>();
@@ -456,7 +460,7 @@ export abstract class BaseScraper<
     let processedCount = 0;
     let changedCount = 0;
 
-    for (const r of chunk) {
+    for (const r of deduplicatedChunk) {
       const docRef = targetRef.doc(r.id);
       const existingData = existingMap.get(r.id) as ParsedRecord | undefined;
 
