@@ -21,6 +21,10 @@ class AntennasNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseFirestore? testFirestore;
 
+  @visibleForTesting
+  DatasetSyncManager<Map<String, dynamic>> get syncManagerForTesting =>
+      _syncManager;
+
   /// Returns cellular antenna documents list.
   List<Map<String, dynamic>> get antennaRecords => _syncManager.records;
 

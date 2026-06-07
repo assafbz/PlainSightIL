@@ -30,6 +30,10 @@ class PatentClassificationsNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseFirestore? testFirestore;
 
+  @visibleForTesting
+  DatasetSyncManager<PatentClassificationRecordModel>
+  get syncManagerForTesting => _syncManager;
+
   /// Returns patent classifications records list.
   List<PatentClassificationRecordModel> get patentRecords {
     if (testFirestore != null) {

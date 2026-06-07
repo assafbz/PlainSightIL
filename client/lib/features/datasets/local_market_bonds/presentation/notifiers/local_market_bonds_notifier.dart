@@ -30,6 +30,10 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseFirestore? testFirestore;
 
+  @visibleForTesting
+  DatasetSyncManager<LocalMarketBondRecordModel> get syncManagerForTesting =>
+      _syncManager;
+
   /// Returns local market bonds records list.
   List<LocalMarketBondRecordModel> get bondRecords {
     if (testFirestore != null) {

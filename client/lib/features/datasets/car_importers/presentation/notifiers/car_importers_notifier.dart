@@ -39,6 +39,10 @@ class CarImportersNotifier extends ChangeNotifier {
     }
   }
 
+  @visibleForTesting
+  DatasetSyncManager<CarImporterRecordModel> get syncManagerForTesting =>
+      _syncManager;
+
   /// Construct and initialize the CarImportersNotifier.
   CarImportersNotifier({
     bool isTesting = false,

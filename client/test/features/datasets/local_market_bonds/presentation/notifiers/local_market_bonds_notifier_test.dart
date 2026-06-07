@@ -1,7 +1,9 @@
-// ignore_for_file: subtype_of_sealed_class, unnecessary_no_such_method
+// ignore_for_file: subtype_of_sealed_class, unnecessary_no_such_method, depend_on_referenced_packages
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/constants/mock_data.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/data/models/local_market_bond_model.dart';
 import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
 
 // --- Fake Firestore chain for query-based notifier testing ---
@@ -551,6 +553,143 @@ void main() {
       expect(notifier.isLoadingMoreBonds, isFalse);
 
       notifier.dispose();
+    });
+  });
+
+  group('LocalMarketBondsNotifier Production Delegation Tests', () {
+    setUp(() {
+      AppStateNotifier.isTesting = false;
+      AppStateNotifier.testIsFirebaseInitialized = true;
+    });
+
+    tearDown(() {
+      AppStateNotifier.isTesting = true;
+      AppStateNotifier.testIsFirebaseInitialized = null;
+    });
+
+    test(
+      'verifies searching, filtering and pagination on production delegation paths',
+      () async {
+        final notifier = LocalMarketBondsNotifier(testFirestore: null);
+
+        // Initialize with mockData directly on sync manager
+        final manager = notifier.syncManagerForTesting;
+        await manager.initialize(mockData: MockData.bonds, isTesting: true);
+
+        // Verify basic loading state delegation
+        expect(notifier.isLoadingBonds, isFalse);
+        expect(notifier.bondRecords.isNotEmpty, isTrue);
+
+        // Test filtering on 'Government'
+        notifier.setFilter('Government');
+        expect(
+          notifier.hasMoreBonds,
+          isFalse,
+        ); // Reads hasMoreBonds with filter set
+        for (final bond in notifier.bondRecords) {
+          expect(bond.bondType['en'], 'Government');
+        }
+
+        // Test filtering on 'CPI-Linked'
+        notifier.setFilter('CPI-Linked');
+        expect(
+          notifier.hasMoreBonds,
+          isFalse,
+        ); // Reads hasMoreBonds with filter set
+        for (final bond in notifier.bondRecords) {
+          expect(bond.bondType['en'], 'CPI-Linked Government');
+        }
+
+        // Test filtering on 'Floating Rate'
+        notifier.setFilter('Floating Rate');
+        expect(
+          notifier.hasMoreBonds,
+          isFalse,
+        ); // Reads hasMoreBonds with filter set
+        for (final bond in notifier.bondRecords) {
+          expect(bond.bondType['en'], 'Floating Rate Government');
+        }
+
+        // Reset filter
+        notifier.setFilter('All');
+        expect(
+          notifier.bondRecords.length,
+          MockData.bonds.length > 20 ? 20 : MockData.bonds.length,
+        );
+
+        // Test text searching
+        notifier.setSearchQuery('Floating');
+        expect(
+          notifier.hasMoreBonds,
+          isFalse,
+        ); // Reads hasMoreBonds with search query set
+        for (final bond in notifier.bondRecords) {
+          expect(
+            bond.bondType['en']?.toLowerCase().contains('floating'),
+            isTrue,
+          );
+        }
+
+        // Test numeric series searching
+        notifier.setSearchQuery('1227784');
+        expect(
+          notifier.hasMoreBonds,
+          isFalse,
+        ); // Reads hasMoreBonds with search query set
+        for (final bond in notifier.bondRecords) {
+          expect(bond.series.toString(), '1227784');
+        }
+
+        // Test hasMoreBonds when records length is <= page size vs when pagination runs
+        notifier.setSearchQuery('');
+        notifier.setFilter('All');
+        expect(notifier.hasMoreBonds, MockData.bonds.length > 20);
+
+        // Test fetchNextPage pagination loading more
+        if (notifier.hasMoreBonds) {
+          final initialLength = notifier.bondRecords.length;
+          await notifier.fetchNextPage();
+          expect(notifier.bondRecords.length > initialLength, isTrue);
+        }
+
+        // Test getRecordLastUpdated, toMap, getRecordId callbacks on the manager
+        final record = MockData.bonds.first;
+        expect(manager.getRecordLastUpdated(record), record.lastUpdated ?? '');
+        expect(manager.toMap(record).isNotEmpty, isTrue);
+        expect(manager.getRecordId(record), record.id);
+
+        notifier.dispose();
+      },
+    );
+
+    test('verifies initBondsListener and cancelBondsListener paths', () async {
+      // 1. testFirestore != null paths (init & cancel)
+      final fakeDoc = FakeQueryDocumentSnapshot(
+        '1',
+        MockData.bonds.first.toMap(),
+      );
+      final fakeSnapshot = FakeQuerySnapshot([fakeDoc]);
+      final fakeCollection = FakeCollectionReference(fakeSnapshot);
+      final fakeFirestore = FakeFirebaseFirestore(fakeCollection);
+
+      final notifierWithFirestore = LocalMarketBondsNotifier(
+        testFirestore: fakeFirestore,
+      );
+
+      notifierWithFirestore
+          .initBondsListener(); // executes fetchNextPage(isRefresh: true) on line 154
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(notifierWithFirestore.bondRecords.isNotEmpty, isTrue);
+
+      notifierWithFirestore.cancelBondsListener(); // executes lines 179-181
+      expect(notifierWithFirestore.bondRecords, isEmpty);
+      notifierWithFirestore.dispose();
+
+      // 2. _isTesting is false, testFirestore is null path in initBondsListener
+      final notifierProd = LocalMarketBondsNotifier(testFirestore: null);
+      // Calls line 166: _syncManager.initialize(testFirestore: testFirestore);
+      notifierProd.initBondsListener();
+      notifierProd.dispose();
     });
   });
 }

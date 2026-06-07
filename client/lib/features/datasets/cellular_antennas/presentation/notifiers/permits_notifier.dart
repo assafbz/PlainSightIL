@@ -26,6 +26,10 @@ class PermitsNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseFirestore? testFirestore;
 
+  @visibleForTesting
+  DatasetSyncManager<Map<String, dynamic>> get syncManagerForTesting =>
+      _syncManager;
+
   /// Returns cellular permit records list.
   List<Map<String, dynamic>> get permitRecords => _syncManager.records;
 
