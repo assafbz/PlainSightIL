@@ -555,6 +555,7 @@ void main() {
         });
 
         AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
 
         // 1. TelemetryNotifier handles exceptions in all metadata/health/runs/dir/requests subscriptions
         final mockFirestoreThrow = FakeFirebaseFirestore((path) {
