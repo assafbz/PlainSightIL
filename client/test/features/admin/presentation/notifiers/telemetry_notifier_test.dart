@@ -1037,5 +1037,126 @@ void main() {
         AppStateNotifier.testIsFirebaseInitialized = null;
       },
     );
+
+    test(
+      'requestDatasetActivation updates compositeScore when aiScore exists',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+
+        final mockFirestoreTrans = FakeFirestoreWithAiScore((path) {
+          return FakeCollectionReference();
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreTrans,
+          testAuth: fakeAuth,
+        );
+
+        final success = await notifier.requestDatasetActivation(
+          'dataset-with-ai',
+          'Title with AI',
+        );
+        expect(success, isTrue);
+
+        notifier.dispose();
+        await authStreamController.close();
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        AppStateNotifier.isTesting = true;
+      },
+    );
+
+    test(
+      'triggerAiAnalysis in production mode with null httpClient uses global http client',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+
+        final mockClient = MockHttpClientLocal((request) async {
+          expect(request.method, equals('POST'));
+          expect(request.url.path, endsWith('/manualAnalyzeDataset'));
+          expect(
+            request.headers['Authorization'],
+            equals('Bearer mock-id-token'),
+          );
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'AI analysis completed successfully',
+              'review': {'aiScore': 90},
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        });
+
+        await http.runWithClient(() async {
+          final notifier = TelemetryNotifier(
+            isTesting: false,
+            httpClient: null,
+            testAuth: fakeAuth,
+          );
+
+          final result = await notifier.triggerAiAnalysis(
+            'unsupported-dataset-id',
+          );
+          expect(result['success'], isTrue);
+          expect(
+            result['message'],
+            equals('AI analysis completed successfully'),
+          );
+          expect(result['review']['aiScore'], equals(90));
+
+          notifier.dispose();
+        }, () => mockClient);
+
+        await authStreamController.close();
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
+}
+
+class FakeTransactionWithAiScore extends FakeTransaction {
+  FakeTransactionWithAiScore() : super(exists: true);
+
+  @override
+  Future<DocumentSnapshot<T>> get<T extends Object?>(
+    DocumentReference<T> documentReference,
+  ) async {
+    return FakeDocumentSnapshot(documentReference.id, true, {
+          'requestCount': 5,
+          'aiScore': 80,
+        })
+        as DocumentSnapshot<T>;
+  }
+}
+
+class FakeFirestoreWithAiScore extends FakeFirebaseFirestore {
+  FakeFirestoreWithAiScore(super.collectionBuilder);
+
+  @override
+  Future<T> runTransaction<T>(
+    TransactionHandler<T> transactionHandler, {
+    Duration timeout = const Duration(seconds: 30),
+    int maxAttempts = 5,
+  }) async {
+    final transaction = FakeTransactionWithAiScore();
+    return await transactionHandler(transaction as Transaction);
+  }
 }

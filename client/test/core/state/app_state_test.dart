@@ -391,6 +391,10 @@ void main() {
       );
       expect(syncResult['success'], isTrue);
 
+      expect(appState.datasetRequests, isNotNull);
+      final aiResult = await appState.triggerAiAnalysis('some-dataset');
+      expect(aiResult['success'], isTrue);
+
       // test updateDatasetScheduler in testing mode
       AppStateNotifier.isTesting = true;
       appState.initAdminMetadataListener(); // Load initial mock data
