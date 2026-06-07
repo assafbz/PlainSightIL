@@ -116,8 +116,10 @@ vi.mock("firebase-functions/v1", async (importOriginal) => {
 });
 
 // 3. Mock @google/generative-ai
-vi.mock("@google/generative-ai", () => {
+vi.mock("@google/generative-ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@google/generative-ai")>();
   return {
+    ...actual,
     GoogleGenerativeAI: class {
       getGenerativeModel = vi.fn().mockReturnValue({
         generateContent: mockGenerateContent,

@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 import { AppLogger as logger } from "../utils/logger";
 
 export interface AiRoadmapReview {
@@ -62,29 +62,29 @@ export function getMockRoadmapReview(title: string): AiRoadmapReview {
   };
 }
 
-const aiReviewSchema = {
-  type: "object",
+const aiReviewSchema: Schema = {
+  type: SchemaType.OBJECT,
   properties: {
     importance: {
-      type: "string",
+      type: SchemaType.STRING,
+      format: "enum",
       enum: ["High", "Medium", "Low"],
       description: "How valuable or important this data is to the general Israeli public.",
     },
     importanceReasoning: {
-      type: "string",
+      type: SchemaType.STRING,
       description:
         "A brief, professional explanation in Hebrew explaining why this rating was given.",
     },
     paymentWillingness: {
-      type: "string",
+      type: SchemaType.STRING,
+      format: "enum",
       enum: ["High", "Medium", "Low"],
       description:
         "How likely Israeli citizens or organizations would be willing to pay for access or premium features related to this dataset.",
     },
     aiScore: {
-      type: "integer",
-      minimum: 0,
-      maximum: 100,
+      type: SchemaType.INTEGER,
       description: "A priority assessment score from 0 (lowest) to 100 (highest priority).",
     },
   },
