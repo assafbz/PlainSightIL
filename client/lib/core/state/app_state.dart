@@ -1,4 +1,7 @@
 import 'dart:ui';
+import 'dart:convert' show jsonDecode;
+import 'dart:io' show File, Platform;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -205,6 +208,7 @@ class AppStateNotifier extends ChangeNotifier {
     });
 
     _initPackageInfo();
+    _initLocalizedStringsSync();
     _loadLocale();
   }
 
@@ -216,11 +220,72 @@ class AppStateNotifier extends ChangeNotifier {
       if (savedLocale == 'en' || savedLocale == 'he') {
         if (_locale != savedLocale) {
           _locale = savedLocale;
-          notifyListeners();
+        }
+      }
+      await loadLocalizedStrings();
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error('Error loading locale from LocalStorage', e);
+    }
+  }
+
+  /// Initialize localized strings synchronously in a unit test environment.
+  void _initLocalizedStringsSync() {
+    try {
+      if (!kIsWeb) {
+        if (Platform.environment.containsKey('FLUTTER_TEST')) {
+          final enFile = File('assets/lang/en.json');
+          final heFile = File('assets/lang/he.json');
+          if (enFile.existsSync() && heFile.existsSync()) {
+            _localizedStrings = {
+              'en': Map<String, String>.from(
+                jsonDecode(enFile.readAsStringSync()) as Map,
+              ),
+              'he': Map<String, String>.from(
+                jsonDecode(heFile.readAsStringSync()) as Map,
+              ),
+            };
+          }
         }
       }
     } catch (e) {
-      AppLogger.error('Error loading locale from LocalStorage', e);
+      AppLogger.error(
+        'Failed to load localized strings synchronously in test',
+        e,
+      );
+    }
+  }
+
+  /// Load localized strings asynchronously from the asset bundle.
+  Future<void> loadLocalizedStrings() async {
+    try {
+      if (isTesting) {
+        // Direct file read for test mode if available
+        if (!kIsWeb) {
+          final enFile = File('assets/lang/en.json');
+          final heFile = File('assets/lang/he.json');
+          if (enFile.existsSync() && heFile.existsSync()) {
+            _localizedStrings = {
+              'en': Map<String, String>.from(
+                jsonDecode(enFile.readAsStringSync()) as Map,
+              ),
+              'he': Map<String, String>.from(
+                jsonDecode(heFile.readAsStringSync()) as Map,
+              ),
+            };
+            return;
+          }
+        }
+      }
+
+      final enString = await rootBundle.loadString('assets/lang/en.json');
+      final heString = await rootBundle.loadString('assets/lang/he.json');
+      _localizedStrings = {
+        'en': Map<String, String>.from(jsonDecode(enString) as Map),
+        'he': Map<String, String>.from(jsonDecode(heString) as Map),
+      };
+    } catch (e) {
+      AppLogger.error('Failed to load localized strings from assets', e);
     }
   }
 
@@ -386,6 +451,7 @@ class AppStateNotifier extends ChangeNotifier {
       _locale = newLocale;
       notifyListeners();
       LocalStorage.saveLocale(newLocale);
+      loadLocalizedStrings().then((_) => notifyListeners());
     }
   }
 
@@ -393,6 +459,7 @@ class AppStateNotifier extends ChangeNotifier {
     _locale = _locale == 'en' ? 'he' : 'en';
     notifyListeners();
     LocalStorage.saveLocale(_locale);
+    loadLocalizedStrings().then((_) => notifyListeners());
   }
 
   void setActiveTab(int index) {
@@ -440,7 +507,9 @@ class AppStateNotifier extends ChangeNotifier {
   }
 
   // Bilingual string resource maps
-  static const Map<String, Map<String, String>> _localizedStrings = {
+  Map<String, Map<String, String>> _localizedStrings = _defaultLocalizedStrings;
+
+  static const Map<String, Map<String, String>> _defaultLocalizedStrings = {
     'en': {
       'app_title': 'PlainSight IL',
       'mission_title': 'Democratizing Civic Data',
