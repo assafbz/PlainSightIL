@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
-import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
-import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
-import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
-import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
-import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
-import 'package:plainsight/features/datasets/travel_warnings/pages/travel_warnings_page.dart';
-import 'package:plainsight/features/datasets/vehicle_recalls/pages/vehicle_recalls_page.dart';
-import 'package:plainsight/features/datasets/car_importers/pages/car_importers_page.dart';
-import 'package:plainsight/features/datasets/local_market_bonds/pages/local_market_bonds_page.dart';
+
+import 'package:plainsight/core/utils/route_registry.dart';
 import '../widgets/dataset_card.dart';
 
 class DatasetDirectoryScreen extends StatefulWidget {
@@ -115,70 +107,12 @@ class _DatasetDirectoryScreenState extends State<DatasetDirectoryScreen> {
   }
 
   void _handleDeepLink(DatasetMetadataModel dataset) {
-    if (dataset.id == DatasetIds.cellularAntennas ||
-        dataset.id == DatasetIds.cellularPermits) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CellularAntennasScreen(
-            appState: widget.appState,
-            initialFilterIndex: dataset.id == DatasetIds.cellularPermits
-                ? 1
-                : 0,
-          ),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.companiesLiquidation) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) =>
-              CompaniesLiquidationScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.doctorsLicenses) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) =>
-              DoctorsLicensesScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.bankAtms) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => BankAtmsScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.patentClassifications) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) =>
-              PatentClassificationsScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.travelWarnings) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => TravelWarningsScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.vehicleRecalls) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => VehicleRecallsScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.carImporters) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CarImportersScreen(appState: widget.appState),
-        ),
-      );
-    } else if (dataset.id == DatasetIds.localMarketBonds) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) =>
-              LocalMarketBondsScreen(appState: widget.appState),
-        ),
-      );
+    try {
+      Navigator.of(
+        context,
+      ).push(RouteRegistry.getDatasetRoute(dataset.id, widget.appState));
+    } on ArgumentError catch (_) {
+      // Ignore unknown/unsupported dataset IDs
     }
   }
 

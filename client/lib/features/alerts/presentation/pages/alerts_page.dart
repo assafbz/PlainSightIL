@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
-import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/features/alerts/data/models/alert_model.dart';
-import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
-import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
-import 'package:plainsight/features/datasets/doctors_licenses/pages/doctors_licenses_page.dart';
-import 'package:plainsight/features/datasets/bank_atms/pages/bank_atms_page.dart';
-import 'package:plainsight/features/datasets/patent_classifications/pages/patent_classifications_page.dart';
-import 'package:plainsight/features/datasets/travel_warnings/pages/travel_warnings_page.dart';
-import 'package:plainsight/features/datasets/vehicle_recalls/pages/vehicle_recalls_page.dart';
-import 'package:plainsight/features/datasets/car_importers/pages/car_importers_page.dart';
-import 'package:plainsight/features/datasets/local_market_bonds/pages/local_market_bonds_page.dart';
+
+import 'package:plainsight/core/utils/route_registry.dart';
 
 class AlertsPage extends StatelessWidget {
   final AppStateNotifier appState;
@@ -19,64 +11,12 @@ class AlertsPage extends StatelessWidget {
   const AlertsPage({super.key, required this.appState});
 
   void _handleDeepLink(BuildContext context, String datasetId) {
-    if (datasetId == DatasetIds.cellularAntennas ||
-        datasetId == DatasetIds.cellularPermits) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CellularAntennasScreen(
-            appState: appState,
-            initialFilterIndex: datasetId == DatasetIds.cellularPermits ? 1 : 0,
-          ),
-        ),
-      );
-    } else if (datasetId == DatasetIds.companiesLiquidation) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CompaniesLiquidationScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.doctorsLicenses) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => DoctorsLicensesScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.bankAtms) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => BankAtmsScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.patentClassifications) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => PatentClassificationsScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.travelWarnings) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => TravelWarningsScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.vehicleRecalls) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => VehicleRecallsScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.carImporters) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CarImportersScreen(appState: appState),
-        ),
-      );
-    } else if (datasetId == DatasetIds.localMarketBonds) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => LocalMarketBondsScreen(appState: appState),
-        ),
-      );
+    try {
+      Navigator.of(
+        context,
+      ).push(RouteRegistry.getDatasetRoute(datasetId, appState));
+    } on ArgumentError catch (_) {
+      // Ignore unknown dataset IDs
     }
   }
 
