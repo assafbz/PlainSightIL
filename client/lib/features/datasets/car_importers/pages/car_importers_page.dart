@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
+import 'package:plainsight/features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
 import '../data/models/car_importer_record_model.dart';
 import '../widgets/car_importer_detail_drawer.dart';
 
@@ -23,6 +27,54 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
   String _searchQuery = '';
   String _selectedMaker = 'All';
 
+  T _getNotifier<T>({bool listen = false}) {
+    try {
+      return Provider.of<T>(context, listen: listen);
+    } catch (_) {
+      if (T == CarImportersNotifier)
+        return widget.appState.carImportersNotifier as T;
+      if (T == AuthNotifier) return widget.appState.authNotifier as T;
+      if (T == AlertsNotifier) return widget.appState.alertsNotifier as T;
+      throw Exception('Notifier not found in AppStateNotifier for type $T');
+    }
+  }
+
+  Widget _buildConsumer<T>({
+    required Widget Function(BuildContext context, T notifier, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final notifier = Provider.of<T>(context);
+      return builder(context, notifier, child);
+    } catch (_) {
+      final notifier = _getNotifier<T>();
+      return ListenableBuilder(
+        listenable: notifier as Listenable,
+        builder: (context, _) => builder(context, notifier, child),
+      );
+    }
+  }
+
+  Widget _buildConsumer2<T1, T2>({
+    required Widget Function(BuildContext context, T1 n1, T2 n2, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final n1 = Provider.of<T1>(context);
+      final n2 = Provider.of<T2>(context);
+      return builder(context, n1, n2, child);
+    } catch (_) {
+      final n1 = _getNotifier<T1>();
+      final n2 = _getNotifier<T2>();
+      return ListenableBuilder(
+        listenable: Listenable.merge([n1 as Listenable, n2 as Listenable]),
+        builder: (context, _) => builder(context, n1, n2, child),
+      );
+    }
+  }
+
   /// Formats pricing to a localized string with commas.
   String _formatPrice(int? price) {
     if (price == null) return '';
@@ -40,12 +92,12 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
     super.initState();
     // Register the dataset in recent history
     widget.appState.addRecent(DatasetIds.carImporters);
-    widget.appState.initCarImportersListener();
+    _getNotifier<CarImportersNotifier>().initCarImportersListener();
   }
 
   @override
   void dispose() {
-    widget.appState.cancelCarImportersListener();
+    _getNotifier<CarImportersNotifier>().cancelCarImportersListener();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -54,7 +106,7 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
   /// Extracts unique maker names present in the records to build filter chips.
   List<String> _getUniqueMakers() {
     final isRtl = widget.appState.locale == 'he';
-    final allRecords = widget.appState.carImporterRecords;
+    final allRecords = _getNotifier<CarImportersNotifier>().carImporterRecords;
 
     final Set<String> makers = {};
     for (final r in allRecords) {
@@ -69,7 +121,7 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
 
   /// Filters loaded records based on search keywords and selected maker chip.
   List<CarImporterRecordModel> _getFilteredRecords() {
-    final allRecords = widget.appState.carImporterRecords;
+    final allRecords = _getNotifier<CarImportersNotifier>().carImporterRecords;
     final isRtl = widget.appState.locale == 'he';
     final defaultFilter = isRtl ? 'הכל' : 'All';
 
@@ -160,424 +212,447 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = widget.appState.locale == 'he';
+    return _buildConsumer<CarImportersNotifier>(
+      builder: (context, carImportersNotifier, _) {
+        final isRtl = widget.appState.locale == 'he';
 
-    return Scaffold(
-      backgroundColor: AppColors.baseBg,
-      body: Stack(
-        children: [
-          // Background Atmospheric Gradients
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.6, -0.6),
-                  radius: 1.2,
-                  colors: [
-                    const Color(0x1F00ACC1), // subtle cyan/teal glow
-                    AppColors.baseBg,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Navigation Header
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        tooltip: 'Back',
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.appState.translate('car_importers_title'),
-                          style: AppTypography.headlineLg(
-                            context,
-                            color: AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      ListenableBuilder(
-                        listenable: widget.appState,
-                        builder: (context, _) {
-                          final isFav = widget.appState.isFavorite(
-                            DatasetIds.carImporters,
-                          );
-                          final isSubbed = widget.appState.isSubscribed(
-                            DatasetIds.carImporters,
-                          );
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                tooltip: widget.appState.translate(
-                                  isSubbed
-                                      ? 'unsubscribe_tooltip'
-                                      : 'subscribe_tooltip',
-                                ),
-                                icon: Icon(
-                                  isSubbed
-                                      ? Icons.notifications_active
-                                      : Icons.notifications_none,
-                                  color: isSubbed
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary,
-                                ),
-                                onPressed: () =>
-                                    widget.appState.toggleSubscription(
-                                      DatasetIds.carImporters,
-                                    ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  isFav
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: isFav
-                                      ? AppColors.danger
-                                      : AppColors.textSecondary,
-                                ),
-                                onPressed: () => widget.appState.toggleFavorite(
-                                  DatasetIds.carImporters,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. Glassmorphic Search Bar
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLow.withAlpha(100),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.glassBorder,
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Icon(
-                            Icons.search,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                            style: AppTypography.bodySm(
-                              context,
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: isRtl
-                                  ? 'חפש לפי דגם, יצרן או יבואן...'
-                                  : 'Search by model, maker or importer...',
-                              hintStyle: AppTypography.bodySm(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.close,
-                              color: AppColors.textSecondary,
-                              size: 18,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          ),
+        return Scaffold(
+          backgroundColor: AppColors.baseBg,
+          body: Stack(
+            children: [
+              // Background Atmospheric Gradients
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.6, -0.6),
+                      radius: 1.2,
+                      colors: [
+                        const Color(0x1F00ACC1), // subtle cyan/teal glow
+                        AppColors.baseBg,
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                ),
+              ),
 
-                  // 3 & 4. ListenableBuilder containing Filter Chips & Results List
-                  Expanded(
-                    child: ListenableBuilder(
-                      listenable: widget.appState,
-                      builder: (context, _) {
-                        final list = _getFilteredRecords();
-                        final makers = _getUniqueMakers();
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Navigation Header
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
+                            tooltip: 'Back',
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.appState.translate('car_importers_title'),
+                              style: AppTypography.headlineLg(
+                                context,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          _buildConsumer2<AuthNotifier, AlertsNotifier>(
+                            builder:
+                                (context, authNotifier, alertsNotifier, _) {
+                                  final isFav = authNotifier.isFavorite(
+                                    DatasetIds.carImporters,
+                                  );
+                                  final isSubbed = alertsNotifier.isSubscribed(
+                                    DatasetIds.carImporters,
+                                  );
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: widget.appState.translate(
+                                          isSubbed
+                                              ? 'unsubscribe_tooltip'
+                                              : 'subscribe_tooltip',
+                                        ),
+                                        icon: Icon(
+                                          isSubbed
+                                              ? Icons.notifications_active
+                                              : Icons.notifications_none,
+                                          color: isSubbed
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: () =>
+                                            alertsNotifier.toggleSubscription(
+                                              DatasetIds.carImporters,
+                                              authNotifier.currentUser?.uid ??
+                                                  (AppStateNotifier.isTesting
+                                                      ? 'mock_uid'
+                                                      : ''),
+                                            ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(
+                                          isFav
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color: isFav
+                                              ? AppColors.danger
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: () =>
+                                            authNotifier.toggleFavorite(
+                                              DatasetIds.carImporters,
+                                            ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // 2. Glassmorphic Search Bar
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLow.withAlpha(100),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.glassBorder,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
                           children: [
-                            if (makers.length > 1) ...[
-                              SizedBox(
-                                height: 40,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  physics: const BouncingScrollPhysics(),
-                                  itemCount: makers.length,
-                                  itemBuilder: (context, index) =>
-                                      _buildFilterChip(makers[index]),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val;
+                                  });
+                                },
+                                style: AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: isRtl
+                                      ? 'חפש לפי דגם, יצרן או יבואן...'
+                                      : 'Search by model, maker or importer...',
+                                  hintStyle: AppTypography.bodySm(
+                                    context,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                            ],
-                            Expanded(
-                              child: widget.appState.isLoadingCarImporters
-                                  ? const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : list.isEmpty
-                                  ? Center(
-                                      child: Text(
-                                        widget.appState.translate('no_results'),
-                                        style: AppTypography.bodyLg(
-                                          context,
-                                          color: AppColors.textTertiary,
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      controller: _scrollController,
-                                      physics: const BouncingScrollPhysics(),
-                                      itemCount: list.length,
-                                      itemBuilder: (context, index) {
-                                        final item = list[index];
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppColors.textSecondary,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                                        return Container(
-                                          margin: const EdgeInsets.only(
-                                            bottom: 12.0,
+                      // 3 & 4. ListenableBuilder containing Filter Chips & Results List
+                      Expanded(
+                        child: ListenableBuilder(
+                          listenable: carImportersNotifier,
+                          builder: (context, _) {
+                            final list = _getFilteredRecords();
+                            final makers = _getUniqueMakers();
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (makers.length > 1) ...[
+                                  SizedBox(
+                                    height: 40,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: makers.length,
+                                      itemBuilder: (context, index) =>
+                                          _buildFilterChip(makers[index]),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                                Expanded(
+                                  child:
+                                      carImportersNotifier.isLoadingCarImporters
+                                      ? const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.surfaceLow
-                                                .withAlpha(120),
-                                            borderRadius: BorderRadius.circular(
-                                              16,
+                                        )
+                                      : list.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            widget.appState.translate(
+                                              'no_results',
                                             ),
-                                            border: Border.all(
-                                              color: AppColors.glassBorder,
-                                              width: 1.0,
+                                            style: AppTypography.bodyLg(
+                                              context,
+                                              color: AppColors.textTertiary,
                                             ),
                                           ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
-                                            child: InkWell(
-                                              onTap: () => _showDetails(item),
-                                              child: Container(
-                                                decoration: const BoxDecoration(
-                                                  border: BorderDirectional(
-                                                    start: BorderSide(
-                                                      color: Color(0xFF00ACC1),
-                                                      width: 4,
-                                                    ),
-                                                  ),
+                                        )
+                                      : ListView.builder(
+                                          controller: _scrollController,
+                                          physics:
+                                              const BouncingScrollPhysics(),
+                                          itemCount: list.length,
+                                          itemBuilder: (context, index) {
+                                            final item = list[index];
+
+                                            return Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 12.0,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.surfaceLow
+                                                    .withAlpha(120),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                border: Border.all(
+                                                  color: AppColors.glassBorder,
+                                                  width: 1.0,
                                                 ),
-                                                padding: const EdgeInsets.all(
-                                                  16.0,
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    // Header Row: Commercial name & Price
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                child: InkWell(
+                                                  onTap: () =>
+                                                      _showDetails(item),
+                                                  child: Container(
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          border:
+                                                              BorderDirectional(
+                                                                start: BorderSide(
+                                                                  color: Color(
+                                                                    0xFF00ACC1,
+                                                                  ),
+                                                                  width: 4,
+                                                                ),
+                                                              ),
+                                                        ),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          16.0,
+                                                        ),
+                                                    child: Column(
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment
                                                               .start,
                                                       children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            item
-                                                                    .commercialName
-                                                                    .isNotEmpty
-                                                                ? item.commercialName
-                                                                : item.modelName,
-                                                            style:
-                                                                AppTypography.bodyLg(
-                                                                  context,
-                                                                  color: AppColors
-                                                                      .textPrimary,
-                                                                ).copyWith(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
+                                                        // Header Row: Commercial name & Price
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Expanded(
+                                                              child: Text(
+                                                                item
+                                                                        .commercialName
+                                                                        .isNotEmpty
+                                                                    ? item.commercialName
+                                                                    : item.modelName,
+                                                                style:
+                                                                    AppTypography.bodyLg(
+                                                                      context,
+                                                                      color: AppColors
+                                                                          .textPrimary,
+                                                                    ).copyWith(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                              width: 8,
+                                                            ),
+                                                            if (item.price !=
+                                                                null)
+                                                              Text(
+                                                                _formatPrice(
+                                                                  item.price,
                                                                 ),
-                                                            maxLines: 1,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
+                                                                style:
+                                                                    AppTypography.bodyLg(
+                                                                      context,
+                                                                      color: AppColors
+                                                                          .success,
+                                                                    ).copyWith(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      fontFamily:
+                                                                          'Outfit',
+                                                                    ),
+                                                              ),
+                                                          ],
                                                         ),
                                                         const SizedBox(
-                                                          width: 8,
+                                                          height: 8,
                                                         ),
-                                                        if (item.price != null)
-                                                          Text(
-                                                            _formatPrice(
-                                                              item.price,
-                                                            ),
-                                                            style:
-                                                                AppTypography.bodyLg(
+
+                                                        // Subtitle: Maker Name and Importer Name
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Expanded(
+                                                              child: Text(
+                                                                item.makerName,
+                                                                style: AppTypography.bodySm(
                                                                   context,
                                                                   color: AppColors
-                                                                      .success,
-                                                                ).copyWith(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  fontFamily:
-                                                                      'Outfit',
+                                                                      .textSecondary,
                                                                 ),
-                                                          ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 8),
-
-                                                    // Subtitle: Maker Name and Importer Name
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            item.makerName,
-                                                            style: AppTypography.bodySm(
-                                                              context,
-                                                              color: AppColors
-                                                                  .textSecondary,
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
                                                             ),
-                                                            maxLines: 1,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ),
-                                                        if (item.productionYear !=
-                                                            null) ...[
-                                                          const SizedBox(
-                                                            width: 8,
-                                                          ),
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal: 8,
-                                                                  vertical: 2,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              color:
-                                                                  const Color(
+                                                            if (item.productionYear !=
+                                                                null) ...[
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          8,
+                                                                      vertical:
+                                                                          2,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(
                                                                     0xFF00ACC1,
-                                                                  ).withAlpha(
-                                                                    20,
-                                                                  ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    8,
-                                                                  ),
-                                                              border: Border.all(
-                                                                color:
-                                                                    const Color(
+                                                                  ).withAlpha(20),
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        8,
+                                                                      ),
+                                                                  border: Border.all(
+                                                                    color: const Color(
                                                                       0xFF00ACC1,
-                                                                    ).withAlpha(
-                                                                      50,
-                                                                    ),
-                                                              ),
-                                                            ),
-                                                            child: Text(
-                                                              item.productionYear
-                                                                  .toString(),
-                                                              style: AppTypography.labelXs(
-                                                                context,
-                                                                color:
-                                                                    const Color(
+                                                                    ).withAlpha(50),
+                                                                  ),
+                                                                ),
+                                                                child: Text(
+                                                                  item.productionYear
+                                                                      .toString(),
+                                                                  style: AppTypography.labelXs(
+                                                                    context,
+                                                                    color: const Color(
                                                                       0xFF00ACC1,
                                                                     ),
+                                                                  ),
+                                                                ),
                                                               ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 8),
+                                                            ],
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 8,
+                                                        ),
 
-                                                    // Footer: Importer Name
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            item.importerName,
-                                                            style: AppTypography.labelXs(
-                                                              context,
-                                                              color: AppColors
-                                                                  .textTertiary,
+                                                        // Footer: Importer Name
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Expanded(
+                                                              child: Text(
+                                                                item.importerName,
+                                                                style: AppTypography.labelXs(
+                                                                  context,
+                                                                  color: AppColors
+                                                                      .textTertiary,
+                                                                ),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                maxLines: 1,
+                                                              ),
                                                             ),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            maxLines: 1,
-                                                          ),
+                                                          ],
                                                         ),
                                                       ],
                                                     ),
-                                                  ],
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                                            );
+                                          },
+                                        ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
