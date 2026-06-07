@@ -814,4 +814,349 @@ void main() {
       },
     );
   });
+
+  group('TelemetryNotifier Unsupported Dataset Roadmap Tests', () {
+    setUp(() {
+      AppStateNotifier.isTesting = true;
+    });
+
+    test(
+      'initDirectoryListener in testing mode loads mock dataset requests',
+      () async {
+        final notifier = TelemetryNotifier(isTesting: true);
+        notifier.initDirectoryListener();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(notifier.isLoadingDirectory, isFalse);
+        expect(
+          notifier.getRequestCount('government-budget-dataset-id'),
+          equals(18),
+        );
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'triggerAiAnalysis in testing mode updates datasetRequests mock values',
+      () async {
+        final notifier = TelemetryNotifier(isTesting: true);
+        notifier.initDirectoryListener();
+        await Future<void>.delayed(Duration.zero);
+
+        final result = await notifier.triggerAiAnalysis('dataset-123');
+        expect(result['success'], isTrue);
+        expect(notifier.datasetRequests['dataset-123'], isNotNull);
+        expect(notifier.datasetRequests['dataset-123']?['aiScore'], equals(85));
+        expect(
+          notifier.datasetRequests['dataset-123']?['aiImportance'],
+          equals('High'),
+        );
+        expect(
+          notifier.datasetRequests['dataset-123']?['compositeScore'],
+          equals(85),
+        );
+        notifier.dispose();
+      },
+    );
+
+    test(
+      'triggerAiAnalysis in production mode propagates correct authorization token and body',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_admin_123', 'admin@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+
+        var postCalled = false;
+        final mockClient = MockHttpClientLocal((request) async {
+          expect(request.method, equals('POST'));
+          expect(request.url.path, endsWith('/manualAnalyzeDataset'));
+          expect(
+            request.headers['Authorization'],
+            equals('Bearer mock-id-token'),
+          );
+
+          final body =
+              jsonDecode((request as http.Request).body)
+                  as Map<String, dynamic>;
+          expect(body['datasetId'], equals('unsupported-dataset-id'));
+          postCalled = true;
+
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'AI analysis completed successfully',
+              'review': {
+                'importance': 'High',
+                'importanceReasoning': 'מאגר בעל חשיבות רבה',
+                'paymentWillingness': 'Low',
+                'aiScore': 90,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testAuth: fakeAuth,
+          httpClient: mockClient,
+        );
+
+        final result = await notifier.triggerAiAnalysis(
+          'unsupported-dataset-id',
+        );
+        expect(result['success'], isTrue);
+        expect(result['message'], equals('AI analysis completed successfully'));
+        expect(result['review']['aiScore'], equals(90));
+        expect(postCalled, isTrue);
+
+        notifier.dispose();
+        await authStreamController.close();
+        AppStateNotifier.isTesting = true;
+        AppStateNotifier.testIsFirebaseInitialized = null;
+      },
+    );
+
+    test(
+      'triggerAiAnalysis in production mode handles HTTP errors correctly',
+      () async {
+        AppStateNotifier.isTesting = false;
+        final mockClient = MockHttpClientLocal((request) async {
+          return http.Response(
+            jsonEncode({
+              'success': false,
+              'error': 'Unauthorized access or database error',
+            }),
+            403,
+          );
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          httpClient: mockClient,
+        );
+
+        final result = await notifier.triggerAiAnalysis(
+          'unsupported-dataset-id',
+        );
+        expect(result['success'], isFalse);
+        expect(
+          result['message'],
+          equals('Unauthorized access or database error'),
+        );
+
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
+
+    test('triggerAiAnalysis handles client exceptions gracefully', () async {
+      AppStateNotifier.isTesting = false;
+      final mockClient = MockHttpClientLocal((request) async {
+        throw Exception('Network connection timed out');
+      });
+
+      final notifier = TelemetryNotifier(
+        isTesting: false,
+        httpClient: mockClient,
+      );
+
+      final result = await notifier.triggerAiAnalysis('unsupported-dataset-id');
+      expect(result['success'], isFalse);
+      expect(result['message'], contains('Network connection timed out'));
+
+      notifier.dispose();
+      AppStateNotifier.isTesting = true;
+    });
+
+    test(
+      'initDirectoryListener maps datasetRequests correctly in integrated mode',
+      () async {
+        final directoryController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final requestsController =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testDirectoryStream: directoryController.stream,
+          testRequestsStream: requestsController.stream,
+        );
+
+        notifier.initDirectoryListener();
+        expect(notifier.isLoadingDirectory, isTrue);
+
+        // Add directory records
+        final fakeDirDoc = FakeQueryDocumentSnapshot('1', {
+          'id': 'antennas-id',
+          'datasetId': 'antennas-id',
+          'name': 'antennas',
+          'title': 'Antennas',
+          'notes': 'notes',
+          'publisher': 'agency',
+          'resourceCount': 1,
+          'lastUpdated': '2026-06-01T12:00:00.000Z',
+          'tags': const ['radiation'],
+          'isSupported': false,
+        });
+        directoryController.add(FakeQuerySnapshot([fakeDirDoc]));
+
+        // Add request data
+        final fakeReqDoc = FakeQueryDocumentSnapshot('antennas-id', {
+          'datasetId': 'antennas-id',
+          'requestCount': 15,
+          'aiScore': 80,
+          'compositeScore': 230,
+        });
+        requestsController.add(FakeQuerySnapshot([fakeReqDoc]));
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(notifier.isLoadingDirectory, isFalse);
+        expect(notifier.getRequestCount('antennas-id'), equals(15));
+        expect(notifier.datasetRequests['antennas-id'], isNotNull);
+        expect(notifier.datasetRequests['antennas-id']?['aiScore'], equals(80));
+        expect(
+          notifier.datasetRequests['antennas-id']?['compositeScore'],
+          equals(230),
+        );
+
+        notifier.dispose();
+        await directoryController.close();
+        await requestsController.close();
+        AppStateNotifier.isTesting = true;
+        AppStateNotifier.testIsFirebaseInitialized = null;
+      },
+    );
+
+    test(
+      'requestDatasetActivation updates compositeScore when aiScore exists',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+
+        final mockFirestoreTrans = FakeFirestoreWithAiScore((path) {
+          return FakeCollectionReference();
+        });
+
+        final notifier = TelemetryNotifier(
+          isTesting: false,
+          testFirestore: mockFirestoreTrans,
+          testAuth: fakeAuth,
+        );
+
+        final success = await notifier.requestDatasetActivation(
+          'dataset-with-ai',
+          'Title with AI',
+        );
+        expect(success, isTrue);
+
+        notifier.dispose();
+        await authStreamController.close();
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        AppStateNotifier.isTesting = true;
+      },
+    );
+
+    test(
+      'triggerAiAnalysis in production mode with null httpClient uses global http client',
+      () async {
+        AppStateNotifier.isTesting = false;
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        final authStreamController = StreamController<User?>.broadcast();
+        final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+        final fakeAuth = FakeFirebaseAuth(
+          mockCurrentUser: fakeUser,
+          authChanges: authStreamController.stream,
+        );
+
+        final mockClient = MockHttpClientLocal((request) async {
+          expect(request.method, equals('POST'));
+          expect(request.url.path, endsWith('/manualAnalyzeDataset'));
+          expect(
+            request.headers['Authorization'],
+            equals('Bearer mock-id-token'),
+          );
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'AI analysis completed successfully',
+              'review': {'aiScore': 90},
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        });
+
+        await http.runWithClient(() async {
+          final notifier = TelemetryNotifier(
+            isTesting: false,
+            httpClient: null,
+            testAuth: fakeAuth,
+          );
+
+          final result = await notifier.triggerAiAnalysis(
+            'unsupported-dataset-id',
+          );
+          expect(result['success'], isTrue);
+          expect(
+            result['message'],
+            equals('AI analysis completed successfully'),
+          );
+          expect(result['review']['aiScore'], equals(90));
+
+          notifier.dispose();
+        }, () => mockClient);
+
+        await authStreamController.close();
+        AppStateNotifier.testIsFirebaseInitialized = null;
+        AppStateNotifier.isTesting = true;
+      },
+    );
+  });
+}
+
+class FakeTransactionWithAiScore extends FakeTransaction {
+  FakeTransactionWithAiScore() : super(exists: true);
+
+  @override
+  Future<DocumentSnapshot<T>> get<T extends Object?>(
+    DocumentReference<T> documentReference,
+  ) async {
+    return FakeDocumentSnapshot(documentReference.id, true, {
+          'requestCount': 5,
+          'aiScore': 80,
+        })
+        as DocumentSnapshot<T>;
+  }
+}
+
+class FakeFirestoreWithAiScore extends FakeFirebaseFirestore {
+  FakeFirestoreWithAiScore(super.collectionBuilder);
+
+  @override
+  Future<T> runTransaction<T>(
+    TransactionHandler<T> transactionHandler, {
+    Duration timeout = const Duration(seconds: 30),
+    int maxAttempts = 5,
+  }) async {
+    final transaction = FakeTransactionWithAiScore();
+    return await transactionHandler(transaction as Transaction);
+  }
 }

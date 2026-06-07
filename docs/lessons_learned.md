@@ -556,3 +556,65 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 ```
 This allows tests to compile and run using lightweight fakes without triggering static checks failures.
 
+---
+
+## 29. Pitfall: Hebrew Pluralization and Unicode Character Mismatch in Includes Checks
+
+### Symptoms
+Unit tests checking keyword-based mock analysis (like `getMockRoadmapReview`) return incorrect scores (e.g. `Medium` instead of `Low`) for plural Hebrew nouns, causing assertions to fail.
+
+### Root Cause
+In Hebrew, pluralizing a noun does not simply append a suffix; it often changes the spelling of the word itself. For example, the singular word "Museum" is `"מוזיאון"` (ending with the final nun `ן`, char code 1503), but its plural form "Museums" is `"מוזיאונים"` (which uses a regular nun `נ`, char code 1504, followed by `י` and `ם`). Therefore, `"מוזיאונים".includes("מוזיאון")` evaluates to `false` in JavaScript/TypeScript because the character codes for `ן` (1503) and `נ` (1504) are different.
+
+### Corrective Action & Best Practice
+1. **Explicit Keyword Checks**: When writing keyword matching logic for Hebrew strings, check for both the word ending in a final nun/mem/tsadi and its root/non-final counterpart (e.g., check `t.includes("מוזיאון") || t.includes("מוזיאונ")`).
+2. **Match Singular Form in Tests**: When writing test cases targeting specific keywords, use titles that contain the exact singular word as a separate token (e.g., use `"מוזיאון תל אביב"` which contains `"מוזיאון"`, rather than the pluralized `"מוזיאונים בישראל"`).
+
+---
+
+## 30. Pitfall: Missing Firestore Trigger Mocks in Unrelated Test Suites
+
+### Symptoms
+Adding a new Firestore trigger (e.g., `.firestore.document("...")`) inside `src/index.ts` causes unrelated test files (like `manual_sync.test.ts`, `ticker.test.ts`, `ai_search_service.test.ts`) to fail during import with `TypeError: Cannot read properties of undefined (reading 'document')`.
+
+### Root Cause
+Many backend test files mock `firebase-functions/v1` partially or dynamically using `vi.mock("firebase-functions/v1")`. When they mock `runWith`, they only return properties they expect their specific tested endpoints to use (e.g., `https`, `pubsub`, `auth`). When `src/index.ts` is imported, all top-level Cloud Function exports are evaluated. If a new export uses a nested trigger builder that was not mock-defined (e.g. `runWith(...).firestore.document`), it will crash with a `TypeError`.
+
+### Corrective Action & Best Practice
+Always ensure that the global `firebase-functions/v1` mock returned by `runWith` is robust and includes stub properties for all trigger types used across `src/index.ts` (e.g. `firestore: { document: vi.fn().mockReturnValue({ onCreate: triggerMock }) }`). When adding a new trigger type to `index.ts`, check and update all other tests that mock `firebase-functions/v1` to prevent import-time failures.
+
+---
+
+## 31. Pitfall: Dart Mock HTTP Client UTF-8 Response Encoding Exception
+
+### Symptoms
+In Dart widget/unit tests, returning non-ASCII strings (such as Hebrew characters) inside a mock `http.Response` body throws an `Invalid argument (string): Contains invalid characters` exception.
+
+### Root Cause
+By default, the Dart `http.Response` constructor decodes/encodes body strings using Latin-1 (ISO-8859-1) if no content-type encoding is specified. Since Latin-1 only supports characters in the range 0-255, passing Hebrew characters (which fall under UTF-8 / higher code points) triggers an invalid character exception.
+
+### Corrective Action & Best Practice
+When constructing mock HTTP responses in Dart that contain Hebrew or non-ASCII characters, always explicitly specify the UTF-8 charset in the headers parameter:
+```dart
+return http.Response(
+  jsonEncode({...}),
+  200,
+  headers: {
+    'content-type': 'application/json; charset=utf-8',
+  },
+);
+```
+
+---
+
+## 32. Pitfall: Missing Braces Cascading UI Compile Failure
+
+### Symptoms
+Compiling the Flutter application or running tests fails with numerous cascading errors complaining that class methods are not defined or that widget classes are not types.
+
+### Root Cause
+A missing closing brace `}` on a class method (e.g. at the end of a long widget build helper) causes the Dart analyzer to parse all subsequent class methods as nested closures inside that method. This prematurely shifts the class boundary, preventing the analyzer from resolving top-level class declarations and methods correctly.
+
+### Corrective Action & Best Practice
+Use editor folding or formatting tools (`dart format`) to verify brace balance when editing large source files. If a compiler suddenly reports that a method is undefined or that a sibling class isn't a type, check the immediately preceding method for a missing closing brace `}`.
+

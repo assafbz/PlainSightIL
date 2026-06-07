@@ -20,6 +20,7 @@ import { ScraperTelemetryTracker } from "./utils/telemetry";
 import { DATASET_IDS } from "./utils/constants";
 import { processAiSearch } from "./services/ai_search_service";
 import { BaseScraper } from "./scrapers/base_scraper";
+import { scoreDatasetWithAi } from "./services/ai_roadmap_service";
 
 const scraperRegistry: Record<string, BaseScraper<any, any>> = {
   [DATASET_IDS.CELLULAR_ANTENNAS]: new CellularAntennasScraper(),
@@ -706,6 +707,64 @@ export const aiSemanticSearch = functions
       res.status(500).json({
         error: "Internal Server Error",
         message: "AI semantic search execution failed.",
+        details: err.message || String(error),
+      });
+    }
+  });
+
+/**
+ * Cloud Function trigger running on creation of a dataset request.
+ * Automatically runs AI priority scoring on the newly requested dataset.
+ */
+export const onDatasetRequestCreate = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .firestore.document("dataset_requests/{datasetId}")
+  .onCreate(async (snap, context) => {
+    const datasetId = context.params.datasetId;
+    logger.info(`onDatasetRequestCreate trigger invoked for datasetId: ${datasetId}`);
+    try {
+      await scoreDatasetWithAi(datasetId, db);
+    } catch (error) {
+      logger.error(`Automatic AI scoring failed for dataset ${datasetId}:`, error);
+    }
+  });
+
+/**
+ * HTTPS Cloud Function for manually triggering AI scoring & priority assessment
+ * of an unsupported dataset. Authorized only for admin users.
+ */
+export const manualAnalyzeDataset = functions
+  .runWith({ serviceAccount: SERVICE_ACCOUNT })
+  .https.onRequest(async (req, res) => {
+    logger.info("manualAnalyzeDataset HTTPS trigger invoked");
+    if (handleCors(req, res)) return;
+
+    const auth = await validateAdminRequest(req, res);
+    if (!auth) return;
+
+    const { datasetId } = req.body || {};
+    if (!datasetId || typeof datasetId !== "string" || datasetId.trim().length === 0) {
+      logger.warn("Rejected manualAnalyzeDataset request: missing or invalid datasetId.");
+      res.status(400).json({
+        error: "Bad Request",
+        message: "Missing or invalid datasetId parameter.",
+      });
+      return;
+    }
+
+    try {
+      const review = await scoreDatasetWithAi(datasetId, db);
+      res.status(200).json({
+        success: true,
+        message: "AI analysis completed successfully.",
+        review,
+      });
+    } catch (error) {
+      const err = error as Error;
+      logger.error(`manualAnalyzeDataset failed for dataset: ${datasetId}`, err);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: "AI analysis execution failed.",
         details: err.message || String(error),
       });
     }
