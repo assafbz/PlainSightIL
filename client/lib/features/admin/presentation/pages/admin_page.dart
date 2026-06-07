@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
 import '../../../../core/constants/dataset_ids.dart';
+import '../../../directory/data/models/dataset_metadata_model.dart';
 
 /// A premium, responsive Admin Dashboard page to view and manage supported datasets.
 /// Follows the Slate Dark mode style guide with glassmorphism overlays and logical mirroring.
@@ -18,7 +19,10 @@ class _AdminPageState extends State<AdminPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _statusFilter = 'all'; // 'all', 'idle', 'syncing', 'error'
-  int _activeSubTab = 0; // 0 for Datasets, 1 for Telemetry
+  int _activeSubTab = 0; // 0 for Datasets, 1 for Roadmap, 2 for Telemetry
+  String _roadmapSortBy =
+      'composite'; // 'composite', 'aiScore', 'votes', 'name'
+  final Set<String> _analyzingDatasetIds = {};
   final Set<String> _expandedRuns = {}; // Tracks expanded log IDs
   final Set<String> _expandedSchedulers =
       {}; // Tracks expanded scheduler card IDs
@@ -430,6 +434,8 @@ class _AdminPageState extends State<AdminPage> {
                                 ),
                               ],
                             )
+                          : _activeSubTab == 1
+                          ? _buildRoadmapView(context)
                           : _buildTelemetryView(context),
                     ),
                   ],
@@ -1183,9 +1189,6 @@ class _AdminPageState extends State<AdminPage> {
                     _activeSubTab = 1;
                   });
                 },
-                borderRadius: const BorderRadius.horizontal(
-                  right: Radius.circular(15),
-                ),
                 child: Container(
                   alignment: Alignment.center,
                   decoration: _activeSubTab == 1
@@ -1199,10 +1202,44 @@ class _AdminPageState extends State<AdminPage> {
                         )
                       : null,
                   child: Text(
-                    widget.appState.translate('telemetry_tab'),
+                    widget.appState.translate('roadmap_tab'),
                     style: AppTypography.bodySm(
                       context,
                       color: _activeSubTab == 1
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _activeSubTab = 2;
+                  });
+                },
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(15),
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: _activeSubTab == 2
+                      ? BoxDecoration(
+                          color: AppColors.primary.withAlpha(40),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        )
+                      : null,
+                  child: Text(
+                    widget.appState.translate('telemetry_tab'),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: _activeSubTab == 2
                           ? AppColors.primary
                           : AppColors.textSecondary,
                     ).copyWith(fontWeight: FontWeight.bold),
@@ -1769,6 +1806,559 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildRoadmapView(BuildContext context) {
+    final isHeb = widget.appState.locale == 'he';
+    final allRecords = widget.appState.directoryRecords;
+    final requestsMap = widget.appState.datasetRequests;
+
+    // Filter to unsupported (roadmap) datasets
+    final List<DatasetMetadataModel> roadmapDatasets = allRecords
+        .where((d) => !d.isSupported)
+        .toList();
+
+    // Apply text search filtering
+    List<DatasetMetadataModel> filtered = roadmapDatasets;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      filtered = roadmapDatasets.where((d) {
+        final title = d.title.toLowerCase();
+        final notes = d.notes.toLowerCase();
+        final publisher = d.publisher.toLowerCase();
+        final tags = d.tags.map((t) => t.toLowerCase()).join(' ');
+        return title.contains(q) ||
+            notes.contains(q) ||
+            publisher.contains(q) ||
+            tags.contains(q);
+      }).toList();
+    }
+
+    // Sort the list based on selection
+    filtered.sort((a, b) {
+      final reqA = requestsMap[a.id];
+      final reqB = requestsMap[b.id];
+
+      final votesA = (reqA?['requestCount'] as num? ?? 0).toInt();
+      final votesB = (reqB?['requestCount'] as num? ?? 0).toInt();
+
+      final aiScoreA = (reqA?['aiScore'] as num? ?? 0).toInt();
+      final aiScoreB = (reqB?['aiScore'] as num? ?? 0).toInt();
+
+      final compositeA = (reqA?['compositeScore'] as num? ?? 0).toInt();
+      final compositeB = (reqB?['compositeScore'] as num? ?? 0).toInt();
+
+      if (_roadmapSortBy == 'composite') {
+        final cmp = compositeB.compareTo(compositeA);
+        if (cmp != 0) return cmp;
+      } else if (_roadmapSortBy == 'aiScore') {
+        final cmp = aiScoreB.compareTo(aiScoreA);
+        if (cmp != 0) return cmp;
+      } else if (_roadmapSortBy == 'votes') {
+        final cmp = votesB.compareTo(votesA);
+        if (cmp != 0) return cmp;
+      }
+
+      // Default fallback/alphabetical sort by title
+      return a.title.compareTo(b.title);
+    });
+
+    return Column(
+      children: [
+        // Search & Sorting Toolbar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Column(
+            children: [
+              // Search Bar
+              Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.glassBorder),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: AppTypography.bodyLg(
+                    context,
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: widget.appState.translate('search_roadmap_hint'),
+                    hintStyle: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textTertiary,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: AppColors.textSecondary,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: AppColors.textSecondary,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Sorting Options Dropdown / Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isHeb ? 'מיין לפי:' : 'Sort by:',
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _roadmapSortBy,
+                      dropdownColor: AppColors.surfaceHigh,
+                      icon: Icon(Icons.sort, color: AppColors.primary),
+                      style: AppTypography.bodySm(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                      onChanged: (String? val) {
+                        if (val != null) {
+                          setState(() {
+                            _roadmapSortBy = val;
+                          });
+                        }
+                      },
+                      items: [
+                        DropdownMenuItem(
+                          value: 'composite',
+                          child: Text(
+                            widget.appState.translate('sort_composite'),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'aiScore',
+                          child: Text(
+                            widget.appState.translate('sort_ai_score'),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'votes',
+                          child: Text(widget.appState.translate('sort_votes')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'name',
+                          child: Text(widget.appState.translate('sort_name')),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // List View of Roadmap Cards
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text(
+                    widget.appState.translate('no_results'),
+                    style: AppTypography.bodyLg(
+                      context,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final item = filtered[index];
+                    final req = requestsMap[item.id];
+                    return _buildRoadmapCard(context, item, req);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoadmapCard(
+    BuildContext context,
+    DatasetMetadataModel dataset,
+    Map<String, dynamic>? requestData,
+  ) {
+    final isHeb = widget.appState.locale == 'he';
+    final votes = (requestData?['requestCount'] as num? ?? 0).toInt();
+    final aiScore = (requestData?['aiScore'] as num? ?? 0).toInt();
+    final compositeScore = (requestData?['compositeScore'] as num? ?? 0)
+        .toInt();
+    final aiImportance = requestData?['aiImportance'] as String? ?? '';
+    final aiImportanceReasoning =
+        requestData?['aiImportanceReasoning'] as String? ?? '';
+    final aiMonetization = requestData?['aiMonetization'] as String? ?? '';
+    final isAnalyzing = _analyzingDatasetIds.contains(dataset.id);
+
+    // Color code importance rating
+    Color importanceColor;
+    if (aiImportance.toLowerCase() == 'high') {
+      importanceColor = AppColors.success;
+    } else if (aiImportance.toLowerCase() == 'medium') {
+      importanceColor = AppColors.warning;
+    } else {
+      importanceColor = AppColors.danger;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: GlassmorphicCard(
+        borderRadius: 20.0,
+        startBorderColor: aiScore > 0
+            ? AppColors.primary.withAlpha(150)
+            : AppColors.glassBorder,
+        startBorderWidth: aiScore > 0 ? 3.0 : 1.0,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header: Title and composite score badge
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dataset.title,
+                          style: AppTypography.bodyLg(
+                            context,
+                            color: AppColors.textPrimary,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${widget.appState.translate('publisher_label')}${dataset.publisher}',
+                          style: AppTypography.labelXs(
+                            context,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (aiScore > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withAlpha(30),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.primary.withAlpha(50),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            compositeScore.toString(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            isHeb ? 'ציון משולב' : 'Composite',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Dataset description
+              Text(
+                dataset.notes,
+                style: AppTypography.bodySm(
+                  context,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Divider(color: Color(0x14FFFFFF), height: 24),
+              // Metrics (Votes and AI Score)
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.how_to_vote_outlined,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${widget.appState.translate('votes_count_label')}$votes',
+                          style: AppTypography.bodySm(
+                            context,
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (aiScore > 0)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.psychology_outlined,
+                            color: AppColors.secondary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${widget.appState.translate('ai_score_label')}$aiScore',
+                            style: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              if (aiScore > 0) ...[
+                const SizedBox(height: 12),
+                const Divider(color: Color(0x14FFFFFF), height: 12),
+                // AI Review Details
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            widget.appState.translate('ai_importance_label'),
+                            style: AppTypography.labelXs(
+                              context,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                          Text(
+                            isHeb
+                                ? (aiImportance.toLowerCase() == 'high'
+                                      ? 'גבוהה'
+                                      : aiImportance.toLowerCase() == 'medium'
+                                      ? 'בינונית'
+                                      : 'נמוכה')
+                                : aiImportance,
+                            style: AppTypography.labelXs(
+                              context,
+                              color: importanceColor,
+                            ).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            widget.appState.translate('ai_monetization_label'),
+                            style: AppTypography.labelXs(
+                              context,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                          Text(
+                            isHeb
+                                ? (aiMonetization.toLowerCase() == 'high'
+                                      ? 'גבוהה'
+                                      : aiMonetization.toLowerCase() == 'medium'
+                                      ? 'בינונית'
+                                      : 'נמוכה')
+                                : aiMonetization,
+                            style: AppTypography.labelXs(
+                              context,
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (aiImportanceReasoning.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLow.withAlpha(80),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.glassBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.appState.translate(
+                            'importance_reasoning_label',
+                          ),
+                          style: AppTypography.labelXs(
+                            context,
+                            color: AppColors.primary,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          aiImportanceReasoning,
+                          style: AppTypography.bodySm(
+                            context,
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontSize: 11, fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 12),
+              // Action Button (Analyze with AI)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isAnalyzing
+                      ? null
+                      : () => _handleAnalyzeDataset(dataset.id),
+                  icon: isAnalyzing
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.textTertiary,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          aiScore > 0
+                              ? Icons.refresh
+                              : Icons.analytics_outlined,
+                          size: 16,
+                        ),
+                  label: Text(
+                    isAnalyzing
+                        ? widget.appState.translate('analyzing_label')
+                        : (aiScore > 0
+                              ? (isHeb
+                                    ? 'נתח מחדש עם AI'
+                                    : 'Re-analyze with AI')
+                              : widget.appState.translate('analyze_now_label')),
+                    style: AppTypography.labelXs(
+                      context,
+                      color: isAnalyzing
+                          ? AppColors.textTertiary
+                          : AppColors.onPrimary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: aiScore > 0
+                        ? AppColors.surfaceHigh
+                        : AppColors.primary,
+                    foregroundColor: aiScore > 0
+                        ? AppColors.textPrimary
+                        : AppColors.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAnalyzeDataset(String datasetId) async {
+    if (_analyzingDatasetIds.contains(datasetId)) return;
+    setState(() {
+      _analyzingDatasetIds.add(datasetId);
+    });
+    try {
+      final res = await widget.appState.triggerAiAnalysis(datasetId);
+      if (res['success'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.success,
+              content: Text(
+                widget.appState.locale == 'he'
+                    ? 'ניתוח AI הושלם בהצלחה'
+                    : 'AI analysis completed successfully',
+              ),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.danger,
+              content: Text(res['message'] ?? 'Error running AI analysis'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.danger,
+            content: Text(e.toString()),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _analyzingDatasetIds.remove(datasetId);
+        });
+      }
+    }
   }
 }
 

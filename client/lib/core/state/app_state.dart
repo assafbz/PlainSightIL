@@ -342,6 +342,12 @@ class AppStateNotifier extends ChangeNotifier {
   Future<Map<String, dynamic>> triggerManualSync(String datasetId) =>
       telemetryNotifier.triggerManualSync(datasetId);
 
+  Map<String, Map<String, dynamic>> get datasetRequests =>
+      telemetryNotifier.datasetRequests;
+
+  Future<Map<String, dynamic>> triggerAiAnalysis(String datasetId) =>
+      telemetryNotifier.triggerAiAnalysis(datasetId);
+
   Future<void> updateDatasetScheduler(
     String datasetId, {
     required bool enabled,
@@ -648,6 +654,20 @@ class AppStateNotifier extends ChangeNotifier {
       'telemetry_title': 'System Health & Telemetry',
       'telemetry_tab': 'Telemetry',
       'datasets_tab': 'Datasets',
+      'roadmap_tab': 'Roadmap',
+      'ai_importance_label': 'AI Importance: ',
+      'ai_monetization_label': 'Willingness to Pay: ',
+      'ai_score_label': 'AI Score: ',
+      'composite_score_label': 'Composite Score: ',
+      'importance_reasoning_label': 'AI Reasoning: ',
+      'analyze_now_label': 'Analyze with AI',
+      'analyzing_label': 'Analyzing...',
+      'votes_count_label': 'User Votes: ',
+      'sort_composite': 'Composite Score',
+      'sort_ai_score': 'AI Score',
+      'sort_votes': 'Votes',
+      'sort_name': 'Name',
+      'search_roadmap_hint': 'Search roadmap datasets...',
       'api_reachability': 'API Reachability',
       'api_status_reachable': 'Reachable',
       'api_status_unreachable': 'Unreachable',
@@ -895,6 +915,20 @@ class AppStateNotifier extends ChangeNotifier {
       'telemetry_title': 'בריאות המערכת וטלמטריה',
       'telemetry_tab': 'טלמטריה',
       'datasets_tab': 'מאגרים',
+      'roadmap_tab': 'מפת דרכים',
+      'ai_importance_label': 'חשיבות לפי AI: ',
+      'ai_monetization_label': 'נכונות לתשלום: ',
+      'ai_score_label': 'ציון AI: ',
+      'composite_score_label': 'ציון משולב: ',
+      'importance_reasoning_label': 'הסבר ה-AI: ',
+      'analyze_now_label': 'נתח באמצעות AI',
+      'analyzing_label': 'מנתח...',
+      'votes_count_label': 'הצבעות משתמשים: ',
+      'sort_composite': 'ציון משולב',
+      'sort_ai_score': 'ציון AI',
+      'sort_votes': 'הצבעות',
+      'sort_name': 'שם',
+      'search_roadmap_hint': 'חפש במפת הדרכים...',
       'api_reachability': 'זמינות ה-API',
       'api_status_reachable': 'זמין',
       'api_status_unreachable': 'לא זמין',

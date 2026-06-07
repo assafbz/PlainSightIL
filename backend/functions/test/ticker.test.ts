@@ -67,6 +67,11 @@ vi.mock("firebase-functions/v1", async (importOriginal) => {
       https: {
         onRequest: triggerMock,
       },
+      firestore: {
+        document: vi.fn().mockReturnValue({
+          onCreate: triggerMock,
+        }),
+      },
       pubsub: {
         schedule: vi.fn().mockReturnValue({
           onRun: triggerMock,

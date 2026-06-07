@@ -34,6 +34,7 @@ class TelemetryNotifier extends ChangeNotifier {
 
   List<DatasetMetadataModel> _directoryRecords = [];
   bool _isLoadingDirectory = true;
+  Map<String, Map<String, dynamic>> _datasetRequests = {};
   Map<String, int> _datasetRequestCounts = {};
   StreamSubscription<QuerySnapshot>? _directorySubscription;
   StreamSubscription<QuerySnapshot>? _requestsSubscription;
@@ -69,6 +70,9 @@ class TelemetryNotifier extends ChangeNotifier {
 
   /// Returns all dataset directory records.
   List<DatasetMetadataModel> get directoryRecords => _directoryRecords;
+
+  /// Returns full dataset request configurations mapped by ID.
+  Map<String, Map<String, dynamic>> get datasetRequests => _datasetRequests;
 
   /// Checks if directory records are loading.
   bool get isLoadingDirectory => _isLoadingDirectory;
@@ -487,11 +491,14 @@ class TelemetryNotifier extends ChangeNotifier {
       if (testRequestsStream != null) {
         _requestsSubscription = testRequestsStream!.listen(
           (snapshot) {
+            final Map<String, Map<String, dynamic>> requests = {};
             final Map<String, int> counts = {};
             for (final doc in snapshot.docs) {
-              counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0)
-                  .toInt();
+              final data = doc.data() as Map<String, dynamic>;
+              requests[doc.id] = data;
+              counts[doc.id] = (data['requestCount'] as num? ?? 0).toInt();
             }
+            _datasetRequests = requests;
             _datasetRequestCounts = counts;
             notifyListeners();
           },
@@ -704,11 +711,14 @@ class TelemetryNotifier extends ChangeNotifier {
           .snapshots()
           .listen(
             (snapshot) {
+              final Map<String, Map<String, dynamic>> requests = {};
               final Map<String, int> counts = {};
               for (final doc in snapshot.docs) {
-                counts[doc.id] = (doc.data()['requestCount'] as num? ?? 0)
-                    .toInt();
+                final data = doc.data();
+                requests[doc.id] = data;
+                counts[doc.id] = (data['requestCount'] as num? ?? 0).toInt();
               }
+              _datasetRequests = requests;
               _datasetRequestCounts = counts;
               notifyListeners();
             },
@@ -810,9 +820,12 @@ class TelemetryNotifier extends ChangeNotifier {
         if (requestSnap.exists) {
           final currentCount =
               (requestSnap.data()?['requestCount'] as num? ?? 0).toInt();
+          final aiScore = (requestSnap.data()?['aiScore'] as num? ?? 0).toInt();
           transaction.update(requestRef, {
             'requestCount': currentCount + 1,
             'lastRequestedAt': FieldValue.serverTimestamp(),
+            if (requestSnap.data()?['aiScore'] != null)
+              'compositeScore': (currentCount + 1) * 10 + aiScore,
           });
         } else {
           transaction.set(requestRef, {
@@ -934,6 +947,87 @@ class TelemetryNotifier extends ChangeNotifier {
       AppLogger.error('Error triggering manual sync', e);
       _datasetMetadataMap[datasetId] = {...localMeta, 'status': 'error'};
       notifyListeners();
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  /// Triggers a manual AI scoring analysis sync via HTTP Cloud Function call.
+  Future<Map<String, dynamic>> triggerAiAnalysis(String datasetId) async {
+    if (_isTesting) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      final existingReq =
+          _datasetRequests[datasetId] ??
+          {
+            'datasetId': datasetId,
+            'datasetTitle': 'Mock Dataset Title',
+            'requestCount': 0,
+          };
+      _datasetRequests[datasetId] = {
+        ...existingReq,
+        'aiScore': 85,
+        'aiImportance': 'High',
+        'aiImportanceReasoning':
+            'זוהי הערכת חשיבות לדוגמה מבינה מלאכותית עבור המאגר.',
+        'aiMonetization': 'Medium',
+        'aiReviewedAt': DateTime.now().toIso8601String(),
+        'compositeScore':
+            ((existingReq['requestCount'] as num? ?? 0).toInt() * 10) + 85,
+      };
+      notifyListeners();
+      return {
+        'success': true,
+        'message': 'AI analysis completed successfully (mock)',
+      };
+    }
+
+    try {
+      String? token;
+      if (isFirebaseInitialized) {
+        try {
+          final user = (testAuth ?? FirebaseAuth.instance).currentUser;
+          if (user != null) {
+            token = await user.getIdToken();
+          }
+        } catch (_) {}
+      }
+
+      final url = Uri.parse('$functionsBaseUrl/manualAnalyzeDataset');
+      final response = httpClient != null
+          ? await httpClient!.post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({'datasetId': datasetId}),
+            )
+          : await http.post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({'datasetId': datasetId}),
+            );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'success': true,
+          'message': data['message'] ?? 'AI analysis completed successfully',
+          'review': data['review'],
+        };
+      } else {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final String errorMessage =
+            (data['error'] ?? data['message'] ?? 'Failed to run AI analysis')
+                .toString();
+        return {'success': false, 'message': errorMessage};
+      }
+    } catch (e) {
+      AppLogger.error('Error triggering manual AI analysis', e);
       return {'success': false, 'message': e.toString()};
     }
   }
