@@ -43,6 +43,9 @@ class DatasetSyncManager<T> {
   /// Callback to notify the listening ChangeNotifier when the dataset changes
   final VoidCallback onStateChanged;
 
+  /// Callback to notify when a sync error occurs
+  final void Function(Object error)? onError;
+
   /// Optional custom comparator to sort records. Defaults to sorting by [lastUpdated] descending.
   final Comparator<T>? sortComparator;
 
@@ -69,6 +72,7 @@ class DatasetSyncManager<T> {
     required this.getRecordLastUpdated,
     required this.onStateChanged,
     this.sortComparator,
+    this.onError,
   });
 
   /// Check if Firebase is initialized.
@@ -97,6 +101,7 @@ class DatasetSyncManager<T> {
     FirebaseFirestore? testFirestore,
     Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream,
     bool forceProductionAsync = false,
+    String? collectionPath,
   }) async {
     if (_subscription != null) {
       await _subscription!.cancel();
@@ -136,7 +141,9 @@ class DatasetSyncManager<T> {
         if (testFirestoreStream != null) {
           stream = testFirestoreStream;
         } else {
-          stream = testFirestore!.collection(datasetId).snapshots();
+          stream = testFirestore!
+              .collection(collectionPath ?? datasetId)
+              .snapshots();
         }
 
         _subscription = stream.listen(
@@ -150,6 +157,7 @@ class DatasetSyncManager<T> {
       } catch (e) {
         _isLoading = false;
         _isSyncing = false;
+        onError?.call(e);
         onStateChanged();
         AppLogger.error(
           'DatasetSyncManager ($datasetId): Exception connecting to test Firestore',
@@ -183,7 +191,7 @@ class DatasetSyncManager<T> {
     // 4. Real Production App path
     _isSyncing = true;
     onStateChanged();
-    unawaited(_initProductionAsync(testFirestore));
+    unawaited(_initProductionAsync(testFirestore, collectionPath));
   }
 
   void _handleSnapshot(QuerySnapshot snapshot) {
@@ -233,6 +241,7 @@ class DatasetSyncManager<T> {
   void _handleError(Object err) {
     _isLoading = false;
     _isSyncing = false;
+    onError?.call(err);
     onStateChanged();
     AppLogger.error(
       'DatasetSyncManager ($datasetId): Firestore listener stream error',
@@ -256,7 +265,10 @@ class DatasetSyncManager<T> {
     }
   }
 
-  Future<void> _initProductionAsync(FirebaseFirestore? testFirestore) async {
+  Future<void> _initProductionAsync(
+    FirebaseFirestore? testFirestore,
+    String? collectionPath,
+  ) async {
     // 1. Load cached records from SharedPreferences
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -303,7 +315,7 @@ class DatasetSyncManager<T> {
 
     try {
       final collectionRef = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(datasetId);
+          .collection(collectionPath ?? datasetId);
 
       // Query only for records updated since the last sync time to minimize reads
       Query query = collectionRef;
@@ -322,6 +334,7 @@ class DatasetSyncManager<T> {
     } catch (e) {
       _isLoading = false;
       _isSyncing = false;
+      onError?.call(e);
       onStateChanged();
       AppLogger.error(
         'DatasetSyncManager ($datasetId): Failed to query Firestore snapshots',

@@ -6,6 +6,7 @@ import 'package:plainsight/core/utils/app_logger.dart';
 import '../../data/models/car_importer_record_model.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/state/dataset_sync_manager.dart';
 
 /// Scoped state notifier that handles car importers collection streams,
 /// loader flags, and test mode data fallbacks.
@@ -13,9 +14,7 @@ class CarImportersNotifier extends ChangeNotifier {
   /// Local indicator if we are running in unit/widget mock testing mode.
   bool get _isTesting => AppStateNotifier.isTesting;
 
-  List<CarImporterRecordModel> _carImporterRecords = [];
-  bool _isLoadingCarImporters = true;
-  StreamSubscription<QuerySnapshot>? _carImportersSubscription;
+  late final DatasetSyncManager<CarImporterRecordModel> _syncManager;
 
   @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
@@ -24,10 +23,10 @@ class CarImportersNotifier extends ChangeNotifier {
   FirebaseFirestore? testFirestore;
 
   /// Returns car importers records list.
-  List<CarImporterRecordModel> get carImporterRecords => _carImporterRecords;
+  List<CarImporterRecordModel> get carImporterRecords => _syncManager.records;
 
   /// Checks if car importers query is loading.
-  bool get isLoadingCarImporters => _isLoadingCarImporters;
+  bool get isLoadingCarImporters => _syncManager.isLoading;
 
   /// Checks if Firebase is initialized.
   bool get isFirebaseInitialized {
@@ -46,139 +45,63 @@ class CarImportersNotifier extends ChangeNotifier {
     bool isTesting = false,
     this.testFirestoreStream,
     this.testFirestore,
-  });
+  }) {
+    _syncManager = DatasetSyncManager<CarImporterRecordModel>(
+      datasetId: DatasetIds.carImporters,
+      fromMap: CarImporterRecordModel.fromMap,
+      toMap: (r) => r.toMap(),
+      getRecordId: (r) => r.id,
+      getRecordLastUpdated: (r) => r.lastUpdated ?? '',
+      onStateChanged: notifyListeners,
+    );
+  }
 
   /// Initialize real-time streams to car importers collection.
   void initCarImportersListener() {
-    _carImportersSubscription?.cancel();
-    if (testFirestoreStream != null) {
-      _isLoadingCarImporters = true;
-      _carImportersSubscription = testFirestoreStream!.listen(
-        (snapshot) {
-          final List<CarImporterRecordModel> records = [];
-          for (final doc in snapshot.docs) {
-            try {
-              records.add(CarImporterRecordModel.fromMap(doc.data()));
-            } catch (e) {
-              // coverage:ignore-start
-              AppLogger.error(
-                'Failed to parse document ${doc.id} in CarImportersNotifier test stream',
-                e,
-              );
-              // coverage:ignore-end
-            }
-          }
-          _carImporterRecords = records;
-          _isLoadingCarImporters = false;
-          notifyListeners();
-        },
-        onError: (Object err) {
-          _isLoadingCarImporters = false;
-          notifyListeners();
-          AppLogger.error(
-            'Firestore car importers collection listener error',
-            err,
-          );
-        },
-      );
-      return;
-    }
-    if (_isTesting) {
-      _carImporterRecords = [
-        CarImporterRecordModel(
-          id: '1',
-          idNum: 1,
-          importerCode: 1,
-          importerName: 'קרסו מוטורס בע"מ',
-          modelType: 'P',
-          makerCode: 928,
-          makerName: 'רנו צרפת',
-          modelCode: 1000,
-          modelName: 'C0635P R TWINGO EP',
-          productionYear: 1996,
-          price: 54950,
-          commercialName: 'טווינגו 2.1 YSAE',
-        ),
-        CarImporterRecordModel(
-          id: '2',
-          idNum: 2,
-          importerCode: 1,
-          importerName: 'קרסו מוטורס בע"מ',
-          modelType: 'P',
-          makerCode: 928,
-          makerName: 'רנו צרפת',
-          modelCode: 4060,
-          modelName: 'L53A05 R19 RN 1.4I',
-          productionYear: 1996,
-          price: 61990,
-          commercialName: '91 NR I4.1 4 דלתות',
-        ),
-      ];
-      _isLoadingCarImporters = false;
-      notifyListeners();
-      return;
-    }
+    final mockList = _isTesting
+        ? [
+            CarImporterRecordModel(
+              id: '1',
+              idNum: 1,
+              importerCode: 1,
+              importerName: 'קרסו מוטורס בע"מ',
+              modelType: 'P',
+              makerCode: 928,
+              makerName: 'רנו צרפת',
+              modelCode: 1000,
+              modelName: 'C0635P R TWINGO EP',
+              productionYear: 1996,
+              price: 54950,
+              commercialName: 'טווינגו 2.1 YSAE',
+            ),
+            CarImporterRecordModel(
+              id: '2',
+              idNum: 2,
+              importerCode: 1,
+              importerName: 'קרסו מוטורס בע"מ',
+              modelType: 'P',
+              makerCode: 928,
+              makerName: 'רנו צרפת',
+              modelCode: 4060,
+              modelName: 'L53A05 R19 RN 1.4I',
+              productionYear: 1996,
+              price: 61990,
+              commercialName: '91 NR I4.1 4 דלתות',
+            ),
+          ]
+        : null;
 
-    if (!isFirebaseInitialized) {
-      _isLoadingCarImporters = false;
-      notifyListeners();
-      return;
-    }
-
-    AppLogger.info(
-      'Initializing car importers listener in CarImportersNotifier',
+    _syncManager.initialize(
+      mockData: mockList,
+      isTesting: _isTesting,
+      testFirestore: testFirestore,
+      testFirestoreStream: testFirestoreStream,
     );
-    _isLoadingCarImporters = true;
-    notifyListeners();
-
-    try {
-      _carImportersSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(DatasetIds.carImporters)
-          .orderBy('_id', descending: true)
-          .limit(200)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              final List<CarImporterRecordModel> records = [];
-              for (final doc in snapshot.docs) {
-                try {
-                  records.add(CarImporterRecordModel.fromMap(doc.data()));
-                } catch (e) {
-                  // coverage:ignore-start
-                  AppLogger.error(
-                    'Failed to parse document ${doc.id} in CarImportersNotifier',
-                    e,
-                  );
-                  // coverage:ignore-end
-                }
-              }
-              _carImporterRecords = records;
-              _isLoadingCarImporters = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingCarImporters = false;
-              notifyListeners();
-              AppLogger.error(
-                'Firestore car importers collection listener error',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingCarImporters = false;
-      notifyListeners();
-      AppLogger.error('Failed to initialize car importers listener', e);
-    }
   }
 
   /// Cancels active car importers subscriptions and resets paging states.
   void cancelCarImportersListener() {
-    _carImportersSubscription?.cancel();
-    _carImportersSubscription = null;
-    _isLoadingCarImporters = true;
-    _carImporterRecords = [];
-    notifyListeners();
+    _syncManager.cancel();
   }
 
   bool _isDisposed = false;
@@ -197,7 +120,7 @@ class CarImportersNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    _carImportersSubscription?.cancel();
+    _syncManager.dispose();
     super.dispose();
   }
 }

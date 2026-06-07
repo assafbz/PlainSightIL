@@ -6,6 +6,7 @@ import 'package:plainsight/core/utils/app_logger.dart';
 
 import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/state/dataset_sync_manager.dart';
 
 /// Scoped state notifier that handles active cellular antenna stream queries,
 /// loader flags, and test mode data fallbacks.
@@ -13,9 +14,7 @@ class AntennasNotifier extends ChangeNotifier {
   /// Local indicator if we are running in unit/widget mock testing mode.
   bool get _isTesting => AppStateNotifier.isTesting;
 
-  List<Map<String, dynamic>> _antennaRecords = [];
-  bool _isLoadingAntennas = true;
-  StreamSubscription<QuerySnapshot>? _antennaSubscription;
+  late final DatasetSyncManager<Map<String, dynamic>> _syncManager;
 
   @visibleForTesting
   Stream<QuerySnapshot<Map<String, dynamic>>>? testFirestoreStream;
@@ -24,10 +23,10 @@ class AntennasNotifier extends ChangeNotifier {
   FirebaseFirestore? testFirestore;
 
   /// Returns cellular antenna documents list.
-  List<Map<String, dynamic>> get antennaRecords => _antennaRecords;
+  List<Map<String, dynamic>> get antennaRecords => _syncManager.records;
 
   /// Checks if active antennas query is executing.
-  bool get isLoadingAntennas => _isLoadingAntennas;
+  bool get isLoadingAntennas => _syncManager.isLoading;
 
   /// Checks if Firebase is initialized.
   bool get isFirebaseInitialized {
@@ -46,112 +45,68 @@ class AntennasNotifier extends ChangeNotifier {
     bool isTesting = false,
     this.testFirestoreStream,
     this.testFirestore,
-  });
+  }) {
+    _syncManager = DatasetSyncManager<Map<String, dynamic>>(
+      datasetId: DatasetIds.cellularAntennas,
+      fromMap: (map) => map,
+      toMap: (map) => map,
+      getRecordId: (map) =>
+          map['antennaId']?.toString() ?? map['id']?.toString() ?? '',
+      getRecordLastUpdated: (map) => map['lastUpdated']?.toString() ?? '',
+      onStateChanged: notifyListeners,
+    );
+  }
 
   /// Initialize real-time streams to cellular antennas collection.
   void initAntennaListener() {
-    _antennaSubscription?.cancel();
-    if (testFirestoreStream != null) {
-      _isLoadingAntennas = true;
-      _antennaSubscription = testFirestoreStream!.listen(
-        (snapshot) {
-          _antennaRecords = snapshot.docs.map((doc) => doc.data()).toList();
-          _isLoadingAntennas = false;
-          scheduleMicrotask(() => notifyListeners());
-        },
-        onError: (Object err) {
-          _isLoadingAntennas = false;
-          scheduleMicrotask(() => notifyListeners());
-          AppLogger.error('Firestore antenna collection listener error', err);
-        },
-      );
-      return;
-    }
-    if (_isTesting) {
-      _antennaRecords = [
-        {
-          'antennaId': 'CELL-100',
-          'addressHebrew': 'דיזנגוף 50, תל אביב',
-          'addressEnglish': 'Dizengoff 50, Tel Aviv',
-          'operatorName': 'Pelephone',
-          'radiationFrequency': 1800.0,
-          'coordinates': const GeoPoint(32.0782, 34.7741),
-        },
-        {
-          'antennaId': 'CELL-101',
-          'addressHebrew': 'בן יהודה 80, תל אביב',
-          'addressEnglish': 'Ben Yehuda 80, Tel Aviv',
-          'operatorName': 'Partner',
-          'radiationFrequency': 3500.0,
-          'coordinates': const GeoPoint(32.0831, 34.7725),
-        },
-        {
-          'antennaId': 'CELL-102',
-          'addressHebrew': 'קיבוץ אפיקים, עמק הירדן',
-          'addressEnglish': 'Kibbutz Afikim, Jordan Valley',
-          'operatorName': 'Cellcom',
-          'radiationFrequency': 2100.0,
-          'coordinates': const GeoPoint(32.6795, 35.5792),
-        },
-        {
-          'antennaId': 'CELL-103',
-          'addressHebrew': 'שדרות רוטשילד 15, תל אביב',
-          'addressEnglish': 'Rothschild Blvd 15, Tel Aviv',
-          'operatorName': 'Hot Mobile',
-          'radiationFrequency': 1800.0,
-          'coordinates': const GeoPoint(32.0635, 34.7712),
-        },
-      ];
-      _isLoadingAntennas = false;
-      scheduleMicrotask(() => notifyListeners());
-      return;
-    }
+    final mockList = _isTesting
+        ? [
+            {
+              'antennaId': 'CELL-100',
+              'addressHebrew': 'דיזנגוף 50, תל אביב',
+              'addressEnglish': 'Dizengoff 50, Tel Aviv',
+              'operatorName': 'Pelephone',
+              'radiationFrequency': 1800.0,
+              'coordinates': const GeoPoint(32.0782, 34.7741),
+            },
+            {
+              'antennaId': 'CELL-101',
+              'addressHebrew': 'בן יהודה 80, תל אביב',
+              'addressEnglish': 'Ben Yehuda 80, Tel Aviv',
+              'operatorName': 'Partner',
+              'radiationFrequency': 3500.0,
+              'coordinates': const GeoPoint(32.0831, 34.7725),
+            },
+            {
+              'antennaId': 'CELL-102',
+              'addressHebrew': 'קיבוץ אפיקים, עמק הירדן',
+              'addressEnglish': 'Kibbutz Afikim, Jordan Valley',
+              'operatorName': 'Cellcom',
+              'radiationFrequency': 2100.0,
+              'coordinates': const GeoPoint(32.6795, 35.5792),
+            },
+            {
+              'antennaId': 'CELL-103',
+              'addressHebrew': 'שדרות רוטשילד 15, תל אביב',
+              'addressEnglish': 'Rothschild Blvd 15, Tel Aviv',
+              'operatorName': 'Hot Mobile',
+              'radiationFrequency': 1800.0,
+              'coordinates': const GeoPoint(32.0635, 34.7712),
+            },
+          ]
+        : null;
 
-    if (!isFirebaseInitialized) {
-      _isLoadingAntennas = false;
-      scheduleMicrotask(() => notifyListeners());
-      return;
-    }
-
-    AppLogger.info(
-      'Initializing cellular antennas listener in AntennasNotifier',
+    _syncManager.initialize(
+      mockData: mockList,
+      isTesting: _isTesting,
+      testFirestore: testFirestore,
+      testFirestoreStream: testFirestoreStream,
     );
-    _isLoadingAntennas = true;
-    scheduleMicrotask(() => notifyListeners());
-
-    try {
-      _antennaSubscription = (testFirestore ?? FirebaseFirestore.instance)
-          .collection(DatasetIds.cellularAntennas)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              _antennaRecords = snapshot.docs.map((doc) => doc.data()).toList();
-              _isLoadingAntennas = false;
-              notifyListeners();
-            },
-            onError: (Object err) {
-              _isLoadingAntennas = false;
-              notifyListeners();
-              AppLogger.error(
-                'Firestore antenna collection listener error',
-                err,
-              );
-            },
-          );
-    } catch (e) {
-      _isLoadingAntennas = false;
-      notifyListeners();
-      AppLogger.error('Failed to initialize antennas listener', e);
-    }
   }
 
   /// Cancels any active stream subscription and resets state flags.
   void cancelAntennaListener() {
-    _antennaSubscription?.cancel();
-    _antennaSubscription = null;
-    _isLoadingAntennas = true;
-    _antennaRecords = [];
-    notifyListeners();
+    _syncManager.cancel();
   }
 
   bool _isDisposed = false;
@@ -170,7 +125,7 @@ class AntennasNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    _antennaSubscription?.cancel();
+    _syncManager.dispose();
     super.dispose();
   }
 }
