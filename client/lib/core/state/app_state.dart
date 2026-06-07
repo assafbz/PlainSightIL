@@ -239,10 +239,10 @@ class AppStateNotifier extends ChangeNotifier {
           if (enFile.existsSync() && heFile.existsSync()) {
             _localizedStrings = {
               'en': Map<String, String>.from(
-                jsonDecode(enFile.readAsStringSync()),
+                jsonDecode(enFile.readAsStringSync()) as Map,
               ),
               'he': Map<String, String>.from(
-                jsonDecode(heFile.readAsStringSync()),
+                jsonDecode(heFile.readAsStringSync()) as Map,
               ),
             };
           }
@@ -267,10 +267,10 @@ class AppStateNotifier extends ChangeNotifier {
           if (enFile.existsSync() && heFile.existsSync()) {
             _localizedStrings = {
               'en': Map<String, String>.from(
-                jsonDecode(enFile.readAsStringSync()),
+                jsonDecode(enFile.readAsStringSync()) as Map,
               ),
               'he': Map<String, String>.from(
-                jsonDecode(heFile.readAsStringSync()),
+                jsonDecode(heFile.readAsStringSync()) as Map,
               ),
             };
             return;
@@ -281,8 +281,8 @@ class AppStateNotifier extends ChangeNotifier {
       final enString = await rootBundle.loadString('assets/lang/en.json');
       final heString = await rootBundle.loadString('assets/lang/he.json');
       _localizedStrings = {
-        'en': Map<String, String>.from(jsonDecode(enString)),
-        'he': Map<String, String>.from(jsonDecode(heString)),
+        'en': Map<String, String>.from(jsonDecode(enString) as Map),
+        'he': Map<String, String>.from(jsonDecode(heString) as Map),
       };
     } catch (e) {
       AppLogger.error('Failed to load localized strings from assets', e);
