@@ -137,6 +137,18 @@ describe("AI Roadmap Service Unit Tests", () => {
       expect(review.importanceReasoning).toContain("תקציב");
     });
 
+    it("should return high score and custom reasoning for municipality/transport datasets", () => {
+      const review = getMockRoadmapReview("כביש ארנונה ותחבורה");
+      expect(review.importance).toBe("High");
+      expect(review.aiScore).toBe(75);
+    });
+
+    it("should return high score and health-focused reasoning for drug/health-basket datasets", () => {
+      const review = getMockRoadmapReview("יבוא תרופות");
+      expect(review.importance).toBe("High");
+      expect(review.aiScore).toBe(90);
+    });
+
     it("should return low score and reasoning for cultural/sports datasets", () => {
       const review = getMockRoadmapReview("מוזיאון תל אביב");
       expect(review.importance).toBe("Low");
