@@ -438,8 +438,14 @@ class _TravelWarningsScreenState extends State<TravelWarningsScreen> {
                             );
 
                             final dateToShow =
-                                (item.date != null &&
-                                    item.date!.trim().isNotEmpty)
+                                (item.sourceUpdatedAt != null &&
+                                    item.sourceUpdatedAt!.trim().isNotEmpty)
+                                ? item.sourceUpdatedAt!
+                                : (item.sourceCreatedAt != null &&
+                                      item.sourceCreatedAt!.trim().isNotEmpty)
+                                ? item.sourceCreatedAt!
+                                : (item.date != null &&
+                                      item.date!.trim().isNotEmpty)
                                 ? item.date!
                                 : (item.lastUpdated != null &&
                                       item.lastUpdated!.trim().isNotEmpty)

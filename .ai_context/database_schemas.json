@@ -102,10 +102,15 @@
           "format": "date-time",
           "description": "ISO timestamp of database document modification."
         },
-        "lastUpdated": {
+        "sourceCreatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of source metadata last modification."
+          "description": "ISO timestamp when the record was created at the source."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the record was last updated at the source."
         }
       },
       "required": [
@@ -180,10 +185,15 @@
           "format": "date-time",
           "description": "ISO timestamp of database document modification."
         },
-        "lastUpdated": {
+        "sourceCreatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of source metadata last modification."
+          "description": "ISO timestamp when the permit application was submitted."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the permit application was last updated."
         }
       },
       "required": [
@@ -198,7 +208,8 @@
         "jurisdiction",
         "coordinates",
         "geohash",
-        "lastUpdated"
+        "sourceCreatedAt",
+        "sourceUpdatedAt"
       ]
     },
     "dataset_metadata": {
@@ -212,6 +223,16 @@
         "activeCollection": {
           "type": "string",
           "description": "The name of the collection currently active for client queries."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the scraper metadata document was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the scraper metadata document was last updated."
         },
         "lastUpdated": {
           "type": "string",
@@ -228,7 +249,7 @@
           "description": "The operational state of the backend sync cron job."
         }
       },
-      "required": ["id", "activeCollection", "lastUpdated", "recordCount", "status"]
+      "required": ["id", "activeCollection", "createdAt", "updatedAt", "lastUpdated", "recordCount", "status"]
     },
     "datasets_metadata": {
       "description": "Registry of public datasets available or requested for integration in the Directory screen.",
@@ -258,10 +279,25 @@
           "type": "integer",
           "description": "Number of resource files in the government package."
         },
-        "lastUpdated": {
+        "sourceCreatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of data availability."
+          "description": "ISO timestamp when the dataset was created at data.gov.il."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the dataset was last updated at data.gov.il."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the metadata registry record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the metadata registry record was last updated."
         },
         "tags": {
           "type": "array",
@@ -275,7 +311,7 @@
           "description": "True if fully integrated and visualized in the app. False if in the roadmap (voteable)."
         }
       },
-      "required": ["id", "name", "title", "notes", "publisher", "resourceCount", "lastUpdated", "tags", "isSupported"]
+      "required": ["id", "name", "title", "notes", "publisher", "resourceCount", "sourceCreatedAt", "sourceUpdatedAt", "tags", "isSupported"]
     },
     "dataset_requests": {
       "description": "Tracks community voting metrics for roadmap dataset activation requests.",
@@ -369,11 +405,6 @@
           "type": "string",
           "description": "City or locality of company activity in Hebrew."
         },
-        "lastUpdated": {
-          "type": "string",
-          "format": "date-time",
-          "description": "ISO timestamp of the last scraper update."
-        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -384,10 +415,15 @@
           "format": "date-time",
           "description": "ISO timestamp of database document modification."
         },
-        "lastUpdated": {
+        "sourceCreatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of source metadata last modification."
+          "description": "ISO timestamp when the liquidation case was submitted."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the liquidation order was received."
         }
       },
       "required": [
@@ -402,7 +438,8 @@
         "cityOfActivity",
         "createdAt",
         "updatedAt",
-        "lastUpdated"
+        "sourceCreatedAt",
+        "sourceUpdatedAt"
       ]
     },
     "doctors_licenses": {
@@ -457,10 +494,15 @@
           "format": "date-time",
           "description": "ISO timestamp of database document modification."
         },
-        "lastUpdated": {
+        "sourceCreatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of source metadata last modification."
+          "description": "ISO timestamp when the medical license was registered."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the license specialty or details were updated."
         }
       },
       "required": [
@@ -472,7 +514,8 @@
         "licenseRegistrationDate",
         "createdAt",
         "updatedAt",
-        "lastUpdated"
+        "sourceCreatedAt",
+        "sourceUpdatedAt"
       ]
     },
     "local_market_bonds": {
@@ -566,10 +609,15 @@
           "format": "date-time",
           "description": "ISO timestamp of database document modification."
         },
-        "lastUpdated": {
+        "sourceCreatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO timestamp of source metadata last modification."
+          "description": "ISO timestamp when the bond was issued."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the bond was updated."
         }
       },
       "required": [
@@ -594,7 +642,8 @@
         "grossCutoffYield",
         "createdAt",
         "updatedAt",
-        "lastUpdated"
+        "sourceCreatedAt",
+        "sourceUpdatedAt"
       ]
     },
     "subscriptions": {

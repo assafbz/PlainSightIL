@@ -60,11 +60,20 @@ class BankAtmRecordModel {
   /// Whether the ATM has handicap access
   final bool hasHandicapAccess;
 
-  /// Last updated timestamp (ISO-8601 string)
-  final String lastUpdated;
+  /// Source created at timestamp (ISO-8601 string)
+  final String sourceCreatedAt;
+
+  /// Source updated at timestamp (ISO-8601 string)
+  final String sourceUpdatedAt;
 
   /// Created at timestamp (ISO-8601 string)
   final String createdAt;
+
+  /// Updated at timestamp (ISO-8601 string)
+  final String updatedAt;
+
+  /// Last updated timestamp (ISO-8601 string) - Legacy backward compatibility
+  final String lastUpdated;
 
   /// Constructor initializing all fields
   BankAtmRecordModel({
@@ -88,8 +97,11 @@ class BankAtmRecordModel {
     required this.hasForexTransaction,
     required this.hasAdditionalTransactions,
     required this.hasHandicapAccess,
-    required this.lastUpdated,
+    required this.sourceCreatedAt,
+    required this.sourceUpdatedAt,
     required this.createdAt,
+    required this.updatedAt,
+    required this.lastUpdated,
   });
 
   /// Factory constructor to parse a Firestore document mapping into the model.
@@ -139,8 +151,20 @@ class BankAtmRecordModel {
       hasAdditionalTransactions:
           map['hasAdditionalTransactions'] as bool? ?? false,
       hasHandicapAccess: map['hasHandicapAccess'] as bool? ?? false,
-      lastUpdated: map['lastUpdated'] as String? ?? '',
+      sourceCreatedAt:
+          map['sourceCreatedAt'] as String? ??
+          map['lastUpdated'] as String? ??
+          '',
+      sourceUpdatedAt:
+          map['sourceUpdatedAt'] as String? ??
+          map['lastUpdated'] as String? ??
+          '',
       createdAt: map['createdAt'] as String? ?? '',
+      updatedAt: map['updatedAt'] as String? ?? '',
+      lastUpdated:
+          map['sourceUpdatedAt'] as String? ??
+          map['lastUpdated'] as String? ??
+          '',
     );
   }
 
@@ -177,8 +201,11 @@ class BankAtmRecordModel {
       'hasForexTransaction': hasForexTransaction,
       'hasAdditionalTransactions': hasAdditionalTransactions,
       'hasHandicapAccess': hasHandicapAccess,
-      'lastUpdated': lastUpdated,
+      'sourceCreatedAt': sourceCreatedAt,
+      'sourceUpdatedAt': sourceUpdatedAt,
       'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'lastUpdated': lastUpdated,
     };
   }
 }

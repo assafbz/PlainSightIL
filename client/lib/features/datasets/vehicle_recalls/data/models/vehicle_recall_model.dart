@@ -61,6 +61,12 @@ class VehicleRecallRecordModel {
   /// ISO 8601 timestamp of when the record was last modified by the scraper.
   final String? updatedAt;
 
+  /// Source creation timestamp (optional ISO-8601 string)
+  final String? sourceCreatedAt;
+
+  /// Source modification timestamp (optional ISO-8601 string)
+  final String? sourceUpdatedAt;
+
   /// ISO 8601 timestamp of the last successful sync operation.
   final String? lastUpdated;
 
@@ -85,6 +91,8 @@ class VehicleRecallRecordModel {
     required this.importerWebsite,
     this.createdAt,
     this.updatedAt,
+    this.sourceCreatedAt,
+    this.sourceUpdatedAt,
     this.lastUpdated,
   });
 
@@ -124,7 +132,12 @@ class VehicleRecallRecordModel {
       importerWebsite: map['importerWebsite'] as String? ?? '',
       createdAt: map['createdAt'] as String?,
       updatedAt: map['updatedAt'] as String?,
-      lastUpdated: map['lastUpdated'] as String?,
+      sourceCreatedAt:
+          map['sourceCreatedAt'] as String? ?? map['lastUpdated'] as String?,
+      sourceUpdatedAt:
+          map['sourceUpdatedAt'] as String? ?? map['lastUpdated'] as String?,
+      lastUpdated:
+          map['sourceUpdatedAt'] as String? ?? map['lastUpdated'] as String?,
     );
   }
 
@@ -150,6 +163,8 @@ class VehicleRecallRecordModel {
       'importerWebsite': importerWebsite,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'sourceCreatedAt': sourceCreatedAt,
+      'sourceUpdatedAt': sourceUpdatedAt,
       'lastUpdated': lastUpdated,
     };
   }

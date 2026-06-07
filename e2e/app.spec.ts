@@ -439,7 +439,7 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await expect(page.getByText('Travel Warnings').first()).toBeVisible({ timeout: 15000 });
 
     // Wait for travel warning records to be visible
-    const warningItem = page.getByRole('button', { name: /אוגנדה|אוזבקיסטאן|אוסטריה|Uganda|Uzbekistan|Austria/ }).first();
+    const warningItem = page.getByRole('button', { name: /אוגנדה|אוזבקיסטאן|אוסטריה|בוליביה|בהאמס|מרשל|סיישל|קוק|Uganda|Uzbekistan|Austria|Bolivia|Bahamas|Marshall|Seychelles|Cook/ }).first();
     await expect(warningItem).toBeVisible({ timeout: 15000 });
   });
 });

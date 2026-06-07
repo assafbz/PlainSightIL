@@ -403,6 +403,7 @@ describe("Scraper and Sync Ingestion", () => {
     const existingAntenna = {
       ...parsed,
       createdAt: initialCreatedAt,
+      sourceUpdatedAt: initialLastUpdated,
       lastUpdated: initialLastUpdated,
     };
 
@@ -431,7 +432,8 @@ describe("Scraper and Sync Ingestion", () => {
     expect(mockBatch.set).toHaveBeenCalledTimes(1);
     const written = mockBatch.set.mock.calls[0][1];
     expect(written.createdAt).toBe(initialCreatedAt);
-    expect(written.lastUpdated).toBe(parsed.lastUpdated);
+    expect(written.sourceUpdatedAt).toBe(parsed.sourceUpdatedAt);
+    expect(written.lastUpdated).toBe(parsed.sourceUpdatedAt);
     expect(written.updatedAt).toBeDefined();
   });
 
