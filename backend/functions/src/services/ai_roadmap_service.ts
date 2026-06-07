@@ -72,12 +72,14 @@ const aiReviewSchema = {
     },
     importanceReasoning: {
       type: "string",
-      description: "A brief, professional explanation in Hebrew explaining why this rating was given.",
+      description:
+        "A brief, professional explanation in Hebrew explaining why this rating was given.",
     },
     paymentWillingness: {
       type: "string",
       enum: ["High", "Medium", "Low"],
-      description: "How likely Israeli citizens or organizations would be willing to pay for access or premium features related to this dataset.",
+      description:
+        "How likely Israeli citizens or organizations would be willing to pay for access or premium features related to this dataset.",
     },
     aiScore: {
       type: "integer",
@@ -174,7 +176,9 @@ Return ONLY valid JSON matching the schema.`;
   };
 
   await db.collection("dataset_requests").doc(datasetId).set(updateData, { merge: true });
-  logger.info(`Successfully saved AI review for dataset ${datasetId} (AI Score: ${review.aiScore}, Composite: ${compositeScore})`);
+  logger.info(
+    `Successfully saved AI review for dataset ${datasetId} (AI Score: ${review.aiScore}, Composite: ${compositeScore})`,
+  );
 
   return review;
 }

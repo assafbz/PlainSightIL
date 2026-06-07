@@ -1,51 +1,47 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 1. Hoist mock functions
-const {
-  mockVerifyIdToken,
-  mockDbGet,
-  mockDbSet,
-  mockFirestoreInstance,
-  mockGenerateContent,
-} = vi.hoisted(() => {
-  const verifyAuth = vi.fn().mockResolvedValue({ uid: "mock-admin-uid" });
-  const dbGet = vi.fn().mockResolvedValue({
-    exists: true,
-    data: () => ({
-      title: "תקציב המדינה",
-      publisher: "משרד האוצר",
-      notes: "תקציב המדינה לשנים האחרונות",
-      tags: ["תקציב", "כספים"],
-    }),
-  });
-  const dbSet = vi.fn().mockResolvedValue(true);
-  const instance = {
-    collection: vi.fn().mockReturnValue({
-      doc: vi.fn().mockReturnValue({
-        get: dbGet,
-        set: dbSet,
+const { mockVerifyIdToken, mockDbGet, mockDbSet, mockFirestoreInstance, mockGenerateContent } =
+  vi.hoisted(() => {
+    const verifyAuth = vi.fn().mockResolvedValue({ uid: "mock-admin-uid" });
+    const dbGet = vi.fn().mockResolvedValue({
+      exists: true,
+      data: () => ({
+        title: "תקציב המדינה",
+        publisher: "משרד האוצר",
+        notes: "תקציב המדינה לשנים האחרונות",
+        tags: ["תקציב", "כספים"],
       }),
-    }),
-  };
-  const genMock = vi.fn().mockResolvedValue({
-    response: {
-      text: () => JSON.stringify({
-        importance: "High",
-        importanceReasoning: "מאגר חשוב מאוד",
-        paymentWillingness: "High",
-        aiScore: 95,
+    });
+    const dbSet = vi.fn().mockResolvedValue(true);
+    const instance = {
+      collection: vi.fn().mockReturnValue({
+        doc: vi.fn().mockReturnValue({
+          get: dbGet,
+          set: dbSet,
+        }),
       }),
-    },
-  });
+    };
+    const genMock = vi.fn().mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            importance: "High",
+            importanceReasoning: "מאגר חשוב מאוד",
+            paymentWillingness: "High",
+            aiScore: 95,
+          }),
+      },
+    });
 
-  return {
-    mockVerifyIdToken: verifyAuth,
-    mockDbGet: dbGet,
-    mockDbSet: dbSet,
-    mockFirestoreInstance: instance,
-    mockGenerateContent: genMock,
-  };
-});
+    return {
+      mockVerifyIdToken: verifyAuth,
+      mockDbGet: dbGet,
+      mockDbSet: dbSet,
+      mockFirestoreInstance: instance,
+      mockGenerateContent: genMock,
+    };
+  });
 
 // 2. Mock firebase-functions partially
 vi.mock("firebase-functions/v1", async (importOriginal) => {
@@ -157,7 +153,7 @@ describe("AI Roadmap Service Unit Tests", () => {
   describe("scoreDatasetWithAi service function", () => {
     it("should fallback to mock reviews if GEMINI_API_KEY is not defined", async () => {
       delete process.env.GEMINI_API_KEY;
-      
+
       // Mock Firestore get to return metadata and existing request
       mockDbGet.mockResolvedValueOnce({
         exists: true,
@@ -169,7 +165,7 @@ describe("AI Roadmap Service Unit Tests", () => {
       });
 
       const review = await scoreDatasetWithAi("dataset-1", mockFirestoreInstance as any);
-      
+
       expect(review.importance).toBe("High");
       expect(review.aiScore).toBe(85);
       expect(mockDbSet).toHaveBeenCalledWith(
@@ -178,13 +174,13 @@ describe("AI Roadmap Service Unit Tests", () => {
           compositeScore: 135, // 5 * 10 + 85 = 135
           aiScore: 85,
         }),
-        { merge: true }
+        { merge: true },
       );
     });
 
     it("should query Gemini API if GEMINI_API_KEY is defined", async () => {
       process.env.GEMINI_API_KEY = "test-key";
-      
+
       // Mock Firestore get to return metadata and existing request
       mockDbGet.mockResolvedValueOnce({
         exists: true,
@@ -202,12 +198,13 @@ describe("AI Roadmap Service Unit Tests", () => {
 
       mockGenerateContent.mockResolvedValueOnce({
         response: {
-          text: () => JSON.stringify({
-            importance: "High",
-            importanceReasoning: "מאגר חשוב מאוד לענייני שקיפות פיננסית",
-            paymentWillingness: "Medium",
-            aiScore: 92,
-          }),
+          text: () =>
+            JSON.stringify({
+              importance: "High",
+              importanceReasoning: "מאגר חשוב מאוד לענייני שקיפות פיננסית",
+              paymentWillingness: "Medium",
+              aiScore: 92,
+            }),
         },
       });
 
@@ -223,13 +220,13 @@ describe("AI Roadmap Service Unit Tests", () => {
           aiImportance: "High",
           aiImportanceReasoning: "מאגר חשוב מאוד לענייני שקיפות פיננסית",
         }),
-        { merge: true }
+        { merge: true },
       );
     });
 
     it("should fallback to mock reviews if Gemini API throws an error", async () => {
       process.env.GEMINI_API_KEY = "test-key";
-      
+
       mockDbGet.mockResolvedValueOnce({
         exists: true,
         data: () => ({ title: "תרבות וספורט" }),
@@ -251,7 +248,7 @@ describe("AI Roadmap Service Unit Tests", () => {
           compositeScore: 40, // 0 * 10 + 40 = 40
           aiScore: 40,
         }),
-        { merge: true }
+        { merge: true },
       );
     });
   });
@@ -281,7 +278,7 @@ describe("AI Roadmap Service Unit Tests", () => {
           datasetId: "dataset-id-123",
           aiScore: 85,
         }),
-        { merge: true }
+        { merge: true },
       );
     });
   });
@@ -323,7 +320,7 @@ describe("AI Roadmap Service Unit Tests", () => {
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           error: "Forbidden",
-        })
+        }),
       );
     });
 
@@ -341,7 +338,7 @@ describe("AI Roadmap Service Unit Tests", () => {
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           error: "Bad Request",
-        })
+        }),
       );
     });
 
@@ -371,7 +368,7 @@ describe("AI Roadmap Service Unit Tests", () => {
             importance: "High",
             aiScore: 85,
           }),
-        })
+        }),
       );
     });
   });
