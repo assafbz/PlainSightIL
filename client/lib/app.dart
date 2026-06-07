@@ -10,6 +10,12 @@ import 'package:plainsight/features/datasets/companies_liquidation/presentation/
 import 'package:plainsight/features/datasets/doctors_licenses/presentation/notifiers/doctors_notifier.dart';
 import 'package:plainsight/features/datasets/travel_warnings/presentation/notifiers/travel_warnings_notifier.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
+import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
+import 'package:plainsight/features/datasets/patent_classifications/presentation/notifiers/patent_classifications_notifier.dart';
+import 'package:plainsight/features/datasets/vehicle_recalls/presentation/notifiers/vehicle_recalls_notifier.dart';
+import 'package:plainsight/features/datasets/car_importers/presentation/notifiers/car_importers_notifier.dart';
+import 'package:plainsight/features/datasets/local_market_bonds/presentation/notifiers/local_market_bonds_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
 import 'package:plainsight/core/widgets/app_shell.dart';
 
 class MyApp extends StatefulWidget {
@@ -60,35 +66,73 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider<TelemetryNotifier>.value(
           value: _appState.telemetryNotifier,
         ),
+        ChangeNotifierProvider<BankAtmsNotifier>.value(
+          value: _appState.bankAtmsNotifier,
+        ),
+        ChangeNotifierProvider<PatentClassificationsNotifier>.value(
+          value: _appState.patentClassificationsNotifier,
+        ),
+        ChangeNotifierProvider<VehicleRecallsNotifier>.value(
+          value: _appState.vehicleRecallsNotifier,
+        ),
+        ChangeNotifierProvider<CarImportersNotifier>.value(
+          value: _appState.carImportersNotifier,
+        ),
+        ChangeNotifierProvider<LocalMarketBondsNotifier>.value(
+          value: _appState.bondsNotifier,
+        ),
+        ChangeNotifierProvider<AlertsNotifier>.value(
+          value: _appState.alertsNotifier,
+        ),
       ],
-      child: ListenableBuilder(
-        listenable: _appState,
-        builder: (context, _) {
-          return MaterialApp(
-            title: 'PlainSightIL',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              scaffoldBackgroundColor: AppColors.baseBg,
-              colorScheme: ColorScheme.dark(
-                primary: AppColors.primary,
-                secondary: AppColors.secondary,
-                surface: AppColors.surface,
-                error: AppColors.danger,
-              ),
-              useMaterial3: true,
+      child:
+          Selector<
+            AppStateNotifier,
+            ({
+              String locale,
+              bool isDarkMode,
+              bool isAuthenticated,
+              bool isGuestMode,
+            })
+          >(
+            selector: (context, appState) => (
+              locale: appState.locale,
+              isDarkMode: appState.isDarkMode,
+              isAuthenticated: appState.isAuthenticated,
+              isGuestMode: appState.isGuestMode,
             ),
-            builder: (context, child) {
-              return Directionality(
-                textDirection: _appState.textDirection,
-                child: child!,
+            builder: (context, settings, _) {
+              final appState = Provider.of<AppStateNotifier>(
+                context,
+                listen: false,
+              );
+              return MaterialApp(
+                title: 'PlainSightIL',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(
+                  scaffoldBackgroundColor: AppColors.baseBg,
+                  colorScheme: ColorScheme.dark(
+                    primary: AppColors.primary,
+                    secondary: AppColors.secondary,
+                    surface: AppColors.surface,
+                    error: AppColors.danger,
+                  ),
+                  useMaterial3: true,
+                ),
+                builder: (context, child) {
+                  return Directionality(
+                    textDirection: settings.locale == 'he'
+                        ? TextDirection.rtl
+                        : TextDirection.ltr,
+                    child: child!,
+                  );
+                },
+                home: (!settings.isAuthenticated && !settings.isGuestMode)
+                    ? LoginPage(appState: appState)
+                    : AppShell(appState: appState),
               );
             },
-            home: (!_appState.isAuthenticated && !_appState.isGuestMode)
-                ? LoginPage(appState: _appState)
-                : AppShell(appState: _appState),
-          );
-        },
-      ),
+          ),
     );
   }
 }

@@ -3,9 +3,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
+import 'package:plainsight/features/datasets/bank_atms/presentation/notifiers/bank_atms_notifier.dart';
 import '../data/models/bank_atm_record_model.dart';
 import '../widgets/bank_atms_map_view.dart';
 import '../../cellular_antennas/widgets/map_controls_overlay.dart';
@@ -37,17 +41,64 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
       ItemPositionsListener.create();
   AnimationController? _mapAnimationController;
 
+  T _getNotifier<T>({bool listen = false}) {
+    try {
+      return Provider.of<T>(context, listen: listen);
+    } catch (_) {
+      if (T == BankAtmsNotifier) return widget.appState.bankAtmsNotifier as T;
+      if (T == AuthNotifier) return widget.appState.authNotifier as T;
+      if (T == AlertsNotifier) return widget.appState.alertsNotifier as T;
+      throw Exception('Notifier not found in AppStateNotifier for type $T');
+    }
+  }
+
+  Widget _buildConsumer<T>({
+    required Widget Function(BuildContext context, T notifier, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final notifier = Provider.of<T>(context);
+      return builder(context, notifier, child);
+    } catch (_) {
+      final notifier = _getNotifier<T>();
+      return ListenableBuilder(
+        listenable: notifier as Listenable,
+        builder: (context, _) => builder(context, notifier, child),
+      );
+    }
+  }
+
+  Widget _buildConsumer2<T1, T2>({
+    required Widget Function(BuildContext context, T1 n1, T2 n2, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final n1 = Provider.of<T1>(context);
+      final n2 = Provider.of<T2>(context);
+      return builder(context, n1, n2, child);
+    } catch (_) {
+      final n1 = _getNotifier<T1>();
+      final n2 = _getNotifier<T2>();
+      return ListenableBuilder(
+        listenable: Listenable.merge([n1 as Listenable, n2 as Listenable]),
+        builder: (context, _) => builder(context, n1, n2, child),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Register the dataset in recent history
     widget.appState.addRecent(DatasetIds.bankAtms);
-    widget.appState.initBankAtmsListener();
+    _getNotifier<BankAtmsNotifier>().initBankAtmsListener();
   }
 
   @override
   void dispose() {
-    widget.appState.cancelBankAtmsListener();
+    _getNotifier<BankAtmsNotifier>().cancelBankAtmsListener();
     _searchController.dispose();
     _mapAnimationController?.dispose();
     _mapController.dispose();
@@ -57,7 +108,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
   /// Extracts unique bank names present in the records to build filter chips.
   List<String> _getUniqueBanks() {
     final isRtl = widget.appState.locale == 'he';
-    final allRecords = widget.appState.atmRecords;
+    final allRecords = _getNotifier<BankAtmsNotifier>().atmRecords;
 
     final Set<String> banks = {};
     for (final r in allRecords) {
@@ -73,7 +124,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
 
   /// Filters loaded ATM records based on search keywords and selected bank chip.
   List<BankAtmRecordModel> _getFilteredRecords() {
-    final allRecords = widget.appState.atmRecords;
+    final allRecords = _getNotifier<BankAtmsNotifier>().atmRecords;
     final isRtl = widget.appState.locale == 'he';
     final defaultFilter = isRtl ? 'הכל' : 'All';
 
@@ -618,470 +669,497 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = widget.appState.locale == 'he';
-    final list = _getFilteredRecords();
-    final banks = _getUniqueBanks();
+    return _buildConsumer<BankAtmsNotifier>(
+      builder: (context, bankAtmsNotifier, _) {
+        final isRtl = widget.appState.locale == 'he';
+        final list = _getFilteredRecords();
+        final banks = _getUniqueBanks();
 
-    return Scaffold(
-      backgroundColor: AppColors.baseBg,
-      appBar: AppBar(
-        backgroundColor: const Color(0x33000000),
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          widget.appState.translate('atm_title'),
-          style: AppTypography.headlineLg(
-            context,
-            color: const Color(0xFF2E7D32),
-          ).copyWith(fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _showMap ? Icons.view_list : Icons.map,
-              color: Colors.white,
+        return Scaffold(
+          backgroundColor: AppColors.baseBg,
+          appBar: AppBar(
+            backgroundColor: const Color(0x33000000),
+            elevation: 0,
+            centerTitle: true,
+            title: Text(
+              widget.appState.translate('atm_title'),
+              style: AppTypography.headlineLg(
+                context,
+                color: const Color(0xFF2E7D32),
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
-            tooltip: _showMap ? 'Show List Only' : 'Show Map',
-            onPressed: () {
-              setState(() {
-                _showMap = !_showMap;
-              });
-            },
-          ),
-          ListenableBuilder(
-            listenable: widget.appState,
-            builder: (context, _) {
-              final isFav = widget.appState.isFavorite(DatasetIds.bankAtms);
-              final isSubbed = widget.appState.isSubscribed(
-                DatasetIds.bankAtms,
-              );
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: widget.appState.translate(
-                      isSubbed ? 'unsubscribe_tooltip' : 'subscribe_tooltip',
-                    ),
-                    icon: Icon(
-                      isSubbed
-                          ? Icons.notifications_active
-                          : Icons.notifications_none,
-                      color: isSubbed
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                    onPressed: () =>
-                        widget.appState.toggleSubscription(DatasetIds.bankAtms),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      isFav ? Icons.favorite : Icons.favorite_border,
-                      color: isFav ? AppColors.danger : AppColors.textSecondary,
-                    ),
-                    onPressed: () =>
-                        widget.appState.toggleFavorite(DatasetIds.bankAtms),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Background Atmospheric Gradients (Green for financial theme)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.6, -0.6),
-                  radius: 1.2,
-                  colors: [
-                    const Color(
-                      0x1F2E7D32,
-                    ), // subtle green glow for financial accent
-                    AppColors.baseBg,
-                  ],
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Back',
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _showMap ? Icons.view_list : Icons.map,
+                  color: Colors.white,
                 ),
+                tooltip: _showMap ? 'Show List Only' : 'Show Map',
+                onPressed: () {
+                  setState(() {
+                    _showMap = !_showMap;
+                  });
+                },
               ),
-            ),
-          ),
-
-          // 1. Map View Pane
-          if (_showMap)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height * 0.35,
-              child: RepaintBoundary(
-                child: BankAtmsMapView(
-                  key: const ValueKey('map_view'),
-                  appState: widget.appState,
-                  records: list,
-                  selectedRecordId: _selectedRecordId,
-                  mapController: _mapController,
-                  onMarkerTap: _onMarkerTap,
-                ),
-              ),
-            ),
-
-          // Map controls overlay (Zoom and Recenter buttons)
-          if (_showMap)
-            Positioned(
-              top: 12,
-              left: isRtl ? 16 : null,
-              right: isRtl ? null : 16,
-              child: MapControlsOverlay(
-                mapController: _mapController,
-                onRecenter: _recenterOnUserLocation,
-              ),
-            ),
-
-          // 2. Interactive Bottom Content Area
-          Positioned.fill(
-            key: const ValueKey('bottom_sheet_content'),
-            top: _showMap ? MediaQuery.of(context).size.height * 0.32 : 0.0,
-            child: Column(
-              children: [
-                if (_showMap)
-                  // Bottom sheet drag handle indicator
-                  Container(
-                    width: 40,
-                    height: 5,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.textTertiary.withAlpha(50),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-
-                // Glassmorphic Search Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLow.withAlpha(100),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.glassBorder,
-                        width: 1.2,
+              _buildConsumer2<AuthNotifier, AlertsNotifier>(
+                builder: (context, authNotifier, alertsNotifier, _) {
+                  final isFav = authNotifier.isFavorite(DatasetIds.bankAtms);
+                  final isSubbed = alertsNotifier.isSubscribed(
+                    DatasetIds.bankAtms,
+                  );
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: widget.appState.translate(
+                          isSubbed
+                              ? 'unsubscribe_tooltip'
+                              : 'subscribe_tooltip',
+                        ),
+                        icon: Icon(
+                          isSubbed
+                              ? Icons.notifications_active
+                              : Icons.notifications_none,
+                          color: isSubbed
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                        ),
+                        onPressed: () => alertsNotifier.toggleSubscription(
+                          DatasetIds.bankAtms,
+                          authNotifier.currentUser?.uid ??
+                              (AppStateNotifier.isTesting ? 'mock_uid' : ''),
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Icon(
-                            Icons.search,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
+                      IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: isFav
+                              ? AppColors.danger
+                              : AppColors.textSecondary,
                         ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                            style: AppTypography.bodySm(
-                              context,
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: widget.appState.translate(
-                                'atm_search_placeholder',
-                              ),
-                              hintStyle: AppTypography.bodySm(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.close,
-                              color: AppColors.textSecondary,
-                              size: 18,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          ),
+                        onPressed: () =>
+                            authNotifier.toggleFavorite(DatasetIds.bankAtms),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+          body: Stack(
+            children: [
+              // Background Atmospheric Gradients (Green for financial theme)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.6, -0.6),
+                      radius: 1.2,
+                      colors: [
+                        const Color(
+                          0x1F2E7D32,
+                        ), // subtle green glow for financial accent
+                        AppColors.baseBg,
                       ],
                     ),
                   ),
                 ),
+              ),
 
-                // Banks Horizontal Chips Row
-                if (banks.length > 1)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: SizedBox(
-                      height: 40,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: banks.length,
-                        itemBuilder: (context, index) =>
-                            _buildFilterChip(banks[index]),
-                      ),
+              // 1. Map View Pane
+              if (_showMap)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: MediaQuery.of(context).size.height * 0.35,
+                  child: RepaintBoundary(
+                    child: BankAtmsMapView(
+                      key: const ValueKey('map_view'),
+                      appState: widget.appState,
+                      records: list,
+                      selectedRecordId: _selectedRecordId,
+                      mapController: _mapController,
+                      onMarkerTap: _onMarkerTap,
                     ),
                   ),
+                ),
 
-                // Main Results list using ScrollablePositionedList
-                Expanded(
-                  child: ListenableBuilder(
-                    listenable: widget.appState,
-                    builder: (context, _) {
-                      if (widget.appState.isLoadingAtms) {
-                        return const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        );
-                      }
+              // Map controls overlay (Zoom and Recenter buttons)
+              if (_showMap)
+                Positioned(
+                  top: 12,
+                  left: isRtl ? 16 : null,
+                  right: isRtl ? null : 16,
+                  child: MapControlsOverlay(
+                    mapController: _mapController,
+                    onRecenter: _recenterOnUserLocation,
+                  ),
+                ),
 
-                      if (list.isEmpty) {
-                        return Center(
-                          child: Text(
-                            widget.appState.translate('no_results'),
-                            style: AppTypography.bodyLg(
-                              context,
-                              color: AppColors.textTertiary,
-                            ),
+              // 2. Interactive Bottom Content Area
+              Positioned.fill(
+                key: const ValueKey('bottom_sheet_content'),
+                top: _showMap ? MediaQuery.of(context).size.height * 0.32 : 0.0,
+                child: Column(
+                  children: [
+                    if (_showMap)
+                      // Bottom sheet drag handle indicator
+                      Container(
+                        width: 40,
+                        height: 5,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.textTertiary.withAlpha(50),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+
+                    // Glassmorphic Search Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLow.withAlpha(100),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.glassBorder,
+                            width: 1.2,
                           ),
-                        );
-                      }
-
-                      return ScrollablePositionedList.builder(
-                        itemScrollController: _itemScrollController,
-                        itemPositionsListener: _itemPositionsListener,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                        itemCount: list.length,
-                        itemBuilder: (context, index) {
-                          final item = list[index];
-                          final bankDisplay = isRtl
-                              ? (item.bankName['he'] ?? '')
-                              : (item.bankName['en'] ?? '');
-                          final isSelected = _selectedRecordId == item.id;
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12.0),
-                            decoration: isSelected
-                                ? BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16.0),
-                                    border: Border.all(
-                                      color: const Color(0xFF2E7D32),
-                                      width: 2.0,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF2E7D32,
-                                        ).withAlpha(80),
-                                        blurRadius: 8.0,
-                                        spreadRadius: 2.0,
-                                      ),
-                                    ],
-                                  )
-                                : BoxDecoration(
-                                    color: AppColors.surfaceLow.withAlpha(120),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppColors.glassBorder,
-                                      width: 1.0,
-                                    ),
+                        ),
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val;
+                                  });
+                                },
+                                style: AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: widget.appState.translate(
+                                    'atm_search_placeholder',
                                   ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: InkWell(
-                                onTap: () => _onCardTap(item),
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    border: BorderDirectional(
-                                      start: BorderSide(
-                                        color: Color(0xFF2E7D32),
-                                        width: 4,
-                                      ),
-                                    ),
+                                  hintStyle: AppTypography.bodySm(
+                                    context,
+                                    color: AppColors.textTertiary,
                                   ),
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Header Row: Bank Name & ATM Number
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              bankDisplay,
-                                              style:
-                                                  AppTypography.bodyLg(
-                                                    context,
-                                                    color:
-                                                        AppColors.textPrimary,
-                                                  ).copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(
-                                                0xFF2E7D32,
-                                              ).withAlpha(20),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: const Color(
-                                                  0xFF2E7D32,
-                                                ).withAlpha(80),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              'ATM #${item.atmNum}',
-                                              style: AppTypography.labelXs(
-                                                context,
-                                                color: const Color(0xFF2E7D32),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // Address & City
-                                      Text(
-                                        '${item.address}, ${item.city}',
-                                        style: AppTypography.bodySm(
-                                          context,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 10),
-
-                                      // Service Icon Chips Row
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
-                                        children: [
-                                          if (item.hasCashWithdrawal)
-                                            _buildServiceIcon(
-                                              Icons.money_outlined,
-                                              isRtl
-                                                  ? 'משיכת מזומנים'
-                                                  : 'Cash Withdrawal',
-                                            ),
-                                          if (item.hasCashDeposit)
-                                            _buildServiceIcon(
-                                              Icons.savings_outlined,
-                                              isRtl
-                                                  ? 'הפקדת מזומנים'
-                                                  : 'Cash Deposit',
-                                            ),
-                                          if (item.hasForexTransaction)
-                                            _buildServiceIcon(
-                                              Icons.currency_exchange_outlined,
-                                              isRtl ? 'מט"ח' : 'Forex',
-                                            ),
-                                          if (item.hasHandicapAccess)
-                                            _buildServiceIcon(
-                                              Icons.accessible_outlined,
-                                              isRtl ? 'נגישות' : 'Accessible',
-                                            ),
-                                          if (item.hasChequeDeposit)
-                                            _buildServiceIcon(
-                                              Icons.receipt_long_outlined,
-                                              isRtl
-                                                  ? 'הפקדת שיקים'
-                                                  : 'Cheque Deposit',
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // Footer Row: Publisher
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              widget.appState.translate(
-                                                'atm_publisher',
-                                              ),
-                                              style: AppTypography.labelXs(
-                                                context,
-                                                color: AppColors.textTertiary,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                          ),
-                                          Text(
-                                            item.lastUpdated.length >= 10
-                                                ? item.lastUpdated.substring(
-                                                    0,
-                                                    10,
-                                                  )
-                                                : item.lastUpdated,
-                                            style: AppTypography.labelXs(
-                                              context,
-                                              color: AppColors.textTertiary,
-                                            ).copyWith(fontFamily: 'Outfit'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                               ),
                             ),
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppColors.textSecondary,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Banks Horizontal Chips Row
+                    if (banks.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: SizedBox(
+                          height: 40,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: banks.length,
+                            itemBuilder: (context, index) =>
+                                _buildFilterChip(banks[index]),
+                          ),
+                        ),
+                      ),
+
+                    // Main Results list using ScrollablePositionedList
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          if (bankAtmsNotifier.isLoadingAtms) {
+                            return const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          }
+
+                          if (list.isEmpty) {
+                            return Center(
+                              child: Text(
+                                widget.appState.translate('no_results'),
+                                style: AppTypography.bodyLg(
+                                  context,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ScrollablePositionedList.builder(
+                            itemScrollController: _itemScrollController,
+                            itemPositionsListener: _itemPositionsListener,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final item = list[index];
+                              final bankDisplay = isRtl
+                                  ? (item.bankName['he'] ?? '')
+                                  : (item.bankName['en'] ?? '');
+                              final isSelected = _selectedRecordId == item.id;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12.0),
+                                decoration: isSelected
+                                    ? BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          16.0,
+                                        ),
+                                        border: Border.all(
+                                          color: const Color(0xFF2E7D32),
+                                          width: 2.0,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFF2E7D32,
+                                            ).withAlpha(80),
+                                            blurRadius: 8.0,
+                                            spreadRadius: 2.0,
+                                          ),
+                                        ],
+                                      )
+                                    : BoxDecoration(
+                                        color: AppColors.surfaceLow.withAlpha(
+                                          120,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: AppColors.glassBorder,
+                                          width: 1.0,
+                                        ),
+                                      ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: InkWell(
+                                    onTap: () => _onCardTap(item),
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        border: BorderDirectional(
+                                          start: BorderSide(
+                                            color: Color(0xFF2E7D32),
+                                            width: 4,
+                                          ),
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Header Row: Bank Name & ATM Number
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  bankDisplay,
+                                                  style:
+                                                      AppTypography.bodyLg(
+                                                        context,
+                                                        color: AppColors
+                                                            .textPrimary,
+                                                      ).copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFF2E7D32,
+                                                  ).withAlpha(20),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFF2E7D32,
+                                                    ).withAlpha(80),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'ATM #${item.atmNum}',
+                                                  style: AppTypography.labelXs(
+                                                    context,
+                                                    color: const Color(
+                                                      0xFF2E7D32,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          // Address & City
+                                          Text(
+                                            '${item.address}, ${item.city}',
+                                            style: AppTypography.bodySm(
+                                              context,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 10),
+
+                                          // Service Icon Chips Row
+                                          Wrap(
+                                            spacing: 6,
+                                            runSpacing: 6,
+                                            children: [
+                                              if (item.hasCashWithdrawal)
+                                                _buildServiceIcon(
+                                                  Icons.money_outlined,
+                                                  isRtl
+                                                      ? 'משיכת מזומנים'
+                                                      : 'Cash Withdrawal',
+                                                ),
+                                              if (item.hasCashDeposit)
+                                                _buildServiceIcon(
+                                                  Icons.savings_outlined,
+                                                  isRtl
+                                                      ? 'הפקדת מזומנים'
+                                                      : 'Cash Deposit',
+                                                ),
+                                              if (item.hasForexTransaction)
+                                                _buildServiceIcon(
+                                                  Icons
+                                                      .currency_exchange_outlined,
+                                                  isRtl ? 'מט"ח' : 'Forex',
+                                                ),
+                                              if (item.hasHandicapAccess)
+                                                _buildServiceIcon(
+                                                  Icons.accessible_outlined,
+                                                  isRtl
+                                                      ? 'נגישות'
+                                                      : 'Accessible',
+                                                ),
+                                              if (item.hasChequeDeposit)
+                                                _buildServiceIcon(
+                                                  Icons.receipt_long_outlined,
+                                                  isRtl
+                                                      ? 'הפקדת שיקים'
+                                                      : 'Cheque Deposit',
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          // Footer Row: Publisher
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  widget.appState.translate(
+                                                    'atm_publisher',
+                                                  ),
+                                                  style: AppTypography.labelXs(
+                                                    context,
+                                                    color:
+                                                        AppColors.textTertiary,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                              ),
+                                              Text(
+                                                item.lastUpdated.length >= 10
+                                                    ? item.lastUpdated
+                                                          .substring(0, 10)
+                                                    : item.lastUpdated,
+                                                style:
+                                                    AppTypography.labelXs(
+                                                      context,
+                                                      color: AppColors
+                                                          .textTertiary,
+                                                    ).copyWith(
+                                                      fontFamily: 'Outfit',
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

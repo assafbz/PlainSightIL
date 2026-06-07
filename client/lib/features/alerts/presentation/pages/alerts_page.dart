@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
 import 'package:plainsight/features/alerts/data/models/alert_model.dart';
 import 'package:plainsight/features/datasets/cellular_antennas/pages/cellular_antennas_page.dart';
 import 'package:plainsight/features/datasets/companies_liquidation/pages/companies_liquidation_page.dart';
@@ -17,6 +20,36 @@ class AlertsPage extends StatelessWidget {
   final AppStateNotifier appState;
 
   const AlertsPage({super.key, required this.appState});
+
+  T _getNotifier<T>(BuildContext context, {bool listen = false}) {
+    try {
+      return Provider.of<T>(context, listen: listen);
+    } catch (_) {
+      if (T == AuthNotifier) return appState.authNotifier as T;
+      if (T == AlertsNotifier) return appState.alertsNotifier as T;
+      throw Exception('Notifier not found in AppStateNotifier for type $T');
+    }
+  }
+
+  Widget _buildConsumer2<T1, T2>(
+    BuildContext context, {
+    required Widget Function(BuildContext context, T1 n1, T2 n2, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final n1 = Provider.of<T1>(context);
+      final n2 = Provider.of<T2>(context);
+      return builder(context, n1, n2, child);
+    } catch (_) {
+      final n1 = _getNotifier<T1>(context);
+      final n2 = _getNotifier<T2>(context);
+      return ListenableBuilder(
+        listenable: Listenable.merge([n1 as Listenable, n2 as Listenable]),
+        builder: (context, _) => builder(context, n1, n2, child),
+      );
+    }
+  }
 
   void _handleDeepLink(BuildContext context, String datasetId) {
     if (datasetId == DatasetIds.cellularAntennas ||
@@ -81,8 +114,14 @@ class AlertsPage extends StatelessWidget {
   }
 
   void _onAlertTapped(BuildContext context, AlertModel alert) {
+    final authNotifier = _getNotifier<AuthNotifier>(context);
+    final alertsNotifier = _getNotifier<AlertsNotifier>(context);
     if (!alert.isRead) {
-      appState.markAlertAsRead(alert.id);
+      alertsNotifier.markAsRead(
+        alert.id,
+        authNotifier.currentUser?.uid ??
+            (AppStateNotifier.isTesting ? 'mock_uid' : ''),
+      );
     }
     if (alert.datasetId != null && alert.datasetId!.isNotEmpty) {
       _handleDeepLink(context, alert.datasetId!);
@@ -135,7 +174,8 @@ class AlertsPage extends StatelessWidget {
                       ),
                       elevation: 0,
                     ),
-                    onPressed: () => appState.signInWithGoogle(),
+                    onPressed: () =>
+                        _getNotifier<AuthNotifier>(context).signInWithGoogle(),
                     icon: const Icon(Icons.login),
                     label: Text(
                       appState.translate('sign_in_google'),
@@ -194,6 +234,11 @@ class AlertsPage extends StatelessWidget {
 
   Widget _buildAlertsList(BuildContext context, List<AlertModel> list) {
     final hasUnread = list.any((a) => !a.isRead);
+    final authNotifier = _getNotifier<AuthNotifier>(context);
+    final alertsNotifier = _getNotifier<AlertsNotifier>(context);
+    final userId =
+        authNotifier.currentUser?.uid ??
+        (AppStateNotifier.isTesting ? 'mock_uid' : '');
 
     return Column(
       children: [
@@ -207,7 +252,7 @@ class AlertsPage extends StatelessWidget {
               alignment: AlignmentDirectional.centerEnd,
               child: TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-                onPressed: () => appState.markAllAlertsAsRead(),
+                onPressed: () => alertsNotifier.markAllAsRead(userId),
                 icon: const Icon(Icons.done_all, size: 18),
                 label: Text(
                   appState.translate('alerts_mark_all_read'),
@@ -262,7 +307,7 @@ class AlertsPage extends StatelessWidget {
                 secondaryBackground: deleteBackground,
                 background: deleteBackground, // fallback
                 onDismissed: (_) {
-                  appState.deleteAlert(alert.id);
+                  alertsNotifier.deleteAlert(alert.id, userId);
                 },
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -419,52 +464,64 @@ class AlertsPage extends StatelessWidget {
     return ListenableBuilder(
       listenable: appState,
       builder: (context, _) {
-        Widget body;
-        if (!appState.isAuthenticated) {
-          body = _buildUnauthenticatedState(context);
-        } else if (appState.isLoadingAlerts) {
-          body = const Center(child: CircularProgressIndicator(strokeWidth: 2));
-        } else if (appState.alerts.isEmpty) {
-          body = _buildEmptyState(context);
-        } else {
-          body = _buildAlertsList(context, appState.alerts);
-        }
+        return _buildConsumer2<AuthNotifier, AlertsNotifier>(
+          context,
+          builder: (context, authNotifier, alertsNotifier, _) {
+            Widget body;
+            if (!authNotifier.isAuthenticated) {
+              body = _buildUnauthenticatedState(context);
+            } else if (alertsNotifier.isLoading) {
+              body = const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              );
+            } else if (alertsNotifier.alerts.isEmpty) {
+              body = _buildEmptyState(context);
+            } else {
+              body = _buildAlertsList(context, alertsNotifier.alerts);
+            }
 
-        return Scaffold(
-          backgroundColor: AppColors.baseBg,
-          body: Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(0.6, -0.6),
-                      radius: 1.2,
-                      colors: [const Color(0x1A571BC1), AppColors.baseBg],
-                    ),
-                  ),
-                ),
-              ),
-              SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                      child: Text(
-                        appState.translate('nav_alerts'),
-                        style: AppTypography.headlineLg(
-                          context,
-                          color: AppColors.textPrimary,
+            return Scaffold(
+              backgroundColor: AppColors.baseBg,
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0.6, -0.6),
+                          radius: 1.2,
+                          colors: [const Color(0x1A571BC1), AppColors.baseBg],
                         ),
                       ),
                     ),
-                    Expanded(child: body),
-                  ],
-                ),
+                  ),
+                  SafeArea(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            16.0,
+                            16.0,
+                            8.0,
+                          ),
+                          child: Text(
+                            appState.translate('nav_alerts'),
+                            style: AppTypography.headlineLg(
+                              context,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: body),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

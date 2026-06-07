@@ -15,59 +15,64 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     // Scaffold without default AppBar and BottomNavigationBar to create
     // a completely custom, premium glassmorphic overlay layout.
-    return Scaffold(
-      backgroundColor: AppColors.baseBg,
-      drawer: NavigationDrawerWidget(appState: appState),
-      body: Stack(
-        children: [
-          // Background Atmospheric Gradients
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.6, -0.6),
-                  radius: 1.2,
-                  colors: [
-                    const Color(0x1F571BC1), // subtle secondary violet glow
-                    AppColors.baseBg,
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: AppColors.baseBg,
+          drawer: NavigationDrawerWidget(appState: appState),
+          body: Stack(
+            children: [
+              // Background Atmospheric Gradients
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.6, -0.6),
+                      radius: 1.2,
+                      colors: [
+                        const Color(0x1F571BC1), // subtle secondary violet glow
+                        AppColors.baseBg,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Main View Viewport
+              SafeArea(
+                child: Column(
+                  children: [
+                    // Top App Bar
+                    _buildHeader(context),
+
+                    // Active View Body
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeInOutCubic,
+                        switchOutCurve: Curves.easeInOutCubic,
+                        child: _buildActiveView(context),
+                      ),
+                    ),
+
+                    // Space for Floating Custom Bottom Navigation Bar
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
-            ),
+
+              // Floating Bottom Navigation Bar
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildBottomNavigationBar(context),
+              ),
+            ],
           ),
-
-          // Main View Viewport
-          SafeArea(
-            child: Column(
-              children: [
-                // Top App Bar
-                _buildHeader(context),
-
-                // Active View Body
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeInOutCubic,
-                    switchOutCurve: Curves.easeInOutCubic,
-                    child: _buildActiveView(context),
-                  ),
-                ),
-
-                // Space for Floating Custom Bottom Navigation Bar
-                const SizedBox(height: 80),
-              ],
-            ),
-          ),
-
-          // Floating Bottom Navigation Bar
-          Positioned(
-            bottom: 16,
-            left: 16,
-            right: 16,
-            child: _buildBottomNavigationBar(context),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
