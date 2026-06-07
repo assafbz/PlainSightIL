@@ -304,7 +304,9 @@ class PatentClassificationsNotifier extends ChangeNotifier {
         _isLoadingPatents = true;
         _hasMorePatents = true;
         notifyListeners();
-        _syncManager.initialize(mockData: MockData.patents, isTesting: true);
+        unawaited(
+          _syncManager.initialize(mockData: MockData.patents, isTesting: true),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMorePatents = false;
         _isLoadingPatents = false;
@@ -316,7 +318,9 @@ class PatentClassificationsNotifier extends ChangeNotifier {
       _isLoadingMorePatents = true;
       notifyListeners();
       if (_isTesting) {
-        _syncManager.initialize(mockData: MockData.patents, isTesting: true);
+        unawaited(
+          _syncManager.initialize(mockData: MockData.patents, isTesting: true),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMorePatents = false;
       }

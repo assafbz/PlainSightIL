@@ -319,7 +319,9 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
         _isLoadingBonds = true;
         _hasMoreBonds = true;
         notifyListeners();
-        _syncManager.initialize(mockData: MockData.bonds, isTesting: true);
+        unawaited(
+          _syncManager.initialize(mockData: MockData.bonds, isTesting: true),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMoreBonds = false;
         _isLoadingBonds = false;
@@ -331,7 +333,9 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
       _isLoadingMoreBonds = true;
       notifyListeners();
       if (_isTesting) {
-        _syncManager.initialize(mockData: MockData.bonds, isTesting: true);
+        unawaited(
+          _syncManager.initialize(mockData: MockData.bonds, isTesting: true),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMoreBonds = false;
       }
