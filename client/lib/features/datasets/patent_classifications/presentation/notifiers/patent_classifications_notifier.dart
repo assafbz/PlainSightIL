@@ -41,31 +41,30 @@ class PatentClassificationsNotifier extends ChangeNotifier {
     }
     var list = _syncManager.records;
 
-    // Apply primary/secondary filter
-    if (_primaryFilter == 'Primary') {
-      list = list.where((r) => r.isPrimary).toList();
-    } else if (_primaryFilter == 'Secondary') {
-      list = list.where((r) => !r.isPrimary).toList();
-    }
-
-    // Apply search query
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase().trim();
-      list = list.where((r) {
-        final appNum = r.applicationNumber.toString();
-        final cpc = r.cpcClassification.toLowerCase();
-        final titleHe = r.titleHebrew.toLowerCase();
-        final titleEn = r.titleEnglish.toLowerCase();
-        return appNum.contains(query) ||
-            cpc.contains(query) ||
-            titleHe.contains(query) ||
-            titleEn.contains(query);
-      }).toList();
-    }
+    // Filter list
+    list = list.where(_filterRecord).toList();
 
     // Return paginated chunk
     final limit = _currentPage * _pageSize;
     return list.take(limit).toList();
+  }
+
+  bool _filterRecord(PatentClassificationRecordModel r) {
+    if (_primaryFilter == 'Primary' && !r.isPrimary) return false;
+    if (_primaryFilter == 'Secondary' && r.isPrimary) return false;
+
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase().trim();
+      final appNum = r.applicationNumber.toString();
+      final cpc = r.cpcClassification.toLowerCase();
+      final titleHe = r.titleHebrew.toLowerCase();
+      final titleEn = r.titleEnglish.toLowerCase();
+      return appNum.contains(query) ||
+          cpc.contains(query) ||
+          titleHe.contains(query) ||
+          titleEn.contains(query);
+    }
+    return true;
   }
 
   /// Checks if patent classifications query is loading initial page.
@@ -87,34 +86,7 @@ class PatentClassificationsNotifier extends ChangeNotifier {
     if (_isTesting) {
       return _hasMorePatents;
     }
-    var list = _syncManager.records;
-    if (list.isEmpty) {
-      return true;
-    }
-
-    // Apply primary/secondary filter
-    if (_primaryFilter == 'Primary') {
-      list = list.where((r) => r.isPrimary).toList();
-    } else if (_primaryFilter == 'Secondary') {
-      list = list.where((r) => !r.isPrimary).toList();
-    }
-
-    // Apply search query
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase().trim();
-      list = list.where((r) {
-        final appNum = r.applicationNumber.toString();
-        final cpc = r.cpcClassification.toLowerCase();
-        final titleHe = r.titleHebrew.toLowerCase();
-        final titleEn = r.titleEnglish.toLowerCase();
-        return appNum.contains(query) ||
-            cpc.contains(query) ||
-            titleHe.contains(query) ||
-            titleEn.contains(query);
-      }).toList();
-    }
-
-    return list.length > _currentPage * _pageSize;
+    return !_syncManager.hasReachedCacheEnd;
   }
 
   /// Checks if Firebase is initialized.
@@ -157,7 +129,11 @@ class PatentClassificationsNotifier extends ChangeNotifier {
         notifyListeners();
       });
     } else {
-      _syncManager.initialize(testFirestore: testFirestore);
+      _syncManager.initialize(
+        testFirestore: testFirestore,
+        limit: _pageSize,
+        filter: _filterRecord,
+      );
     }
   }
 
@@ -314,6 +290,8 @@ class PatentClassificationsNotifier extends ChangeNotifier {
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMorePatents = false;
         _isLoadingPatents = false;
+      } else {
+        await _syncManager.initialize(limit: _pageSize, filter: _filterRecord);
       }
     } else {
       if (!hasMorePatents || _isLoadingMorePatents || isLoadingPatents) {
@@ -327,6 +305,11 @@ class PatentClassificationsNotifier extends ChangeNotifier {
         );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMorePatents = false;
+      } else {
+        await _syncManager.loadMore(
+          (_currentPage + 1) * _pageSize,
+          filter: _filterRecord,
+        );
       }
       _currentPage++;
       _isLoadingMorePatents = false;

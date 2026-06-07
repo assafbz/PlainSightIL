@@ -5,12 +5,14 @@ import 'package:plainsight/app.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   try {
     const bool useEmulator = bool.fromEnvironment(
       'USE_EMULATOR',

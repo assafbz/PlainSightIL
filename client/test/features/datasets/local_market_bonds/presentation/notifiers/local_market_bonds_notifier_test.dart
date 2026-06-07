@@ -1,4 +1,6 @@
 // ignore_for_file: subtype_of_sealed_class, unnecessary_no_such_method, depend_on_referenced_packages
+import 'dart:io';
+import 'package:hive_ce/hive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
@@ -133,8 +135,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('LocalMarketBondsNotifier Tests', () {
+    late Directory tempDir;
+
     setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('hive_test');
+      Hive.init(tempDir.path);
       AppStateNotifier.isTesting = true;
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
     });
 
     test('should initialize with empty records and loading false', () {
@@ -570,10 +583,33 @@ void main() {
       'verifies searching, filtering and pagination on production delegation paths',
       () async {
         final notifier = LocalMarketBondsNotifier(testFirestore: null);
-
-        // Initialize with mockData directly on sync manager
         final manager = notifier.syncManagerForTesting;
-        await manager.initialize(mockData: MockData.bonds, isTesting: true);
+
+        // Open the Hive box and save mock data directly to simulate cached records
+        final box = await Hive.openLazyBox<dynamic>(
+          'dataset_cache_${manager.datasetId}',
+        );
+        final Map<String, dynamic> recordsMap = {};
+        for (final r in MockData.bonds) {
+          recordsMap[manager.getRecordId(r)] = manager.toMap(r);
+        }
+        await box.putAll(recordsMap);
+        final List<String> sortedKeys = MockData.bonds
+            .map((r) => manager.getRecordId(r))
+            .toList();
+        await box.put('__sorted_keys__', sortedKeys);
+
+        // Helper to wait for the async cache load to complete
+        Future<void> waitForLoad() async {
+          final end = DateTime.now().add(const Duration(seconds: 2));
+          while (notifier.isLoadingBonds && DateTime.now().isBefore(end)) {
+            await Future<void>.delayed(const Duration(milliseconds: 5));
+          }
+        }
+
+        // Initialize the notifier (production mode loads cache)
+        notifier.initBondsListener();
+        await waitForLoad();
 
         // Verify basic loading state delegation
         expect(notifier.isLoadingBonds, isFalse);
@@ -581,6 +617,7 @@ void main() {
 
         // Test filtering on 'Government'
         notifier.setFilter('Government');
+        await waitForLoad();
         expect(
           notifier.hasMoreBonds,
           isFalse,
@@ -591,6 +628,7 @@ void main() {
 
         // Test filtering on 'CPI-Linked'
         notifier.setFilter('CPI-Linked');
+        await waitForLoad();
         expect(
           notifier.hasMoreBonds,
           isFalse,
@@ -601,6 +639,7 @@ void main() {
 
         // Test filtering on 'Floating Rate'
         notifier.setFilter('Floating Rate');
+        await waitForLoad();
         expect(
           notifier.hasMoreBonds,
           isFalse,
@@ -611,6 +650,7 @@ void main() {
 
         // Reset filter
         notifier.setFilter('All');
+        await waitForLoad();
         expect(
           notifier.bondRecords.length,
           MockData.bonds.length > 20 ? 20 : MockData.bonds.length,
@@ -618,6 +658,7 @@ void main() {
 
         // Test text searching
         notifier.setSearchQuery('Floating');
+        await waitForLoad();
         expect(
           notifier.hasMoreBonds,
           isFalse,
@@ -631,6 +672,7 @@ void main() {
 
         // Test numeric series searching
         notifier.setSearchQuery('1227784');
+        await waitForLoad();
         expect(
           notifier.hasMoreBonds,
           isFalse,
@@ -642,6 +684,7 @@ void main() {
         // Test hasMoreBonds when records length is <= page size vs when pagination runs
         notifier.setSearchQuery('');
         notifier.setFilter('All');
+        await waitForLoad();
         expect(notifier.hasMoreBonds, MockData.bonds.length > 20);
 
         // Test fetchNextPage pagination loading more
@@ -688,6 +731,10 @@ void main() {
       final notifierProd = LocalMarketBondsNotifier(testFirestore: null);
       // Calls line 166: _syncManager.initialize(testFirestore: testFirestore);
       notifierProd.initBondsListener();
+      final end = DateTime.now().add(const Duration(seconds: 2));
+      while (notifierProd.isLoadingBonds && DateTime.now().isBefore(end)) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
       notifierProd.dispose();
     });
   });

@@ -1,4 +1,6 @@
 // ignore_for_file: subtype_of_sealed_class, unnecessary_no_such_method, depend_on_referenced_packages
+import 'dart:io';
+import 'package:hive_ce/hive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/app_state.dart';
@@ -7,8 +9,19 @@ import 'package:plainsight/features/datasets/patent_classifications/presentation
 
 void main() {
   group('PatentClassificationsNotifier Tests', () {
+    late Directory tempDir;
+
     setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('hive_test');
+      Hive.init(tempDir.path);
       AppStateNotifier.isTesting = true;
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
     });
 
     test('should initialize with empty records and loading false', () {
@@ -207,10 +220,33 @@ void main() {
       'verifies searching, filtering and pagination on production delegation paths',
       () async {
         final notifier = PatentClassificationsNotifier(testFirestore: null);
-
-        // Initialize with mockData directly on sync manager
         final manager = notifier.syncManagerForTesting;
-        await manager.initialize(mockData: MockData.patents, isTesting: true);
+
+        // Open the Hive box and save mock data directly to simulate cached records
+        final box = await Hive.openLazyBox<dynamic>(
+          'dataset_cache_${manager.datasetId}',
+        );
+        final Map<String, dynamic> recordsMap = {};
+        for (final r in MockData.patents) {
+          recordsMap[manager.getRecordId(r)] = manager.toMap(r);
+        }
+        await box.putAll(recordsMap);
+        final List<String> sortedKeys = MockData.patents
+            .map((r) => manager.getRecordId(r))
+            .toList();
+        await box.put('__sorted_keys__', sortedKeys);
+
+        // Helper to wait for the async cache load to complete
+        Future<void> waitForLoad() async {
+          final end = DateTime.now().add(const Duration(seconds: 2));
+          while (notifier.isLoadingPatents && DateTime.now().isBefore(end)) {
+            await Future<void>.delayed(const Duration(milliseconds: 5));
+          }
+        }
+
+        // Initialize the notifier (production mode loads cache)
+        notifier.initPatentClassificationsListener();
+        await waitForLoad();
 
         // Verify basic loading state delegation
         expect(notifier.isLoadingPatents, isFalse);
@@ -218,6 +254,7 @@ void main() {
 
         // Test filtering on 'Primary'
         notifier.setPrimaryFilter('Primary');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -228,6 +265,7 @@ void main() {
 
         // Test filtering on 'Secondary'
         notifier.setPrimaryFilter('Secondary');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -238,6 +276,7 @@ void main() {
 
         // Reset filter
         notifier.setPrimaryFilter('All');
+        await waitForLoad();
         expect(
           notifier.patentRecords.length,
           MockData.patents.length > 20 ? 20 : MockData.patents.length,
@@ -245,6 +284,7 @@ void main() {
 
         // Test text searching by CPC classification
         notifier.setSearchQuery('A61P35/00');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -255,6 +295,7 @@ void main() {
 
         // Test text searching by Hebrew title
         notifier.setSearchQuery('שילוב');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -265,6 +306,7 @@ void main() {
 
         // Test text searching by English title
         notifier.setSearchQuery('DRUG');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -275,6 +317,7 @@ void main() {
 
         // Test numeric application number searching
         notifier.setSearchQuery('327015');
+        await waitForLoad();
         expect(
           notifier.hasMorePatents,
           isFalse,
@@ -286,6 +329,7 @@ void main() {
         // Test hasMorePatents when records length is <= page size vs when pagination runs
         notifier.setSearchQuery('');
         notifier.setPrimaryFilter('All');
+        await waitForLoad();
         expect(notifier.hasMorePatents, MockData.patents.length > 20);
 
         // Test fetchNextPage pagination loading more
@@ -334,6 +378,10 @@ void main() {
         // 2. _isTesting is false, testFirestore is null path in initPatentClassificationsListener
         final notifierProd = PatentClassificationsNotifier(testFirestore: null);
         notifierProd.initPatentClassificationsListener();
+        final end = DateTime.now().add(const Duration(seconds: 2));
+        while (notifierProd.isLoadingPatents && DateTime.now().isBefore(end)) {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+        }
         notifierProd.dispose();
       },
     );

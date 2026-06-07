@@ -41,34 +41,37 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
     }
     var list = _syncManager.records;
 
-    // Apply bondType filter
-    if (_filter == 'Government') {
-      list = list.where((r) => r.bondType['en'] == 'Government').toList();
-    } else if (_filter == 'CPI-Linked') {
-      list = list
-          .where((r) => r.bondType['en'] == 'CPI-Linked Government')
-          .toList();
-    } else if (_filter == 'Floating Rate') {
-      list = list
-          .where((r) => r.bondType['en'] == 'Floating Rate Government')
-          .toList();
-    }
+    // Filter list
+    list = list.where(_filterRecord).toList();
 
-    // Apply search query
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase().trim();
-      list = list.where((r) {
-        final seriesStr = r.series.toString();
-        final typeHe = r.bondType['he']?.toLowerCase() ?? '';
-        final typeEn = r.bondType['en']?.toLowerCase() ?? '';
-        return seriesStr.contains(query) ||
-            typeHe.contains(query) ||
-            typeEn.contains(query);
-      }).toList();
-    }
-
+    // Return paginated chunk
     final limit = _currentPage * _pageSize;
     return list.take(limit).toList();
+  }
+
+  bool _filterRecord(LocalMarketBondRecordModel r) {
+    if (_filter == 'Government' && r.bondType['en'] != 'Government') {
+      return false;
+    }
+    if (_filter == 'CPI-Linked' &&
+        r.bondType['en'] != 'CPI-Linked Government') {
+      return false;
+    }
+    if (_filter == 'Floating Rate' &&
+        r.bondType['en'] != 'Floating Rate Government') {
+      return false;
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase().trim();
+      final seriesStr = r.series.toString();
+      final typeHe = r.bondType['he']?.toLowerCase() ?? '';
+      final typeEn = r.bondType['en']?.toLowerCase() ?? '';
+      return seriesStr.contains(query) ||
+          typeHe.contains(query) ||
+          typeEn.contains(query);
+    }
+    return true;
   }
 
   /// Checks if bonds query is loading initial page.
@@ -90,38 +93,7 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
     if (_isTesting) {
       return _hasMoreBonds;
     }
-    var list = _syncManager.records;
-    if (list.isEmpty) {
-      return true;
-    }
-
-    // Apply bondType filter
-    if (_filter == 'Government') {
-      list = list.where((r) => r.bondType['en'] == 'Government').toList();
-    } else if (_filter == 'CPI-Linked') {
-      list = list
-          .where((r) => r.bondType['en'] == 'CPI-Linked Government')
-          .toList();
-    } else if (_filter == 'Floating Rate') {
-      list = list
-          .where((r) => r.bondType['en'] == 'Floating Rate Government')
-          .toList();
-    }
-
-    // Apply search query
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase().trim();
-      list = list.where((r) {
-        final seriesStr = r.series.toString();
-        final typeHe = r.bondType['he']?.toLowerCase() ?? '';
-        final typeEn = r.bondType['en']?.toLowerCase() ?? '';
-        return seriesStr.contains(query) ||
-            typeHe.contains(query) ||
-            typeEn.contains(query);
-      }).toList();
-    }
-
-    return list.length > _currentPage * _pageSize;
+    return !_syncManager.hasReachedCacheEnd;
   }
 
   /// Checks if Firebase is initialized.
@@ -164,7 +136,11 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
         notifyListeners();
       });
     } else {
-      _syncManager.initialize(testFirestore: testFirestore);
+      _syncManager.initialize(
+        testFirestore: testFirestore,
+        limit: _pageSize,
+        filter: _filterRecord,
+      );
     }
   }
 
@@ -329,6 +305,8 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMoreBonds = false;
         _isLoadingBonds = false;
+      } else {
+        await _syncManager.initialize(limit: _pageSize, filter: _filterRecord);
       }
     } else {
       if (!hasMoreBonds || _isLoadingMoreBonds || isLoadingBonds) {
@@ -342,6 +320,11 @@ class LocalMarketBondsNotifier extends ChangeNotifier {
         );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         _hasMoreBonds = false;
+      } else {
+        await _syncManager.loadMore(
+          (_currentPage + 1) * _pageSize,
+          filter: _filterRecord,
+        );
       }
       _currentPage++;
       _isLoadingMoreBonds = false;
