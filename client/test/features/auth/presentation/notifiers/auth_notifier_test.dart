@@ -127,6 +127,7 @@ void main() {
 
     test('AuthNotifier handles real Firebase and Firestore flows', () async {
       AppStateNotifier.isTesting = false;
+      AppStateNotifier.testIsFirebaseInitialized = true;
       final authStreamController = StreamController<User?>.broadcast();
       final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
       final fakeAuth = FakeFirebaseAuth(
@@ -159,6 +160,7 @@ void main() {
       notifier.dispose();
       await authStreamController.close();
       AppStateNotifier.isTesting = true;
+      AppStateNotifier.testIsFirebaseInitialized = null;
     });
 
     test(
