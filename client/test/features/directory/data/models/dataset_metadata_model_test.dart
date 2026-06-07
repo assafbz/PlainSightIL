@@ -68,6 +68,10 @@ void main() {
         notes: 'רשימת מוקדי שידור סלולריים פעילים',
         publisher: 'המשרד להגנת הסביבה',
         resourceCount: 3,
+        sourceCreatedAt: tDate,
+        sourceUpdatedAt: tDate,
+        createdAt: tDate,
+        updatedAt: tDate,
         lastUpdated: tDate,
         tags: ['אנטנות'],
         isSupported: true,
@@ -75,6 +79,10 @@ void main() {
 
       final map = model.toMap();
       expect(map['id'], '8935c8e5-ec77-421f-af86-d970583195f8');
+      expect(map['sourceCreatedAt'], tDate.toIso8601String());
+      expect(map['sourceUpdatedAt'], tDate.toIso8601String());
+      expect(map['createdAt'], tDate.toIso8601String());
+      expect(map['updatedAt'], tDate.toIso8601String());
       expect(map['lastUpdated'], tDate.toIso8601String());
       expect(map['isSupported'], isTrue);
     });

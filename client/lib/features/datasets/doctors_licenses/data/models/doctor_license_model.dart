@@ -33,7 +33,13 @@ class DoctorLicenseRecordModel {
   /// Firestore database modification timestamp (optional ISO-8601 string)
   final String? updatedAt;
 
-  /// Source metadata modification timestamp (optional ISO-8601 string)
+  /// Source creation timestamp (optional ISO-8601 string)
+  final String? sourceCreatedAt;
+
+  /// Source modification timestamp (optional ISO-8601 string)
+  final String? sourceUpdatedAt;
+
+  /// Source metadata modification timestamp (optional ISO-8601 string) - Legacy backward compatibility
   final String? lastUpdated;
 
   /// Constructor initializing all fields
@@ -49,6 +55,8 @@ class DoctorLicenseRecordModel {
     this.specialtyName,
     this.createdAt,
     this.updatedAt,
+    this.sourceCreatedAt,
+    this.sourceUpdatedAt,
     this.lastUpdated,
   });
 
@@ -68,7 +76,12 @@ class DoctorLicenseRecordModel {
       specialtyName: map['specialtyName'] as String?,
       createdAt: map['createdAt'] as String?,
       updatedAt: map['updatedAt'] as String?,
-      lastUpdated: map['lastUpdated'] as String?,
+      sourceCreatedAt:
+          map['sourceCreatedAt'] as String? ?? map['lastUpdated'] as String?,
+      sourceUpdatedAt:
+          map['sourceUpdatedAt'] as String? ?? map['lastUpdated'] as String?,
+      lastUpdated:
+          map['sourceUpdatedAt'] as String? ?? map['lastUpdated'] as String?,
     );
   }
 
@@ -86,6 +99,8 @@ class DoctorLicenseRecordModel {
       'specialtyName': specialtyName,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'sourceCreatedAt': sourceCreatedAt,
+      'sourceUpdatedAt': sourceUpdatedAt,
       'lastUpdated': lastUpdated,
     };
   }

@@ -91,7 +91,7 @@ During standard dataset sync cycles:
 2. It evaluates `areRecordsEqual(existingData, incomingData)`.
 3. If the record does not exist or has changed (`areRecordsEqual == false`), it is written to the Firestore batch, and `changedCount` is incremented.
 4. Upon successful sync execution, the scraper returns `{ success: true, count: totalProcessed, changedCount: changedCount }`.
-5. **Alert Condition**: An alert is triggered only if `changedCount > 0` and this sync is NOT the first sync (i.e., `recordCount` was already $>0$ and a previous `lastUpdated` exists in `dataset_metadata`).
+5. **Alert Condition**: An alert is triggered only if `changedCount > 0` and this sync is NOT the first sync (i.e., `recordCount` was already $>0$ and a previous `updatedAt` or `lastUpdated` exists in `dataset_metadata`).
 
 ### 4.2 Dataset Directory Metadata Scraper
 During the `metadata_scraper` sync cycle:

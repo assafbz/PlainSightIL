@@ -134,7 +134,8 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   "addressEnglish": "50 Dizengoff, Tel Aviv",
   "createdAt": "2026-05-15T12:00:00Z",
   "updatedAt": "2026-06-01T22:30:00Z",
-  "lastUpdated": "2026-05-15T00:00:00Z"
+  "sourceCreatedAt": "2026-05-15T00:00:00Z",
+  "sourceUpdatedAt": "2026-05-15T00:00:00Z"
 }
 ```
 
@@ -161,7 +162,8 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   "jurisdiction": "ירושלים",
   "createdAt": "2026-04-10T12:00:00Z",
   "updatedAt": "2026-06-01T22:30:00Z",
-  "lastUpdated": "2026-06-01T22:30:00Z"
+  "sourceCreatedAt": "2026-04-10T00:00:00Z",
+  "sourceUpdatedAt": "2026-06-01T22:30:00Z"
 }
 ```
 
@@ -185,7 +187,8 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   "cityOfActivity": "בני ברק",
   "createdAt": "2026-03-20T12:00:00Z",
   "updatedAt": "2026-06-01T22:39:22Z",
-  "lastUpdated": "2026-06-01T22:39:22Z"
+  "sourceCreatedAt": "2026-01-15T00:00:00Z",
+  "sourceUpdatedAt": "2026-06-01T22:39:22Z"
 }
 ```
 
@@ -203,7 +206,8 @@ To optimize geo-searches and provide bilingual information, documents use pre-co
   "specialtyName": null,
   "createdAt": "2026-05-15T12:00:00Z",
   "updatedAt": "2026-06-02T17:00:00Z",
-  "lastUpdated": "1969-07-28T00:00:00Z"
+  "sourceCreatedAt": "1969-07-28T00:00:00Z",
+  "sourceUpdatedAt": "1969-07-28T00:00:00Z"
 }
 ```
 
@@ -354,7 +358,7 @@ Every time a developer or agent adds a new dataset to PlainSightIL, they must pe
 
 1.  **Define Data Models**: Write matching Dart data serializable models with custom key parsers (in `data/models/`).
 2.  **Setup Cloud Data Syncer**: Write a new Cloud Scheduler cron task inside the Firebase Functions codebase to scrape the target dataset from `data.gov.il`, clean/translate key-value structures, compute Geohashes, and write records to Cloud Firestore.
-3.  **Define Cloud Index Rules**: Set up index configurations in Firestore (e.g. `geohash ASC + lastUpdated DESC`) for query optimizations.
+3.  **Define Cloud Index Rules**: Set up index configurations in Firestore (e.g. `geohash ASC + sourceUpdatedAt DESC`) for query optimizations.
 4.  **Register State Listener**: Add the dataset properties, stream subscriptions, and loader flags to `AppStateNotifier` (or a feature-scoped Notifier), ensuring dynamic updates.
 5.  **Create UI Presentation Panels**:
     *   Assemble a visual canvas (e.g. Map with markers, detail lists, custom charts).

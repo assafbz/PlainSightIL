@@ -73,6 +73,10 @@ void main() {
         notes: 'רשימת מוקדי שידור סלולריים פעילים',
         publisher: 'המשרד להגנת הסביבה',
         resourceCount: 3,
+        sourceCreatedAt: tDate,
+        sourceUpdatedAt: tDate,
+        createdAt: tDate,
+        updatedAt: tDate,
         lastUpdated: tDate,
         tags: ['אנטנות'],
         isSupported: true,
@@ -80,6 +84,10 @@ void main() {
 
       final map = model.toMap();
       expect(map['id'], '8935c8e5-ec77-421f-af86-d970583195f8');
+      expect(map['sourceCreatedAt'], tDate.toIso8601String());
+      expect(map['sourceUpdatedAt'], tDate.toIso8601String());
+      expect(map['createdAt'], tDate.toIso8601String());
+      expect(map['updatedAt'], tDate.toIso8601String());
       expect(map['lastUpdated'], tDate.toIso8601String());
       expect(map['isSupported'], isTrue);
     });
@@ -260,8 +268,11 @@ void main() {
         hasForexTransaction: true,
         hasAdditionalTransactions: false,
         hasHandicapAccess: false,
-        lastUpdated: '2026-06-02T09:00:00Z',
+        sourceCreatedAt: '2026-06-02T09:00:00Z',
+        sourceUpdatedAt: '2026-06-02T09:00:00Z',
         createdAt: '2026-06-02T09:00:00Z',
+        updatedAt: '2026-06-02T09:00:00Z',
+        lastUpdated: '2026-06-02T09:00:00Z',
       );
 
       final map = model.toMap();
@@ -270,6 +281,11 @@ void main() {
       expect(map['coordinates']['latitude'], 31.778);
       expect(map['coordinates']['longitude'], 35.235);
       expect(map['hasHandicapAccess'], isFalse);
+      expect(map['sourceCreatedAt'], '2026-06-02T09:00:00Z');
+      expect(map['sourceUpdatedAt'], '2026-06-02T09:00:00Z');
+      expect(map['createdAt'], '2026-06-02T09:00:00Z');
+      expect(map['updatedAt'], '2026-06-02T09:00:00Z');
+      expect(map['lastUpdated'], '2026-06-02T09:00:00Z');
     });
   });
 
