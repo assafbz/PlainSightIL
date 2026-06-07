@@ -33,10 +33,15 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
     try {
       return Provider.of<T>(context, listen: listen);
     } catch (_) {
-      if (T == LocalMarketBondsNotifier)
+      if (T == LocalMarketBondsNotifier) {
         return widget.appState.bondsNotifier as T;
-      if (T == AuthNotifier) return widget.appState.authNotifier as T;
-      if (T == AlertsNotifier) return widget.appState.alertsNotifier as T;
+      }
+      if (T == AuthNotifier) {
+        return widget.appState.authNotifier as T;
+      }
+      if (T == AlertsNotifier) {
+        return widget.appState.alertsNotifier as T;
+      }
       throw Exception('Notifier not found in AppStateNotifier for type $T');
     }
   }

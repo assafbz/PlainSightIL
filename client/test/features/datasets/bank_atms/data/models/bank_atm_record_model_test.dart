@@ -87,10 +87,7 @@ void main() {
         hasForexTransaction: true,
         hasAdditionalTransactions: false,
         hasHandicapAccess: false,
-        sourceCreatedAt: '2026-06-02T09:00:00Z',
-        sourceUpdatedAt: '2026-06-02T09:00:00Z',
         createdAt: '2026-06-02T09:00:00Z',
-        updatedAt: '2026-06-02T09:00:00Z',
         lastUpdated: '2026-06-02T09:00:00Z',
       );
 
@@ -100,10 +97,7 @@ void main() {
       expect(map['coordinates']['latitude'], 31.778);
       expect(map['coordinates']['longitude'], 35.235);
       expect(map['hasHandicapAccess'], isFalse);
-      expect(map['sourceCreatedAt'], '2026-06-02T09:00:00Z');
-      expect(map['sourceUpdatedAt'], '2026-06-02T09:00:00Z');
       expect(map['createdAt'], '2026-06-02T09:00:00Z');
-      expect(map['updatedAt'], '2026-06-02T09:00:00Z');
       expect(map['lastUpdated'], '2026-06-02T09:00:00Z');
     });
   });

@@ -31,10 +31,15 @@ class _CarImportersScreenState extends State<CarImportersScreen> {
     try {
       return Provider.of<T>(context, listen: listen);
     } catch (_) {
-      if (T == CarImportersNotifier)
+      if (T == CarImportersNotifier) {
         return widget.appState.carImportersNotifier as T;
-      if (T == AuthNotifier) return widget.appState.authNotifier as T;
-      if (T == AlertsNotifier) return widget.appState.alertsNotifier as T;
+      }
+      if (T == AuthNotifier) {
+        return widget.appState.authNotifier as T;
+      }
+      if (T == AlertsNotifier) {
+        return widget.appState.alertsNotifier as T;
+      }
       throw Exception('Notifier not found in AppStateNotifier for type $T');
     }
   }
