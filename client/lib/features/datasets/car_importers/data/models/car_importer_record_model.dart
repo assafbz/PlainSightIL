@@ -42,7 +42,13 @@ class CarImporterRecordModel {
   /// Firestore database modification timestamp (optional ISO-8601 string)
   final String? updatedAt;
 
-  /// Source metadata modification timestamp (optional ISO-8601 string)
+  /// Source creation timestamp (optional ISO-8601 string)
+  final String? sourceCreatedAt;
+
+  /// Source modification timestamp (optional ISO-8601 string)
+  final String? sourceUpdatedAt;
+
+  /// Legacy backward compatibility
   final String? lastUpdated;
 
   /// Constructor initializing all fields
@@ -61,6 +67,8 @@ class CarImporterRecordModel {
     required this.commercialName,
     this.createdAt,
     this.updatedAt,
+    this.sourceCreatedAt,
+    this.sourceUpdatedAt,
     this.lastUpdated,
   });
 
@@ -88,7 +96,12 @@ class CarImporterRecordModel {
       commercialName: map['commercialName']?.toString() ?? '',
       createdAt: map['createdAt']?.toString(),
       updatedAt: map['updatedAt']?.toString(),
-      lastUpdated: map['lastUpdated']?.toString(),
+      sourceCreatedAt:
+          map['sourceCreatedAt']?.toString() ?? map['lastUpdated']?.toString(),
+      sourceUpdatedAt:
+          map['sourceUpdatedAt']?.toString() ?? map['lastUpdated']?.toString(),
+      lastUpdated:
+          map['sourceUpdatedAt']?.toString() ?? map['lastUpdated']?.toString(),
     );
   }
 
@@ -109,6 +122,8 @@ class CarImporterRecordModel {
       'commercialName': commercialName,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'sourceCreatedAt': sourceCreatedAt,
+      'sourceUpdatedAt': sourceUpdatedAt,
       'lastUpdated': lastUpdated,
     };
   }

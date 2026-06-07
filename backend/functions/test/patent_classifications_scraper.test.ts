@@ -71,7 +71,7 @@ describe("Patent Classifications Record Parser", () => {
       expect(parsed.titleEnglish).toBe("DRUG COMBINATION");
       expect(parsed.cpcClassification).toBe("A61P35/00");
       expect(parsed.isPrimary).toBe(true);
-      expect(parsed.lastUpdated).toBeDefined();
+      expect(parsed.sourceUpdatedAt).toBeDefined();
     }
   });
 

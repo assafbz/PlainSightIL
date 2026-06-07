@@ -1,12 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainsight/features/datasets/bank_atms/data/models/bank_atm_record_model.dart';
 
-class MockGeoPoint {
-  final double latitude;
-  final double longitude;
-  MockGeoPoint(this.latitude, this.longitude);
-}
-
 void main() {
   group('BankAtmRecordModel Tests', () {
     test('fromMap parses safely with nested map coordinates', () {
@@ -93,8 +87,11 @@ void main() {
         hasForexTransaction: true,
         hasAdditionalTransactions: false,
         hasHandicapAccess: false,
-        lastUpdated: '2026-06-02T09:00:00Z',
+        sourceCreatedAt: '2026-06-02T09:00:00Z',
+        sourceUpdatedAt: '2026-06-02T09:00:00Z',
         createdAt: '2026-06-02T09:00:00Z',
+        updatedAt: '2026-06-02T09:00:00Z',
+        lastUpdated: '2026-06-02T09:00:00Z',
       );
 
       final map = model.toMap();
@@ -103,6 +100,17 @@ void main() {
       expect(map['coordinates']['latitude'], 31.778);
       expect(map['coordinates']['longitude'], 35.235);
       expect(map['hasHandicapAccess'], isFalse);
+      expect(map['sourceCreatedAt'], '2026-06-02T09:00:00Z');
+      expect(map['sourceUpdatedAt'], '2026-06-02T09:00:00Z');
+      expect(map['createdAt'], '2026-06-02T09:00:00Z');
+      expect(map['updatedAt'], '2026-06-02T09:00:00Z');
+      expect(map['lastUpdated'], '2026-06-02T09:00:00Z');
     });
   });
+}
+
+class MockGeoPoint {
+  final double latitude;
+  final double longitude;
+  MockGeoPoint(this.latitude, this.longitude);
 }

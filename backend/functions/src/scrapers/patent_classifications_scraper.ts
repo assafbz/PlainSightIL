@@ -27,7 +27,8 @@ export interface PatentClassificationRecord {
   titleEnglish: string;
   cpcClassification: string;
   isPrimary: boolean;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -74,7 +75,7 @@ export function parsePatentRecord(record: HebrewPatentRecord): PatentClassificat
   }
 
   const isPrimary = (record["ראשי"] ?? "").trim() === "ראשי";
-  const lastUpdated = new Date().toISOString();
+  const nowStr = new Date().toISOString();
 
   return {
     id,
@@ -84,7 +85,8 @@ export function parsePatentRecord(record: HebrewPatentRecord): PatentClassificat
     titleEnglish,
     cpcClassification,
     isPrimary,
-    lastUpdated,
+    sourceCreatedAt: nowStr,
+    sourceUpdatedAt: nowStr,
   };
 }
 

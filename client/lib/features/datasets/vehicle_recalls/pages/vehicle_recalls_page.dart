@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:plainsight/features/alerts/presentation/notifiers/alerts_notifier.dart';
+import 'package:plainsight/features/datasets/vehicle_recalls/presentation/notifiers/vehicle_recalls_notifier.dart';
 import '../data/models/vehicle_recall_model.dart';
 import '../widgets/vehicle_recall_detail_drawer.dart';
 
@@ -30,22 +34,77 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
       'All'; // 'All' represents no manufacturer filtering
   bool _deepLinkHandled = false;
 
+  T _getNotifier<T>({bool listen = false}) {
+    try {
+      return Provider.of<T>(context, listen: listen);
+    } catch (_) {
+      if (T == VehicleRecallsNotifier) {
+        return widget.appState.vehicleRecallsNotifier as T;
+      }
+      if (T == AuthNotifier) {
+        return widget.appState.authNotifier as T;
+      }
+      if (T == AlertsNotifier) {
+        return widget.appState.alertsNotifier as T;
+      }
+      throw Exception('Notifier not found in AppStateNotifier for type $T');
+    }
+  }
+
+  Widget _buildConsumer<T>({
+    required Widget Function(BuildContext context, T notifier, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final notifier = Provider.of<T>(context);
+      return builder(context, notifier, child);
+    } catch (_) {
+      final notifier = _getNotifier<T>();
+      return ListenableBuilder(
+        listenable: notifier as Listenable,
+        builder: (context, _) => builder(context, notifier, child),
+      );
+    }
+  }
+
+  Widget _buildConsumer2<T1, T2>({
+    required Widget Function(BuildContext context, T1 n1, T2 n2, Widget? child)
+    builder,
+    Widget? child,
+  }) {
+    try {
+      final n1 = Provider.of<T1>(context);
+      final n2 = Provider.of<T2>(context);
+      return builder(context, n1, n2, child);
+    } catch (_) {
+      final n1 = _getNotifier<T1>();
+      final n2 = _getNotifier<T2>();
+      return ListenableBuilder(
+        listenable: Listenable.merge([n1 as Listenable, n2 as Listenable]),
+        builder: (context, _) => builder(context, n1, n2, child),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Register the dataset in recent history
     widget.appState.addRecent(DatasetIds.vehicleRecalls);
-    widget.appState.initRecallsListener();
+    final notifier = _getNotifier<VehicleRecallsNotifier>();
+    notifier.initRecallsListener();
     if (widget.initialSelectedId != null) {
-      widget.appState.addListener(_handleDeepLink);
+      notifier.addListener(_handleDeepLink);
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
     }
   }
 
   @override
   void dispose() {
-    widget.appState.removeListener(_handleDeepLink);
-    widget.appState.cancelRecallsListener();
+    final notifier = _getNotifier<VehicleRecallsNotifier>();
+    notifier.removeListener(_handleDeepLink);
+    notifier.cancelRecallsListener();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -53,9 +112,10 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
 
   void _handleDeepLink() {
     if (_deepLinkHandled || widget.initialSelectedId == null) return;
-    if (widget.appState.isLoadingRecalls) return;
+    final notifier = _getNotifier<VehicleRecallsNotifier>();
+    if (notifier.isLoadingRecalls) return;
 
-    final records = widget.appState.recallRecords;
+    final records = notifier.recallRecords;
     if (records.isEmpty) return;
 
     VehicleRecallRecordModel? targetRecord;
@@ -69,7 +129,7 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
 
     if (targetRecord != null) {
       _deepLinkHandled = true;
-      widget.appState.removeListener(_handleDeepLink);
+      notifier.removeListener(_handleDeepLink);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showDetails(targetRecord!);
       });
@@ -79,7 +139,7 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
   /// Extracts unique manufacturer names present in the records to build filter chips.
   List<String> _getUniqueManufacturers() {
     final isRtl = widget.appState.locale == 'he';
-    final allRecords = widget.appState.recallRecords;
+    final allRecords = _getNotifier<VehicleRecallsNotifier>().recallRecords;
 
     final Set<String> manufacturers = {};
     for (final r in allRecords) {
@@ -94,7 +154,7 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
 
   /// Filters loaded vehicle recall records based on search keywords and selected manufacturer chip.
   List<VehicleRecallRecordModel> _getFilteredRecords() {
-    final allRecords = widget.appState.recallRecords;
+    final allRecords = _getNotifier<VehicleRecallsNotifier>().recallRecords;
     final isRtl = widget.appState.locale == 'he';
     final defaultFilter = isRtl ? 'הכל' : 'All';
 
@@ -192,406 +252,443 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final list = _getFilteredRecords();
-    final manufacturers = _getUniqueManufacturers();
+    return _buildConsumer<VehicleRecallsNotifier>(
+      builder: (context, recallsNotifier, _) {
+        final list = _getFilteredRecords();
+        final manufacturers = _getUniqueManufacturers();
 
-    return Scaffold(
-      backgroundColor: AppColors.baseBg,
-      body: Stack(
-        children: [
-          // Background Atmospheric Gradients
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.6, -0.6),
-                  radius: 1.2,
-                  colors: [
-                    const Color(
-                      0x1FDD4B39,
-                    ), // subtle red warning glow for recalls accent
-                    AppColors.baseBg,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Navigation Header
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        tooltip: 'Back',
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.appState.translate('recalls_title'),
-                          style: AppTypography.headlineLg(
-                            context,
-                            color: AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      ListenableBuilder(
-                        listenable: widget.appState,
-                        builder: (context, _) {
-                          final isFav = widget.appState.isFavorite(
-                            DatasetIds.vehicleRecalls,
-                          );
-                          final isSubbed = widget.appState.isSubscribed(
-                            DatasetIds.vehicleRecalls,
-                          );
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                tooltip: widget.appState.translate(
-                                  isSubbed
-                                      ? 'unsubscribe_tooltip'
-                                      : 'subscribe_tooltip',
-                                ),
-                                icon: Icon(
-                                  isSubbed
-                                      ? Icons.notifications_active
-                                      : Icons.notifications_none,
-                                  color: isSubbed
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary,
-                                ),
-                                onPressed: () =>
-                                    widget.appState.toggleSubscription(
-                                      DatasetIds.vehicleRecalls,
-                                    ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  isFav
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: isFav
-                                      ? AppColors.danger
-                                      : AppColors.textSecondary,
-                                ),
-                                onPressed: () => widget.appState.toggleFavorite(
-                                  DatasetIds.vehicleRecalls,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. Glassmorphic Search Bar
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLow.withAlpha(100),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.glassBorder,
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Icon(
-                            Icons.search,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                            style: AppTypography.bodySm(
-                              context,
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: widget.appState.translate(
-                                'recalls_search_placeholder',
-                              ),
-                              hintStyle: AppTypography.bodySm(
-                                context,
-                                color: AppColors.textTertiary,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.close,
-                              color: AppColors.textSecondary,
-                              size: 18,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          ),
+        return Scaffold(
+          backgroundColor: AppColors.baseBg,
+          body: Stack(
+            children: [
+              // Background Atmospheric Gradients
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.6, -0.6),
+                      radius: 1.2,
+                      colors: [
+                        const Color(
+                          0x1FDD4B39,
+                        ), // subtle red warning glow for recalls accent
+                        AppColors.baseBg,
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                ),
+              ),
 
-                  // 3. Manufacturers Horizontal Chips Row
-                  if (manufacturers.length > 1)
-                    SizedBox(
-                      height: 40,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: manufacturers.length,
-                        itemBuilder: (context, index) =>
-                            _buildFilterChip(manufacturers[index]),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // 4. Main Results list
-                  Expanded(
-                    child: ListenableBuilder(
-                      listenable: widget.appState,
-                      builder: (context, _) {
-                        if (widget.appState.isLoadingRecalls) {
-                          return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
-
-                        if (list.isEmpty) {
-                          return Center(
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Navigation Header
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
+                            tooltip: 'Back',
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
                             child: Text(
-                              widget.appState.translate('no_results'),
-                              style: AppTypography.bodyLg(
+                              widget.appState.translate('recalls_title'),
+                              style: AppTypography.headlineLg(
                                 context,
-                                color: AppColors.textTertiary,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          _buildConsumer2<AuthNotifier, AlertsNotifier>(
+                            builder:
+                                (context, authNotifier, alertsNotifier, _) {
+                                  final isFav = authNotifier.isFavorite(
+                                    DatasetIds.vehicleRecalls,
+                                  );
+                                  final isSubbed = alertsNotifier.isSubscribed(
+                                    DatasetIds.vehicleRecalls,
+                                  );
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: widget.appState.translate(
+                                          isSubbed
+                                              ? 'unsubscribe_tooltip'
+                                              : 'subscribe_tooltip',
+                                        ),
+                                        icon: Icon(
+                                          isSubbed
+                                              ? Icons.notifications_active
+                                              : Icons.notifications_none,
+                                          color: isSubbed
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: () =>
+                                            alertsNotifier.toggleSubscription(
+                                              DatasetIds.vehicleRecalls,
+                                              authNotifier.currentUser?.uid ??
+                                                  (AppStateNotifier.isTesting
+                                                      ? 'mock_uid'
+                                                      : ''),
+                                            ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(
+                                          isFav
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color: isFav
+                                              ? AppColors.danger
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: () =>
+                                            authNotifier.toggleFavorite(
+                                              DatasetIds.vehicleRecalls,
+                                            ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 2. Glassmorphic Search Bar
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLow.withAlpha(100),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.glassBorder,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                color: AppColors.textSecondary,
+                                size: 20,
                               ),
                             ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: list.length,
-                          itemBuilder: (context, index) {
-                            final item = list[index];
-                            final hasCategory = item.defectCategory.isNotEmpty;
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceLow.withAlpha(120),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.glassBorder,
-                                  width: 1.0,
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val;
+                                  });
+                                },
+                                style: AppTypography.bodySm(
+                                  context,
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: widget.appState.translate(
+                                    'recalls_search_placeholder',
+                                  ),
+                                  hintStyle: AppTypography.bodySm(
+                                    context,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  onTap: () => _showDetails(item),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: BorderDirectional(
-                                        start: BorderSide(
-                                          color: AppColors.danger,
-                                          width: 4,
-                                        ),
-                                      ),
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppColors.textSecondary,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 3. Manufacturers Horizontal Chips Row
+                      if (manufacturers.length > 1)
+                        SizedBox(
+                          height: 40,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: manufacturers.length,
+                            itemBuilder: (context, index) =>
+                                _buildFilterChip(manufacturers[index]),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      // 4. Main Results list
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            if (recallsNotifier.isLoadingRecalls) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              );
+                            }
+
+                            if (list.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  widget.appState.translate('no_results'),
+                                  style: AppTypography.bodyLg(
+                                    context,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              controller: _scrollController,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: list.length,
+                              itemBuilder: (context, index) {
+                                final item = list[index];
+                                final hasCategory =
+                                    item.defectCategory.isNotEmpty;
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12.0),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceLow.withAlpha(120),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: AppColors.glassBorder,
+                                      width: 1.0,
                                     ),
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Header Row: Manufacturer/Model & Recall Code Badge
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: InkWell(
+                                      onTap: () => _showDetails(item),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          border: BorderDirectional(
+                                            start: BorderSide(
+                                              color: AppColors.danger,
+                                              width: 4,
+                                            ),
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Expanded(
-                                              child: Text(
-                                                '${item.manufacturerName} - ${item.modelName}',
-                                                style:
-                                                    AppTypography.bodyLg(
-                                                      context,
-                                                      color:
-                                                          AppColors.textPrimary,
-                                                    ).copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontFamily: 'Outfit',
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
+                                            // Header Row: Manufacturer/Model & Recall Code Badge
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    '${item.manufacturerName} - ${item.modelName}',
+                                                    style:
+                                                        AppTypography.bodyLg(
+                                                          context,
+                                                          color: AppColors
+                                                              .textPrimary,
+                                                        ).copyWith(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily: 'Outfit',
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.danger
-                                                    .withAlpha(20),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: AppColors.danger
-                                                      .withAlpha(80),
                                                 ),
-                                              ),
-                                              child: Text(
-                                                '${widget.appState.translate("recall_id_label")}${item.recallId}',
-                                                style:
-                                                    AppTypography.labelXs(
-                                                      context,
-                                                      color: AppColors.danger,
-                                                    ).copyWith(
-                                                      fontFamily: 'Outfit',
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 2,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.danger
+                                                        .withAlpha(20),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: AppColors.danger
+                                                          .withAlpha(80),
                                                     ),
-                                              ),
+                                                  ),
+                                                  child: Text(
+                                                    '${widget.appState.translate("recall_id_label")}${item.recallId}',
+                                                    style:
+                                                        AppTypography.labelXs(
+                                                          context,
+                                                          color:
+                                                              AppColors.danger,
+                                                        ).copyWith(
+                                                          fontFamily: 'Outfit',
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
+                                            const SizedBox(height: 8),
 
-                                        // Defect Description
-                                        Text(
-                                          item.defectDescription,
-                                          style: AppTypography.bodySm(
-                                            context,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 8),
-
-                                        // Mapped Details
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
+                                            // Defect Description
                                             Text(
-                                              '${widget.appState.translate("recall_year_label")}${item.recallYear}',
+                                              item.defectDescription,
                                               style: AppTypography.bodySm(
                                                 context,
                                                 color: AppColors.textSecondary,
-                                              ).copyWith(fontFamily: 'Outfit'),
-                                            ),
-                                            if (hasCategory)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.secondary
-                                                      .withAlpha(20),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                    color: AppColors.secondary
-                                                        .withAlpha(50),
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  item.defectCategory,
-                                                  style: AppTypography.labelXs(
-                                                    context,
-                                                    color: AppColors.secondary,
-                                                  ),
-                                                ),
                                               ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 8),
 
-                                        // Footer Row: Metadata / Last Modified Date
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                widget.appState.translate(
-                                                  'recalls_publisher',
+                                            // Mapped Details
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Text(
+                                                  '${widget.appState.translate("recall_year_label")}${item.recallYear}',
+                                                  style:
+                                                      AppTypography.bodySm(
+                                                        context,
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      ).copyWith(
+                                                        fontFamily: 'Outfit',
+                                                      ),
                                                 ),
-                                                style: AppTypography.labelXs(
-                                                  context,
-                                                  color: AppColors.textTertiary,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
+                                                if (hasCategory)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.secondary
+                                                          .withAlpha(20),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      border: Border.all(
+                                                        color: AppColors
+                                                            .secondary
+                                                            .withAlpha(50),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      item.defectCategory,
+                                                      style:
+                                                          AppTypography.labelXs(
+                                                            context,
+                                                            color: AppColors
+                                                                .secondary,
+                                                          ),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
-                                            Text(
-                                              item.buildEndDate.length >= 10
-                                                  ? item.buildEndDate.substring(
-                                                      0,
-                                                      10,
-                                                    )
-                                                  : item.buildEndDate,
-                                              style: AppTypography.labelXs(
-                                                context,
-                                                color: AppColors.textTertiary,
-                                              ).copyWith(fontFamily: 'Outfit'),
+                                            const SizedBox(height: 8),
+
+                                            // Footer Row: Metadata / Last Modified Date
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    widget.appState.translate(
+                                                      'recalls_publisher',
+                                                    ),
+                                                    style:
+                                                        AppTypography.labelXs(
+                                                          context,
+                                                          color: AppColors
+                                                              .textTertiary,
+                                                        ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  item.buildEndDate.length >= 10
+                                                      ? item.buildEndDate
+                                                            .substring(0, 10)
+                                                      : item.buildEndDate,
+                                                  style:
+                                                      AppTypography.labelXs(
+                                                        context,
+                                                        color: AppColors
+                                                            .textTertiary,
+                                                      ).copyWith(
+                                                        fontFamily: 'Outfit',
+                                                      ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -45,7 +45,8 @@ export interface VehicleRecallRecord {
   importerName: string;
   importerPhone: string;
   importerWebsite: string;
-  lastUpdated: string;
+  sourceCreatedAt: string;
+  sourceUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -130,7 +131,7 @@ export function parseRecallRecord(record: HebrewVehicleRecallRecord): VehicleRec
   const importerPhone = cleanString(record.TELEPHONE ?? "");
   const importerWebsite = cleanString(record.WEBSITE ?? "");
 
-  const lastUpdated = buildEndDate || buildStartDate || new Date().toISOString();
+  const nowStr = new Date().toISOString();
 
   return {
     id,
@@ -150,7 +151,8 @@ export function parseRecallRecord(record: HebrewVehicleRecallRecord): VehicleRec
     importerName,
     importerPhone,
     importerWebsite,
-    lastUpdated,
+    sourceCreatedAt: nowStr,
+    sourceUpdatedAt: nowStr,
   };
 }
 

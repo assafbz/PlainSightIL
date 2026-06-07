@@ -298,5 +298,16 @@ void main() {
         AppStateNotifier.testIsFirebaseInitialized = null;
       },
     );
+
+    test('getRecordLastUpdated extraction callback works', () {
+      final notifier = PermitsNotifier(isTesting: true);
+      final manager = notifier.syncManagerForTesting;
+      expect(
+        manager.getRecordLastUpdated({'lastUpdated': '2026-06-02'}),
+        '2026-06-02',
+      );
+      expect(manager.getRecordLastUpdated({}), '');
+      notifier.dispose();
+    });
   });
 }

@@ -1,4 +1,4 @@
-description: "Guidelines and checklist for integrating new datasets from data.gov.il into the PlainSightIL platform, utilizing an in-place update policy with a triple-timestamp schema (createdAt, updatedAt, and lastUpdated) to prevent redundant database writes."
+description: "Guidelines and checklist for integrating new datasets from data.gov.il into the PlainSightIL platform, utilizing an in-place update policy with a quadruple-timestamp schema (createdAt, updatedAt, sourceCreatedAt, and sourceUpdatedAt) to prevent redundant database writes."
 ---
 
 # PlainSightIL: Dataset Integration Playbook
@@ -107,16 +107,16 @@ The general list catalog/search screen (where all datasets are displayed togethe
 
 ### Step 2.1: The Ingestion Metadata Schema
 
-To support dataset refreshes efficiently and create alerts on records that are new or updated, we implement an **In-place Update Policy with a Triple-Timestamp Schema** at the database level.
+To support dataset refreshes efficiently and create alerts on records that are new or updated, we implement an **In-place Update Policy with a Quadruple-Timestamp Schema** at the database level.
 
 ```mermaid
 flowchart TD
     A[Cloud Scraper fetches raw records] --> B[Get existing Firestore records in chunks]
     B --> C{Record exists?}
-    C -- Yes --> D{Data or lastUpdated changed?}
-    D -- Yes --> E[Set updatedAt = now, preserve createdAt, update lastUpdated & write]
+    C -- Yes --> D{Data or sourceUpdatedAt changed?}
+    D -- Yes --> E[Set updatedAt = now, preserve createdAt/sourceCreatedAt, update sourceUpdatedAt & write]
     D -- No --> F[Skip writing to avoid unnecessary operations]
-    C -- No --> G[Set createdAt = now, updatedAt = now, write new record]
+    C -- No --> G[Set createdAt = now, updatedAt = now, sourceCreatedAt = now, sourceUpdatedAt = now, write new record]
     E --> H[Atomic metadata update at end]
     F --> H
     G --> H
@@ -130,23 +130,26 @@ Create a central collection `dataset_metadata` in Firestore containing pointers 
 export interface DatasetMetadata {
   id: string;                    // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d"
   activeCollection: string;      // e.g. "ff398c7e-c522-4ee8-a53a-312b188a573d"
-  lastUpdated: string;           // ISO timestamp of last successful sync
+  createdAt: string;             // ISO timestamp when this metadata record was created
+  updatedAt: string;             // ISO timestamp when this metadata record was last updated
+  lastUpdated: string;           // ISO timestamp of last successful sync (for legacy compat)
   recordCount: number;           // Total count of records imported
   status: "idle" | "syncing" | "error";
 }
 ```
 
 ### Step 2.2: Collection Setup
-Define a collection for your dataset named exactly after the resource GUID (e.g., `<resource_guid>`). The documents must use the triple-timestamp schema:
+Define a collection for your dataset named exactly after the resource GUID (e.g., `<resource_guid>`). The documents must use the quadruple-timestamp schema:
 
 ```typescript
 export interface NormalizedDatasetRecord {
   id: string;                         
   coordinates: admin.firestore.GeoPoint; 
   geohash: string;                    
-  createdAt: string;                  // ISO timestamp of first document ingestion
+  createdAt: string;                  // ISO timestamp of first database document ingestion
   updatedAt: string;                  // ISO timestamp of database document modification
-  lastUpdated: string;                // ISO timestamp of source metadata last modification
+  sourceCreatedAt: string;            // ISO timestamp when record was created at source
+  sourceUpdatedAt: string;            // ISO timestamp when record was updated at source
   
   // Dynamic translations are embedded in data structures
   company: {
