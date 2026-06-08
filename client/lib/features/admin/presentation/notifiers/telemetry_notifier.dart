@@ -932,23 +932,15 @@ class TelemetryNotifier extends ChangeNotifier {
 
       final appCheckToken = await _getAppCheckToken();
       final url = Uri.parse('$functionsBaseUrl/$functionName');
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+        if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
+      };
+
       final response = httpClient != null
-          ? await httpClient!.post(
-              url,
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
-              },
-            )
-          : await http.post(
-              url,
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
-              },
-            );
+          ? await httpClient!.post(url, headers: headers)
+          : await http.post(url, headers: headers);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data =
@@ -1018,23 +1010,21 @@ class TelemetryNotifier extends ChangeNotifier {
 
       final appCheckToken = await _getAppCheckToken();
       final url = Uri.parse('$functionsBaseUrl/manualAnalyzeDataset');
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+        if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
+      };
+
       final response = httpClient != null
           ? await httpClient!.post(
               url,
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
-              },
+              headers: headers,
               body: jsonEncode({'datasetId': datasetId}),
             )
           : await http.post(
               url,
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
-              },
+              headers: headers,
               body: jsonEncode({'datasetId': datasetId}),
             );
 

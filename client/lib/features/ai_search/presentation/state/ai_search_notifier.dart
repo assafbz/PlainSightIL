@@ -151,25 +151,22 @@ class AiSearchNotifier extends ChangeNotifier {
 
       final String functionUrl =
           '${appState.telemetryNotifier.functionsBaseUrl}/aiSemanticSearch';
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+        if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
+      };
+
       final response = _client != null
           ? await _client.post(
               Uri.parse(functionUrl),
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
-              },
+              headers: headers,
               body: jsonEncode({'query': trimmed, 'lang': appState.locale}),
             )
           : await http
                 .post(
                   Uri.parse(functionUrl),
-                  headers: {
-                    'Content-Type': 'application/json',
-                    if (token != null) 'Authorization': 'Bearer $token',
-                    if (appCheckToken != null)
-                      'X-Firebase-AppCheck': appCheckToken,
-                  },
+                  headers: headers,
                   body: jsonEncode({'query': trimmed, 'lang': appState.locale}),
                 )
                 .timeout(const Duration(seconds: 30));
