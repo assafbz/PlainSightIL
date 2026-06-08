@@ -91,7 +91,7 @@ function handleCors(req: functions.https.Request, res: functions.Response): bool
 
   if (req.method === "OPTIONS") {
     res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-firebase-appcheck");
     res.set("Access-Control-Max-Age", "3600");
     res.status(204).send("");
     return true;

@@ -135,7 +135,9 @@ describe("CORS Handling Security Policy", () => {
     expect(result).toBe(true);
     expect(headers["Access-Control-Allow-Origin"]).toBe("http://localhost:8080");
     expect(headers["Access-Control-Allow-Methods"]).toBe("GET, POST, OPTIONS");
-    expect(headers["Access-Control-Allow-Headers"]).toBe("Content-Type, Authorization");
+    expect(headers["Access-Control-Allow-Headers"]).toBe(
+      "Content-Type, Authorization, x-firebase-appcheck",
+    );
     expect(headers["Access-Control-Max-Age"]).toBe("3600");
     expect(responseStatus).toBe(204);
     expect(responseData).toBe("");
