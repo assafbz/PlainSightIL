@@ -55,7 +55,9 @@ class FakeCollectionReference
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #where) {
+    if (invocation.memberName == #where ||
+        invocation.memberName == #orderBy ||
+        invocation.memberName == #limit) {
       return this;
     }
     if (invocation.memberName == #snapshots) {

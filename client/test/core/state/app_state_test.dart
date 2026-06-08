@@ -308,6 +308,9 @@ void main() {
       appState.initBankAtmsListener();
       appState.initBondsListener();
       appState.initRecallsListener();
+      appState.initCarImportersListener();
+      appState.initPatentClassificationsListener();
+      appState.initTravelWarningsListener();
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 

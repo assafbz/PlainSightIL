@@ -37,15 +37,15 @@ const scraperRegistry: Record<string, BaseScraper<any, any>> = {
 };
 
 const defaultIntervals: Record<string, number> = {
-  [DATASET_IDS.CELLULAR_ANTENNAS]: 24, // Cellular Antennas (daily)
+  [DATASET_IDS.CELLULAR_ANTENNAS]: 168, // Cellular Antennas (extended to weekly)
   [DATASET_IDS.CELLULAR_PERMITS]: 168, // Cellular Permit Apps (weekly)
-  [DATASET_IDS.COMPANIES_LIQUIDATION]: 168, // Companies Liquidation (weekly)
-  [DATASET_IDS.DOCTORS_LICENSES]: 168, // Doctors Licenses (weekly)
-  [DATASET_IDS.BANK_ATMS]: 168, // Bank ATMs (weekly)
-  [DATASET_IDS.PATENT_CLASSIFICATIONS]: 24, // Patent Classifications (daily)
+  [DATASET_IDS.COMPANIES_LIQUIDATION]: 336, // Companies Liquidation (extended to bi-weekly)
+  [DATASET_IDS.DOCTORS_LICENSES]: 336, // Doctors Licenses (extended to bi-weekly)
+  [DATASET_IDS.BANK_ATMS]: 336, // Bank ATMs (extended to bi-weekly)
+  [DATASET_IDS.PATENT_CLASSIFICATIONS]: 168, // Patent Classifications (extended to weekly)
   [DATASET_IDS.TRAVEL_WARNINGS]: 24, // Travel Warnings (daily)
   [DATASET_IDS.VEHICLE_RECALLS]: 168, // Vehicle Recalls (weekly)
-  [DATASET_IDS.CAR_IMPORTERS]: 168, // Car Importers (weekly)
+  [DATASET_IDS.CAR_IMPORTERS]: 336, // Car Importers (extended to bi-weekly)
   [DATASET_IDS.LOCAL_MARKET_BONDS]: 24, // Local Market Bonds (daily)
   datasets_metadata: 168, // Dataset Metadata (weekly)
 };
