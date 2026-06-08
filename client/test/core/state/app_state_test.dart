@@ -300,6 +300,8 @@ void main() {
       expect(appState.isLoadingAntennas, isFalse);
       expect(appState.isLoadingPermits, isFalse);
 
+      appState.initAntennaListener();
+
       appState.initAdminMetadataListener();
       appState.initDirectoryListener();
       appState.initLiquidationListener();
@@ -437,6 +439,7 @@ void main() {
       AppStateNotifier.testIsFirebaseInitialized = null;
 
       appState.setMockProfile(null);
+      appState.cancelAntennaListener();
       appState.dispose();
     });
 
