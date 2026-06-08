@@ -84,11 +84,11 @@ void main() async {
 
     try {
       await FirebaseAppCheck.instance.activate(
-        webProvider: ReCaptchaV3Provider(
+        providerWeb: ReCaptchaV3Provider(
           '6Lcw-popAAAAAN1xOQQ3nZ5s3i5j5j5j5j5j5j5j',
         ),
-        androidProvider: AndroidProvider.debug,
-        appleProvider: AppleProvider.debug,
+        providerAndroid: const AndroidDebugProvider(),
+        providerApple: const AppleDebugProvider(),
       );
       AppLogger.info('Firebase App Check activated successfully');
     } catch (e, stack) {
