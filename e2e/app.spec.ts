@@ -15,9 +15,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   test.beforeAll(async ({ browser }) => {
     // Extend hook timeout to 3 minutes for cold DDC compilation
     test.setTimeout(180000);
-    // Create browser context with geolocation permissions pre-granted
+    // Create browser context
     const context = await browser.newContext({
-      permissions: ['geolocation'],
       geolocation: { latitude: 32.0853, longitude: 34.7818 },
     });
     // Create page and set console listeners
@@ -103,9 +102,6 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   });
 
   test('E2E-ANT-03: GPS Recenter Fallbacks', async ({ context }) => {
-    // Clear permissions to simulate denied state
-    await context.clearPermissions();
-
     // Locate the GPS Recenter button
     const recenterBtn = page.getByText('Recenter on Location').first();
     await expect(recenterBtn).toBeVisible({ timeout: 10000 });
