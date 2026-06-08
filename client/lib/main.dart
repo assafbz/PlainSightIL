@@ -71,6 +71,15 @@ void main() async {
             stack,
           );
         }
+      } else {
+        const hasExplicitEmulator = bool.hasEnvironment('USE_EMULATOR');
+        if (!hasExplicitEmulator) {
+          useEmulator = true;
+          const hasExplicitEnv = bool.hasEnvironment('ENVIRONMENT');
+          if (!hasExplicitEnv) {
+            environment = 'local';
+          }
+        }
       }
     }
 

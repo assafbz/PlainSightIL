@@ -19,7 +19,8 @@ export function getMockRoadmapReview(
   publisher: string = "",
 ): AiRoadmapReview {
   let importance: "High" | "Medium" | "Low" = "Medium";
-  let importanceReasoning = "מאגר זה מציג נתונים בעלי חשיבות ציבורית בינונית עבור הציבור בישראל.";
+  let importanceReasoning =
+    "מאגר זה מציג נתונים בעלי עניין ציבורי בינוני. אזרחים וחוקרים עשויים להיעזר בו לצורך הגברת השקיפות הכללית, אך השפעתו הישירה על חיי השגרה מוגבלת.";
   let paymentWillingness: "High" | "Medium" | "Low" = "Low";
   let aiScore = 50;
 
@@ -38,12 +39,13 @@ export function getMockRoadmapReview(
     t.includes("חינוך")
   ) {
     importance = "High";
-    importanceReasoning = `מאגר זה (${title}) כולל מידע בעל ערך חברתי וכלכלי רב לציבור בישראל, ומאפשר שקיפות בנושאים קריטיים של תקציבים, בריאות או דיור.`;
+    importanceReasoning = `מאגר זה (${title}) כולל מידע בעל ערך חברתי וכלכלי רב. תושבים המודאגים מבריאות משפחתם או תקציבם, הורים המחפשים מסגרות חינוך מתאימות, ורוכשי דירות זקוקים למידע זה לקבלת החלטות מושכלות.`;
     paymentWillingness = "Medium";
     aiScore = 85;
   } else if (t.includes("תרופות") || t.includes("סל הבריאות")) {
     importance = "High";
-    importanceReasoning = "מידע רפואי בעל השפעה ישירה על בריאות הציבור ואיכות החיים.";
+    importanceReasoning =
+      "מאגר זה כולל מידע רפואי קריטי. מטופלים ובני משפחותיהם זקוקים לנגישות מהירה למידע על תרופות וזכויות רפואיות, ורופאים נעזרים בו להענקת טיפול מיטבי.";
     paymentWillingness = "Medium";
     aiScore = 90;
   } else if (
@@ -58,7 +60,8 @@ export function getMockRoadmapReview(
     n.includes("מפגע")
   ) {
     importance = "High";
-    importanceReasoning = "מאגר בעל חשיבות סביבתית ובריאותית גבוהה ביותר עבור הציבור בישראל.";
+    importanceReasoning =
+      "מאגר זה חיוני לבטיחות ובריאות הציבור. תושבים המבקשים לוודא שסביבת מגוריהם בטוחה מקרינה או זיהום, ופעילים סביבתיים, זקוקים לנתונים אלו כדי לפקח על מפגעים.";
     paymentWillingness = "Medium";
     aiScore = 88;
   }
@@ -77,7 +80,8 @@ export function getMockRoadmapReview(
     n.includes("נסיעה")
   ) {
     importance = "High";
-    importanceReasoning = "מידע שימושי מאוד לחיי היומיום של אזרחים ועסקים מקומיים בישראל.";
+    importanceReasoning =
+      "מידע זה מספק ערך מעשי יומיומי רב. נוסעי תחבורה ציבורית ונהגים יכולים לתכנן את מסלולם ביעילות, בעוד תושבים ועסקים מקומיים יכולים להעריך עלויות ארנונה ומיסוי עירוני.";
     paymentWillingness = "Low";
     aiScore = 75;
   }
@@ -96,7 +100,7 @@ export function getMockRoadmapReview(
   ) {
     importance = "Medium";
     importanceReasoning =
-      "מאגר זה תורם לשקיפות פיננסית ותאגידית בישראל, ומאפשר לציבור לפקח על פעילות כלכלית וציבורית.";
+      "מאגר זה קריטי לשמירה על טוהר המידות. פעילים חברתיים, חוקרים ועיתונאים זקוקים לנגישות קלה לנתונים אלו כדי לפקח על התנהלות פיננסית ותאגידית וניהול כספי ציבור.";
     paymentWillingness = "Low";
     aiScore = 65;
   }
@@ -111,7 +115,8 @@ export function getMockRoadmapReview(
     t.includes("אירועים")
   ) {
     importance = "Low";
-    importanceReasoning = "מאגר בעל עניין פנאי או תרבותי מקומי, שאינו קריטי לשירותים יומיומיים.";
+    importanceReasoning =
+      "המאגר מציע ערך תרבותי ופנאי עבור תושבים ותיירים המתכננים סיורים ופעילויות ספורט, אך הוא אינו קריטי לניהול חיי היומיום או לצרכים חיוניים של אזרחים.";
     paymentWillingness = "Low";
     aiScore = 40;
   }
@@ -129,7 +134,7 @@ export function getMockRoadmapReview(
   ) {
     importance = "Low";
     importanceReasoning =
-      "מאגר זה מציג נתונים מנהליים פנימיים או סטטיסטיים בעלי עניין ציבורי נמוך יחסית ביומיום.";
+      "המאגר מורכב מנתונים מנהליים פנימיים או פרוטוקולים בירוקרטיים. אזרח מן השורה יתקשה למצוא בו תועלת מעשית לחיי היומיום, והוא מיועד בעיקר לצרכי מחקר נקודתיים או תיעוד ארכיוני.";
     paymentWillingness = "Low";
     aiScore = 25;
   }
@@ -175,7 +180,7 @@ const aiReviewSchema: Schema = {
     importanceReasoning: {
       type: SchemaType.STRING,
       description:
-        "A brief, professional explanation in Hebrew explaining why this rating was given.",
+        "An explanation in Hebrew presenting a few concrete citizen perspectives (e.g., from the point of view of a resident, advocate, consumer, or researcher) on why they find this dataset valuable or why it lacks value. Keep it informative and under 3 sentences.",
     },
     paymentWillingness: {
       type: SchemaType.STRING,
@@ -248,7 +253,7 @@ Your prioritization criteria should focus on assessing the value of making this 
 
 Evaluate and return a JSON object with:
 1. "importance": "High" | "Medium" | "Low" (based on how valuable/important this data is to the general Israeli public).
-2. "importanceReasoning": A brief explanation in Hebrew ("why") of your importance rating. Keep it under 2 sentences. Focus on the value of making this data accessible to the public.
+2. "importanceReasoning": A detailed explanation in Hebrew presenting a few concrete citizen perspectives (e.g. from the point of view of a resident, advocate, consumer, or researcher) explaining why they find this dataset valuable (or why it lacks value if priority is low). Keep it informative yet concise (2-3 sentences).
 3. "paymentWillingness": "High" | "Medium" | "Low" (how likely Israeli citizens or organizations would be willing to pay for access or premium features related to this dataset, e.g. real-time alerts or advanced filtering).
 4. "aiScore": A numerical score from 0 to 100 representing the AI's priority assessment (where 100 is top priority).
 
