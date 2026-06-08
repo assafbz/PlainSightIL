@@ -65,6 +65,9 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   });
 
   test('E2E-LOC-01: Language Switcher & UI Translation', async () => {
+    // Wait for the datasets to load first by asserting an English card title is visible
+    await expect(page.getByText('Cellular Antennas').first()).toBeVisible({ timeout: 15000 });
+
     // Assert initial language toggle key is "HE" (English mode active)
     const langBtn = page.getByText('HE', { exact: true });
     await expect(langBtn).toBeVisible();
