@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -284,7 +285,8 @@ class AuthNotifier extends ChangeNotifier {
     }
 
     try {
-      if (kIsWeb) {
+      if (kIsWeb ||
+          (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))) {
         final provider = GoogleAuthProvider();
         await (testAuth ?? FirebaseAuth.instance).signInWithPopup(provider);
       } else {
