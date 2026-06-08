@@ -1,4 +1,4 @@
-package com.plainsight.plainsight
+package com.assafbz.plainsightil
 
 import io.flutter.embedding.android.FlutterActivity
 
