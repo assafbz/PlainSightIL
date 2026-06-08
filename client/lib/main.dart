@@ -96,8 +96,12 @@ void main() async {
         }
       } else {
         await FirebaseAppCheck.instance.activate(
-          providerAndroid: const AndroidDebugProvider(),
-          providerApple: const AppleDebugProvider(),
+          providerAndroid: kReleaseMode
+              ? const AndroidPlayIntegrityProvider()
+              : const AndroidDebugProvider(),
+          providerApple: kReleaseMode
+              ? const AppleAppAttestWithDeviceCheckFallbackProvider()
+              : const AppleDebugProvider(),
         );
       }
       AppLogger.info('Firebase App Check activated successfully');
