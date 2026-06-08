@@ -1,6 +1,6 @@
 {
   "name": "plainsightil-root",
-  "version": "1.0.117",
+  "version": "1.0.118",
   "description": "Root workspace management scripts for PlainSightIL",
   "private": true,
   "scripts": {

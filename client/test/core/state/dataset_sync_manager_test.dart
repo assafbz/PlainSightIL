@@ -745,6 +745,7 @@ void main() {
         expect(manager.isSyncing, isFalse);
         expect(manager.records.length, 1);
         expect(manager.records.first.val, 'A');
+        expect(stateChanged, isTrue);
 
         manager.dispose();
       },
