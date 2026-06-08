@@ -1,6 +1,8 @@
+import 'dart:convert' show jsonDecode;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:plainsight/app.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/core/config/firebase_config.dart';
@@ -14,20 +16,59 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   try {
-    const bool useEmulator = bool.fromEnvironment(
+    bool useEmulator = const bool.fromEnvironment(
       'USE_EMULATOR',
       defaultValue: true,
     );
-    const String environment = String.fromEnvironment(
+    String environment = const String.fromEnvironment(
       'ENVIRONMENT',
       defaultValue: 'local',
     );
+
+    FirebaseOptions? dynamicOptions;
+
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      final isLocal = host == 'localhost' ||
+          host == '127.0.0.1' ||
+          host.startsWith('192.168.') ||
+          host.startsWith('10.') ||
+          host.startsWith('172.');
+      if (!isLocal) {
+        useEmulator = false;
+        if (environment == 'local') {
+          environment = 'dev';
+        }
+
+        try {
+          final initUri = Uri.base.resolve('/__/firebase/init.json');
+          final response = await http.get(initUri);
+          if (response.statusCode == 200) {
+            final config = jsonDecode(response.body) as Map<String, dynamic>;
+            dynamicOptions = FirebaseOptions(
+              apiKey: config['apiKey'] as String,
+              appId: config['appId'] as String,
+              messagingSenderId: config['messagingSenderId'] as String,
+              projectId: config['projectId'] as String,
+              authDomain: config['authDomain'] as String?,
+              storageBucket: config['storageBucket'] as String?,
+              measurementId: config['measurementId'] as String?,
+            );
+            AppLogger.info('Successfully fetched dynamic Firebase configuration from hosting');
+          } else {
+            AppLogger.error('Failed to load dynamic Firebase configuration: HTTP ${response.statusCode}');
+          }
+        } catch (e, stack) {
+          AppLogger.error('Error fetching dynamic Firebase configuration from hosting', e, stack);
+        }
+      }
+    }
+
     AppStateNotifier.useEmulator = useEmulator;
     AppStateNotifier.environment = environment;
 
-    final options = (environment == 'dev')
-        ? devFirebaseOptions
-        : localFirebaseOptions;
+    final options = dynamicOptions ??
+        ((environment == 'dev') ? devFirebaseOptions : localFirebaseOptions);
     await Firebase.initializeApp(options: options);
 
     if (useEmulator) {
