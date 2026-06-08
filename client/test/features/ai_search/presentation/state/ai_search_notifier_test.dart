@@ -11,8 +11,20 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http_testing;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/ai_search/presentation/state/ai_search_notifier.dart';
+
+class FakeFirebaseAppCheck implements FirebaseAppCheck {
+  final String mockToken;
+  FakeFirebaseAppCheck({this.mockToken = 'mock-appcheck-token'});
+
+  @override
+  Future<String?> getToken([bool? forceRefresh]) async => mockToken;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class FakeUser implements User {
   final String _uid;
@@ -233,6 +245,7 @@ void main() {
       AppStateNotifier.isTesting = false; // Test real calling logic
       AppStateNotifier.testIsFirebaseInitialized = true;
       final mockClient = http_testing.MockClient((request) async {
+        expect(request.headers['X-Firebase-AppCheck'], 'mock-appcheck-token');
         final responseBody = {
           'answer': 'Found Toyota recall details [cit-01].',
           'citations': [
@@ -253,11 +266,13 @@ void main() {
 
       final fakeUser = FakeUser('uid-123', 'test@example.com');
       final fakeAuth = FakeFirebaseAuth(mockCurrentUser: fakeUser);
+      final fakeAppCheck = FakeFirebaseAppCheck();
 
       final notifier = AiSearchNotifier(
         appState: appState,
         client: mockClient,
         auth: fakeAuth,
+        appCheck: fakeAppCheck,
       );
       await notifier.performSearch('toyota');
 
