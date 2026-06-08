@@ -84,11 +84,16 @@ void main() async {
 
     try {
       if (kIsWeb) {
-        await FirebaseAppCheck.instance.activate(
-          providerWeb: ReCaptchaV3Provider(
-            '6Lcw-popAAAAAN1xOQQ3nZ5s3i5j5j5j5j5j5j5j',
-          ),
-        );
+        const recaptchaKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
+        if (recaptchaKey.isNotEmpty) {
+          await FirebaseAppCheck.instance.activate(
+            providerWeb: ReCaptchaV3Provider(recaptchaKey),
+          );
+        } else {
+          AppLogger.warning(
+            'Firebase App Check was not activated: RECAPTCHA_SITE_KEY is not configured.',
+          );
+        }
       } else {
         await FirebaseAppCheck.instance.activate(
           providerAndroid: const AndroidDebugProvider(),
