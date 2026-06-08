@@ -58,6 +58,9 @@ class AuthNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseAuth? testAuth;
 
+  @visibleForTesting
+  GoogleSignIn? testGoogleSignIn;
+
   late final UserProfileRepository _profileRepository;
   late final GetUserProfile _getUserProfileUseCase;
   late final UpdateUserProfile _updateUserProfileUseCase;
@@ -285,12 +288,13 @@ class AuthNotifier extends ChangeNotifier {
     }
 
     try {
-      if (kIsWeb ||
-          (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))) {
+      if ((kIsWeb ||
+              (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))) &&
+          testGoogleSignIn == null) {
         final provider = GoogleAuthProvider();
         await (testAuth ?? FirebaseAuth.instance).signInWithPopup(provider);
       } else {
-        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignIn googleSignIn = testGoogleSignIn ?? GoogleSignIn();
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         if (googleUser == null) {
           throw FirebaseAuthException(

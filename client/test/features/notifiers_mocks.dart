@@ -320,6 +320,7 @@ class FakeFirebaseAuth implements FirebaseAuth {
   final Stream<User?> authChanges;
   final Future<UserCredential> Function()? onSignInAnonymously;
   final Future<UserCredential> Function()? onSignInWithPopup;
+  final Future<UserCredential> Function(AuthCredential)? onSignInWithCredential;
   final Future<void> Function()? onSignOut;
 
   FakeFirebaseAuth({
@@ -327,6 +328,7 @@ class FakeFirebaseAuth implements FirebaseAuth {
     required this.authChanges,
     this.onSignInAnonymously,
     this.onSignInWithPopup,
+    this.onSignInWithCredential,
     this.onSignOut,
   });
 
@@ -340,6 +342,14 @@ class FakeFirebaseAuth implements FirebaseAuth {
   Future<UserCredential> signInWithPopup(dynamic provider) async {
     if (onSignInWithPopup != null) {
       return onSignInWithPopup!();
+    }
+    return FakeUserCredential();
+  }
+
+  @override
+  Future<UserCredential> signInWithCredential(AuthCredential credential) async {
+    if (onSignInWithCredential != null) {
+      return onSignInWithCredential!(credential);
     }
     return FakeUserCredential();
   }
