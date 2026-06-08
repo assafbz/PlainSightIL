@@ -537,156 +537,184 @@ class _AiSearchPageState extends State<AiSearchPage> {
                     child: Container(
                       color: AppColors.baseBg.withValues(alpha: 0.8),
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Center(
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: GlassmorphicCard(
-                            borderRadius: 24.0,
-                            startBorderColor: AppColors.secondary,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 32,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.secondary.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      border: Border.all(
-                                        color: AppColors.secondary.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.lock_outline_rounded,
-                                      color: AppColors.secondary,
-                                      size: 40,
-                                    ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 400),
+                              child: GlassmorphicCard(
+                                borderRadius: 24.0,
+                                startBorderColor: AppColors.secondary,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 32,
                                   ),
-                                  const SizedBox(height: 24),
-                                  Text(
-                                    widget.appState.translate(
-                                      'ai_locked_title',
-                                    ),
-                                    style: AppTypography.headlineLg(
-                                      context,
-                                      color: AppColors.textPrimary,
-                                    ).copyWith(fontWeight: FontWeight.bold),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    widget.appState.translate('ai_locked_desc'),
-                                    style: AppTypography.bodySm(
-                                      context,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 32),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 50,
-                                    child: _isSubscribing
-                                        ? const Center(
-                                            child: CircularProgressIndicator(),
-                                          )
-                                        : ElevatedButton(
-                                            onPressed: () async {
-                                              setState(() {
-                                                _isSubscribing = true;
-                                              });
-                                              try {
-                                                final currentProfile =
-                                                    widget.appState.userProfile;
-                                                if (currentProfile != null) {
-                                                  final updated = currentProfile
-                                                      .copyWith(
-                                                        isSubscribed: true,
-                                                      );
-                                                  await widget.appState
-                                                      .updateUserProfile(
-                                                        updated,
-                                                      );
-                                                } else {
-                                                  final defaultProfile =
-                                                      UserProfile(
-                                                        uid:
-                                                            widget
-                                                                .appState
-                                                                .currentUser
-                                                                ?.uid ??
-                                                            'mock_uid',
-                                                        firstName: '',
-                                                        lastName: '',
-                                                        email:
-                                                            widget
-                                                                .appState
-                                                                .currentUser
-                                                                ?.email ??
-                                                            'mock@example.com',
-                                                        role: 'user',
-                                                        isSubscribed: true,
-                                                        createdAt:
-                                                            DateTime.now(),
-                                                        updatedAt:
-                                                            DateTime.now(),
-                                                      );
-                                                  await widget.appState
-                                                      .updateUserProfile(
-                                                        defaultProfile,
-                                                      );
-                                                }
-                                              } catch (e) {
-                                                AppLogger.error(
-                                                  'Failed to subscribe from paywall',
-                                                  e,
-                                                );
-                                              } finally {
-                                                if (mounted) {
-                                                  setState(() {
-                                                    _isSubscribing = false;
-                                                  });
-                                                }
-                                              }
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  AppColors.secondary,
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                              ),
-                                              elevation: 0,
-                                            ),
-                                            child: Text(
-                                              widget.appState.translate(
-                                                'subscribe_btn',
-                                              ),
-                                              style:
-                                                  AppTypography.bodyLg(
-                                                    context,
-                                                    color: Colors.white,
-                                                  ).copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.secondary.withValues(
+                                            alpha: 0.1,
                                           ),
+                                          border: Border.all(
+                                            color: AppColors.secondary
+                                                .withValues(alpha: 0.2),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.lock_outline_rounded,
+                                          color: AppColors.secondary,
+                                          size: 40,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Text(
+                                        widget.appState.translate(
+                                          'ai_locked_title',
+                                        ),
+                                        style: AppTypography.headlineLg(
+                                          context,
+                                          color: AppColors.textPrimary,
+                                        ).copyWith(fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        widget.appState.translate(
+                                          'ai_locked_desc',
+                                        ),
+                                        style: AppTypography.bodySm(
+                                          context,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 32),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 50,
+                                        child: _isSubscribing
+                                            ? const Center(
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              )
+                                            : ElevatedButton(
+                                                onPressed: () async {
+                                                  setState(() {
+                                                    _isSubscribing = true;
+                                                  });
+                                                  try {
+                                                    final currentProfile =
+                                                        widget
+                                                            .appState
+                                                            .userProfile;
+                                                    if (currentProfile !=
+                                                        null) {
+                                                      final updated =
+                                                          currentProfile
+                                                              .copyWith(
+                                                                isSubscribed:
+                                                                    true,
+                                                              );
+                                                      await widget.appState
+                                                          .updateUserProfile(
+                                                            updated,
+                                                          );
+                                                    } else {
+                                                      final defaultProfile =
+                                                          UserProfile(
+                                                            uid:
+                                                                widget
+                                                                    .appState
+                                                                    .currentUser
+                                                                    ?.uid ??
+                                                                'mock_uid',
+                                                            firstName: '',
+                                                            lastName: '',
+                                                            email:
+                                                                widget
+                                                                    .appState
+                                                                    .currentUser
+                                                                    ?.email ??
+                                                                'mock@example.com',
+                                                            role: 'user',
+                                                            isSubscribed: true,
+                                                            createdAt:
+                                                                DateTime.now(),
+                                                            updatedAt:
+                                                                DateTime.now(),
+                                                          );
+                                                      await widget.appState
+                                                          .updateUserProfile(
+                                                            defaultProfile,
+                                                          );
+                                                    }
+                                                  } catch (e) {
+                                                    AppLogger.error(
+                                                      'Failed to subscribe from paywall',
+                                                      e,
+                                                    );
+                                                  } finally {
+                                                    if (mounted) {
+                                                      setState(() {
+                                                        _isSubscribing = false;
+                                                      });
+                                                    }
+                                                  }
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      AppColors.secondary,
+                                                  foregroundColor: Colors.white,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          14,
+                                                        ),
+                                                  ),
+                                                  elevation: 0,
+                                                ),
+                                                child: Text(
+                                                  widget.appState.translate(
+                                                    'subscribe_btn',
+                                                  ),
+                                                  style:
+                                                      AppTypography.bodyLg(
+                                                        context,
+                                                        color: Colors.white,
+                                                      ).copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+                                              ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                          PositionedDirectional(
+                            top: 16,
+                            end: 0,
+                            child: SafeArea(
+                              child: IconButton(
+                                key: const Key('paywall_close_button'),
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppColors.textPrimary,
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
