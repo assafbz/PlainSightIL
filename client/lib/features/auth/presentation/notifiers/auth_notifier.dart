@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plainsight/core/state/local_storage.dart';
 import 'package:plainsight/core/utils/app_logger.dart';
@@ -54,6 +57,9 @@ class AuthNotifier extends ChangeNotifier {
 
   @visibleForTesting
   FirebaseAuth? testAuth;
+
+  @visibleForTesting
+  GoogleSignIn? testGoogleSignIn;
 
   late final UserProfileRepository _profileRepository;
   late final GetUserProfile _getUserProfileUseCase;
@@ -282,8 +288,30 @@ class AuthNotifier extends ChangeNotifier {
     }
 
     try {
-      final provider = GoogleAuthProvider();
-      await (testAuth ?? FirebaseAuth.instance).signInWithPopup(provider);
+      if ((kIsWeb ||
+              (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))) &&
+          testGoogleSignIn == null) {
+        final provider = GoogleAuthProvider();
+        await (testAuth ?? FirebaseAuth.instance).signInWithPopup(provider);
+      } else {
+        final GoogleSignIn googleSignIn = testGoogleSignIn ?? GoogleSignIn();
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          throw FirebaseAuthException(
+            code: 'ERROR_ABORTED_BY_USER',
+            message: 'Sign in aborted by user',
+          );
+        }
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await (testAuth ?? FirebaseAuth.instance).signInWithCredential(
+          credential,
+        );
+      }
       _isGuestMode = false;
       notifyListeners();
     } catch (e) {

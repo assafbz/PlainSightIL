@@ -6,6 +6,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../notifiers_mocks.dart';
 
 void main() {
@@ -300,5 +301,102 @@ void main() {
         AppStateNotifier.isTesting = true;
       },
     );
+
+    test('AuthNotifier handles native mobile Google Sign-In success', () async {
+      AppStateNotifier.isTesting = false;
+      final authStreamController = StreamController<User?>.broadcast();
+      final fakeUser = FakeUser('user_123', 'assaf@plainsight.il');
+      final fakeAuth = FakeFirebaseAuth(
+        mockCurrentUser: null,
+        authChanges: authStreamController.stream,
+        onSignInWithCredential: (credential) async {
+          expect(credential.providerId, 'google.com');
+          return FakeUserCredential();
+        },
+      );
+
+      final notifier = AuthNotifier(
+        isTesting: false,
+        testAuthChangesStream: authStreamController.stream,
+        testProfileRepository: FakeUserProfileRepository(tProfile),
+        testAuth: fakeAuth,
+      );
+
+      final fakeAuthResult = FakeGoogleSignInAuthentication(
+        accessToken: 'access_token_123',
+        idToken: 'id_token_123',
+      );
+      final fakeGoogleUser = FakeGoogleSignInAccount(fakeAuthResult);
+      final fakeGoogleSignIn = FakeGoogleSignIn(mockUser: fakeGoogleUser);
+
+      notifier.testGoogleSignIn = fakeGoogleSignIn;
+
+      expect(notifier.isAuthenticated, isFalse);
+      await notifier.signInWithGoogle();
+
+      // Wait for auth stream to reflect changes
+      authStreamController.add(fakeUser);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(notifier.isAuthenticated, isTrue);
+
+      notifier.dispose();
+      await authStreamController.close();
+      AppStateNotifier.isTesting = true;
+    });
+
+    test(
+      'AuthNotifier handles native mobile Google Sign-In cancel/abort',
+      () async {
+        AppStateNotifier.isTesting = false;
+        final notifier = AuthNotifier(
+          isTesting: false,
+          testProfileRepository: FakeUserProfileRepository(tProfile),
+        );
+
+        final fakeGoogleSignIn = FakeGoogleSignIn(mockUser: null);
+        notifier.testGoogleSignIn = fakeGoogleSignIn;
+
+        expect(notifier.isAuthenticated, isFalse);
+        expect(
+          () => notifier.signInWithGoogle(),
+          throwsA(
+            isA<FirebaseAuthException>().having(
+              (e) => e.code,
+              'code',
+              'ERROR_ABORTED_BY_USER',
+            ),
+          ),
+        );
+
+        notifier.dispose();
+        AppStateNotifier.isTesting = true;
+      },
+    );
   });
+}
+
+class FakeGoogleSignIn extends Fake implements GoogleSignIn {
+  final GoogleSignInAccount? mockUser;
+  FakeGoogleSignIn({this.mockUser});
+
+  @override
+  Future<GoogleSignInAccount?> signIn() async => mockUser;
+}
+
+class FakeGoogleSignInAccount extends Fake implements GoogleSignInAccount {
+  final GoogleSignInAuthentication mockAuth;
+  FakeGoogleSignInAccount(this.mockAuth);
+
+  @override
+  Future<GoogleSignInAuthentication> get authentication async => mockAuth;
+}
+
+class FakeGoogleSignInAuthentication extends Fake
+    implements GoogleSignInAuthentication {
+  @override
+  final String? accessToken;
+  @override
+  final String? idToken;
+  FakeGoogleSignInAuthentication({this.accessToken, this.idToken});
 }

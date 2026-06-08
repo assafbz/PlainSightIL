@@ -1,6 +1,6 @@
 import 'dart:convert' show jsonDecode;
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainsight/app.dart';
@@ -19,11 +19,11 @@ void main() async {
   try {
     bool useEmulator = const bool.fromEnvironment(
       'USE_EMULATOR',
-      defaultValue: true,
+      defaultValue: !kReleaseMode,
     );
     String environment = const String.fromEnvironment(
       'ENVIRONMENT',
-      defaultValue: 'local',
+      defaultValue: kReleaseMode ? 'dev' : 'local',
     );
 
     FirebaseOptions? dynamicOptions;
@@ -70,6 +70,15 @@ void main() async {
             e,
             stack,
           );
+        }
+      } else {
+        const hasExplicitEmulator = bool.hasEnvironment('USE_EMULATOR');
+        if (!hasExplicitEmulator) {
+          useEmulator = true;
+          const hasExplicitEnv = bool.hasEnvironment('ENVIRONMENT');
+          if (!hasExplicitEnv) {
+            environment = 'local';
+          }
         }
       }
     }
