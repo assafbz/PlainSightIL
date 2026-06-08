@@ -911,6 +911,10 @@ void main() {
             request.headers['Authorization'],
             equals('Bearer mock-id-token'),
           );
+          expect(
+            request.headers['X-Firebase-AppCheck'],
+            equals('mock-appcheck-token'),
+          );
 
           final body =
               jsonDecode((request as http.Request).body)
@@ -938,6 +942,7 @@ void main() {
           isTesting: false,
           testAuth: fakeAuth,
           httpClient: mockClient,
+          testAppCheck: FakeFirebaseAppCheck(),
         );
 
         final result = await notifier.triggerAiAnalysis(
