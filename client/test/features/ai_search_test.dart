@@ -139,5 +139,64 @@ void main() {
       expect(appState.userProfile?.isSubscribed, isTrue);
       expect(find.text('Premium Feature'), findsNothing);
     });
+
+    testWidgets('Tapping close button on premium paywall pops the page', (
+      WidgetTester tester,
+    ) async {
+      appState.setMockProfile(
+        UserProfile(
+          uid: 'mock_uid',
+          firstName: 'Assaf',
+          lastName: 'Benzaken',
+          email: 'assaf@plainsight.il',
+          role: 'user',
+          isSubscribed: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => AiSearchPage(
+                          appState: appState,
+                          onNavigate: (context, datasetId, docId) {},
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open Search'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open page
+      await tester.tap(find.text('Open Search'));
+      await tester.pumpAndSettle();
+
+      // Verify paywall overlay is visible
+      expect(find.text('Premium Feature'), findsOneWidget);
+
+      // Find and tap close button
+      final closeButtonFinder = find.byKey(const Key('paywall_close_button'));
+      expect(closeButtonFinder, findsOneWidget);
+      await tester.tap(closeButtonFinder);
+      await tester.pumpAndSettle();
+
+      // Verify the page is popped and we are back to the previous screen
+      expect(find.text('Premium Feature'), findsNothing);
+      expect(find.text('Open Search'), findsOneWidget);
+    });
   });
 }

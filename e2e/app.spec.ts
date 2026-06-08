@@ -101,7 +101,10 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await page.getByText('Active Towers').click();
   });
 
-  test('E2E-ANT-03: GPS Recenter Fallbacks', async ({ context }) => {
+  test('E2E-ANT-03: GPS Recenter Fallbacks', async () => {
+    // Clear geolocation permissions to simulate initial denied/prompt state
+    await page.context().clearPermissions();
+
     // Locate the GPS Recenter button
     const recenterBtn = page.getByText('Recenter on Location').first();
     await expect(recenterBtn).toBeVisible({ timeout: 10000 });
@@ -121,8 +124,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await expect(page.getByText('Location Access')).toBeVisible({ timeout: 5000 });
 
     // Grant permission before allowing in Flutter dialog to let requestPermission resolve
-    await context.grantPermissions(['geolocation']);
-    await context.setGeolocation({ latitude: 32.0853, longitude: 34.7818 });
+    await page.context().grantPermissions(['geolocation']);
+    await page.context().setGeolocation({ latitude: 32.0853, longitude: 34.7818 });
 
     // Tap "Allow" to simulate consent
     await page.getByText('Allow').click();
