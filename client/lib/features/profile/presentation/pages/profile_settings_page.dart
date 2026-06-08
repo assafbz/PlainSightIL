@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/state/app_state.dart';
 import '../../../../core/theme/design_system.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/user_profile.dart';
 
 /// A premium, responsive user settings screen built using glassmorphism styling
@@ -27,6 +28,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   late TextEditingController _roleController;
 
   bool _isSaving = false;
+  bool _isTogglingSubscription = false;
 
   @override
   void initState() {
@@ -248,7 +250,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 3, child: Column(children: [_buildAvatarCard()])),
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              _buildAvatarCard(),
+              const SizedBox(height: 20),
+              _buildSubscriptionCard(),
+            ],
+          ),
+        ),
         const SizedBox(width: 24),
         Expanded(
           flex: 5,
@@ -275,6 +286,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         _buildEditableDetailsCard(),
         const SizedBox(height: 20),
         _buildLockedCredentialsCard(),
+        const SizedBox(height: 20),
+        _buildSubscriptionCard(),
         const SizedBox(height: 24),
         _buildActionButtons(stackButtons: true),
       ],
@@ -450,6 +463,141 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               controller: _roleController,
               labelKey: 'user_role',
               enabled: false,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Card allowing users to toggle their simulated premium subscription status.
+  Widget _buildSubscriptionCard() {
+    final profile = widget.appState.userProfile;
+    final bool isSubscribed = profile?.isSubscribed ?? false;
+
+    return GlassmorphicCard(
+      borderRadius: 20.0,
+      startBorderColor: isSubscribed ? AppColors.success : AppColors.secondary,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.appState.translate('upgrade_premium_title'),
+                    style: AppTypography.headlineMd(
+                      context,
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                if (isSubscribed) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.success.withAlpha(40),
+                      ),
+                    ),
+                    child: Text(
+                      widget.appState.translate('subscribed_badge'),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.success,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.appState.translate('upgrade_premium_desc'),
+              style: AppTypography.bodySm(
+                context,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: _isTogglingSubscription
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: () async {
+                        setState(() {
+                          _isTogglingSubscription = true;
+                        });
+                        try {
+                          final currentProfile = widget.appState.userProfile;
+                          if (currentProfile != null) {
+                            final updated = currentProfile.copyWith(
+                              isSubscribed: !isSubscribed,
+                            );
+                            await widget.appState.updateUserProfile(updated);
+                          } else {
+                            // Fallback if profile is not loaded (create default profile with toggled flag)
+                            final defaultProfile = UserProfile(
+                              uid:
+                                  widget.appState.currentUser?.uid ??
+                                  'mock_uid',
+                              firstName: _firstNameController.text.trim(),
+                              lastName: _lastNameController.text.trim(),
+                              email: _emailController.text.trim(),
+                              role: 'user',
+                              isSubscribed: !isSubscribed,
+                              createdAt: DateTime.now(),
+                              updatedAt: DateTime.now(),
+                            );
+                            await widget.appState.updateUserProfile(
+                              defaultProfile,
+                            );
+                          }
+                        } catch (e) {
+                          AppLogger.error('Failed to toggle subscription', e);
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isTogglingSubscription = false;
+                            });
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isSubscribed
+                            ? AppColors.surfaceHigh
+                            : AppColors.secondary,
+                        foregroundColor: isSubscribed
+                            ? AppColors.textPrimary
+                            : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        widget.appState.translate(
+                          isSubscribed ? 'unsubscribe_btn' : 'subscribe_btn',
+                        ),
+                        style: AppTypography.bodyLg(
+                          context,
+                          color: isSubscribed
+                              ? AppColors.textPrimary
+                              : Colors.white,
+                        ).copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
             ),
           ],
         ),

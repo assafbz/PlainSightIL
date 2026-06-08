@@ -354,6 +354,7 @@ class _MockUserProfileRepository implements UserProfileRepository {
       lastName: 'Benzaken',
       email: 'assaf@plainsight.il',
       role: 'user',
+      isSubscribed: false,
       createdAt: DateTime(2026, 6, 1),
       updatedAt: DateTime(2026, 6, 1),
     );

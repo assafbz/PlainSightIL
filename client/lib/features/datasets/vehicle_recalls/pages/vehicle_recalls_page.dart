@@ -333,14 +333,33 @@ class _VehicleRecallsScreenState extends State<VehicleRecallsScreen> {
                                               ? AppColors.primary
                                               : AppColors.textSecondary,
                                         ),
-                                        onPressed: () =>
-                                            alertsNotifier.toggleSubscription(
-                                              DatasetIds.vehicleRecalls,
-                                              authNotifier.currentUser?.uid ??
-                                                  (AppStateNotifier.isTesting
-                                                      ? 'mock_uid'
-                                                      : ''),
-                                            ),
+                                        onPressed: () async {
+                                          try {
+                                            await widget.appState
+                                                .toggleSubscription(
+                                                  DatasetIds.vehicleRecalls,
+                                                );
+                                          } catch (e) {
+                                            if (context.mounted &&
+                                                e.toString().contains(
+                                                  'LimitReached',
+                                                )) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    widget.appState.translate(
+                                                      'limits_exceeded_desc',
+                                                    ),
+                                                  ),
+                                                  backgroundColor:
+                                                      AppColors.danger,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
                                       ),
                                       IconButton(
                                         icon: Icon(

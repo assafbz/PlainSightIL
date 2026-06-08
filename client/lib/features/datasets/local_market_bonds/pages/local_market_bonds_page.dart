@@ -265,14 +265,29 @@ class _LocalMarketBondsScreenState extends State<LocalMarketBondsScreen> {
                                       ? AppColors.primary
                                       : AppColors.textSecondary,
                                 ),
-                                onPressed: () =>
-                                    alertsNotifier.toggleSubscription(
+                                onPressed: () async {
+                                  try {
+                                    await widget.appState.toggleSubscription(
                                       DatasetIds.localMarketBonds,
-                                      authNotifier.currentUser?.uid ??
-                                          (AppStateNotifier.isTesting
-                                              ? 'mock_uid'
-                                              : ''),
-                                    ),
+                                    );
+                                  } catch (e) {
+                                    if (context.mounted &&
+                                        e.toString().contains('LimitReached')) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            widget.appState.translate(
+                                              'limits_exceeded_desc',
+                                            ),
+                                          ),
+                                          backgroundColor: AppColors.danger,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
                               ),
                               IconButton(
                                 icon: Icon(

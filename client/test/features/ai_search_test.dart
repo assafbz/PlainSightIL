@@ -5,6 +5,7 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/ai_search/presentation/pages/ai_search_page.dart';
 import 'package:plainsight/features/ai_search/presentation/widgets/ai_search_bar.dart';
 import 'package:plainsight/features/ai_search/presentation/widgets/citation_badge.dart';
+import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,18 @@ void main() {
 
     setUp(() {
       appState = AppStateNotifier();
+      appState.setMockProfile(
+        UserProfile(
+          uid: 'mock_uid',
+          firstName: 'Assaf',
+          lastName: 'Benzaken',
+          email: 'assaf@plainsight.il',
+          role: 'user',
+          isSubscribed: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
     });
 
     testWidgets('Renders layout elements (header, input, suggestions)', (
@@ -85,6 +98,46 @@ void main() {
 
       expect(routedDatasetId, isNotNull);
       expect(routedDocId, '11020');
+    });
+
+    testWidgets('Shows premium paywall overlay when not subscribed', (
+      WidgetTester tester,
+    ) async {
+      appState.setMockProfile(
+        UserProfile(
+          uid: 'mock_uid',
+          firstName: 'Assaf',
+          lastName: 'Benzaken',
+          email: 'assaf@plainsight.il',
+          role: 'user',
+          isSubscribed: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AiSearchPage(
+              appState: appState,
+              onNavigate: (context, datasetId, docId) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify paywall overlay elements are visible
+      expect(find.text('Premium Feature'), findsOneWidget);
+      expect(find.text(appState.translate('subscribe_btn')), findsOneWidget);
+
+      // Tap Subscribe, verify user becomes subscribed and paywall is dismissed
+      await tester.tap(find.text(appState.translate('subscribe_btn')));
+      await tester.pumpAndSettle();
+
+      expect(appState.userProfile?.isSubscribed, isTrue);
+      expect(find.text('Premium Feature'), findsNothing);
     });
   });
 }

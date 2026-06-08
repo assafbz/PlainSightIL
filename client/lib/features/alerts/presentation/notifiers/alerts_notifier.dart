@@ -29,10 +29,13 @@ class AlertsNotifier extends ChangeNotifier {
 
   StreamSubscription<QuerySnapshot>? _alertsSubscription;
   StreamSubscription<QuerySnapshot>? _subsSubscription;
+  StreamSubscription<DocumentSnapshot>? _limitsSubscription;
 
   List<AlertModel> _alerts = [];
   List<String> _subscribedDatasetIds = [];
   bool _isLoading = false;
+  int _standardLimit = 3;
+  int _premiumLimit = 10;
 
   /// Gets the list of parsed alerts.
   List<AlertModel> get alerts => _alerts;
@@ -45,6 +48,12 @@ class AlertsNotifier extends ChangeNotifier {
 
   /// Returns the count of unread alerts.
   int get unreadCount => _alerts.where((a) => !a.isRead).length;
+
+  /// Returns standard user alert limits.
+  int get standardLimit => _standardLimit;
+
+  /// Returns premium user alert limits.
+  int get premiumLimit => _premiumLimit;
 
   /// Constructs an [AlertsNotifier].
   AlertsNotifier({this.isTesting = false, FirebaseFirestore? firestore})
@@ -77,6 +86,25 @@ class AlertsNotifier extends ChangeNotifier {
     }
 
     try {
+      // Stream limits configuration
+      _limitsSubscription = _firestore
+          .collection('settings')
+          .doc('limits')
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (snapshot.exists && snapshot.data() != null) {
+                final data = snapshot.data()!;
+                _standardLimit = data['standardLimit'] as int? ?? 3;
+                _premiumLimit = data['premiumLimit'] as int? ?? 10;
+                notifyListeners();
+              }
+            },
+            onError: (Object error) {
+              AppLogger.error('Limits Settings Stream Error', error);
+            },
+          );
+
       // Stream subscriptions
       _subsSubscription = _firestore
           .collection('subscriptions')
@@ -131,6 +159,8 @@ class AlertsNotifier extends ChangeNotifier {
     _alertsSubscription = null;
     _subsSubscription?.cancel();
     _subsSubscription = null;
+    _limitsSubscription?.cancel();
+    _limitsSubscription = null;
   }
 
   /// Checks if the user is subscribed to a dataset.
@@ -271,6 +301,29 @@ class AlertsNotifier extends ChangeNotifier {
           .delete();
     } catch (e) {
       AppLogger.error('Failed to delete alert $alertId', e);
+      rethrow;
+    }
+  }
+
+  /// Saves the standard and premium limits config in Firestore.
+  Future<void> saveLimits(int standardLimit, int premiumLimit) async {
+    if (isTesting) {
+      _standardLimit = standardLimit;
+      _premiumLimit = premiumLimit;
+      notifyListeners();
+      return;
+    }
+    try {
+      await _firestore.collection('settings').doc('limits').set({
+        'standardLimit': standardLimit,
+        'premiumLimit': premiumLimit,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      AppLogger.info(
+        'Updated limits in Firestore: standard=$standardLimit, premium=$premiumLimit',
+      );
+    } catch (e) {
+      AppLogger.error('Failed to save limits in Firestore', e);
       rethrow;
     }
   }

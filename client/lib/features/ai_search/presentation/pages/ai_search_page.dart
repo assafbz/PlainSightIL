@@ -1,10 +1,13 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/core/state/app_state.dart';
+import 'package:plainsight/core/utils/app_logger.dart';
 import '../state/ai_search_notifier.dart';
 import '../widgets/ai_search_bar.dart';
 import '../widgets/citation_badge.dart';
 import '../../data/models/ai_search_result_model.dart';
+import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
 
 /// Inline parsed text renderer that turns **bold** markers and [cit-XX] brackets
 /// into rich styled text spans and clickable inline widgets.
@@ -184,16 +187,25 @@ class AiSearchPage extends StatefulWidget {
 class _AiSearchPageState extends State<AiSearchPage> {
   final TextEditingController _queryController = TextEditingController();
   late final AiSearchNotifier _notifier;
+  bool _isSubscribing = false;
 
   @override
   void initState() {
     super.initState();
     _notifier = AiSearchNotifier(appState: widget.appState);
     _notifier.loadHistory();
+    widget.appState.addListener(_onAppStateChanged);
+  }
+
+  void _onAppStateChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    widget.appState.removeListener(_onAppStateChanged);
     _queryController.dispose();
     _notifier.dispose();
     super.dispose();
@@ -207,6 +219,8 @@ class _AiSearchPageState extends State<AiSearchPage> {
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.appState.locale == 'he';
+    final isSubscribed = widget.appState.userProfile?.isSubscribed ?? false;
+
     return Directionality(
       textDirection: widget.appState.textDirection,
       child: Scaffold(
@@ -515,6 +529,169 @@ class _AiSearchPageState extends State<AiSearchPage> {
                 ),
               ),
             ),
+            if (!isSubscribed)
+              Positioned.fill(
+                child: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      color: AppColors.baseBg.withValues(alpha: 0.8),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 400),
+                          child: GlassmorphicCard(
+                            borderRadius: 24.0,
+                            startBorderColor: AppColors.secondary,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 32,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.secondary.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.secondary.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.lock_outline_rounded,
+                                      color: AppColors.secondary,
+                                      size: 40,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    widget.appState.translate(
+                                      'ai_locked_title',
+                                    ),
+                                    style: AppTypography.headlineLg(
+                                      context,
+                                      color: AppColors.textPrimary,
+                                    ).copyWith(fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    widget.appState.translate('ai_locked_desc'),
+                                    style: AppTypography.bodySm(
+                                      context,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 32),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 50,
+                                    child: _isSubscribing
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : ElevatedButton(
+                                            onPressed: () async {
+                                              setState(() {
+                                                _isSubscribing = true;
+                                              });
+                                              try {
+                                                final currentProfile =
+                                                    widget.appState.userProfile;
+                                                if (currentProfile != null) {
+                                                  final updated = currentProfile
+                                                      .copyWith(
+                                                        isSubscribed: true,
+                                                      );
+                                                  await widget.appState
+                                                      .updateUserProfile(
+                                                        updated,
+                                                      );
+                                                } else {
+                                                  final defaultProfile =
+                                                      UserProfile(
+                                                        uid:
+                                                            widget
+                                                                .appState
+                                                                .currentUser
+                                                                ?.uid ??
+                                                            'mock_uid',
+                                                        firstName: '',
+                                                        lastName: '',
+                                                        email:
+                                                            widget
+                                                                .appState
+                                                                .currentUser
+                                                                ?.email ??
+                                                            'mock@example.com',
+                                                        role: 'user',
+                                                        isSubscribed: true,
+                                                        createdAt:
+                                                            DateTime.now(),
+                                                        updatedAt:
+                                                            DateTime.now(),
+                                                      );
+                                                  await widget.appState
+                                                      .updateUserProfile(
+                                                        defaultProfile,
+                                                      );
+                                                }
+                                              } catch (e) {
+                                                AppLogger.error(
+                                                  'Failed to subscribe from paywall',
+                                                  e,
+                                                );
+                                              } finally {
+                                                if (mounted) {
+                                                  setState(() {
+                                                    _isSubscribing = false;
+                                                  });
+                                                }
+                                              }
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.secondary,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                              ),
+                                              elevation: 0,
+                                            ),
+                                            child: Text(
+                                              widget.appState.translate(
+                                                'subscribe_btn',
+                                              ),
+                                              style:
+                                                  AppTypography.bodyLg(
+                                                    context,
+                                                    color: Colors.white,
+                                                  ).copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

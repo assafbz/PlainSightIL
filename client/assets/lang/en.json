@@ -247,5 +247,21 @@
   "search_roadmap_hint": "Search roadmap datasets...",
   "sort_by": "Sort by:",
   "composite": "Composite",
-  "re_analyze_now_label": "Re-analyze with AI"
+  "re_analyze_now_label": "Re-analyze with AI",
+  "settings_tab": "Settings",
+  "limits_config_title": "Alert Limits Configuration",
+  "standard_limit_label": "Standard User Limit",
+  "premium_limit_label": "Subscribed User Limit",
+  "save_limits_btn": "Save Limits",
+  "limits_save_success": "Limits settings updated successfully",
+  "limits_save_error": "Failed to update limits settings",
+  "upgrade_premium_title": "Premium Plan",
+  "upgrade_premium_desc": "Unlock unlimited alerts and advanced AI search capabilities.",
+  "subscribed_badge": "Active Subscription",
+  "subscribe_btn": "Subscribe for ₪19/mo",
+  "unsubscribe_btn": "Cancel Subscription",
+  "limits_exceeded_title": "Limit Reached",
+  "limits_exceeded_desc": "Standard users are limited to 3 subscriptions. Upgrade to Premium for more!",
+  "ai_locked_title": "Premium Feature",
+  "ai_locked_desc": "Paid subscription is required to unlock AI Semantic Search. Upgrade now!"
 }

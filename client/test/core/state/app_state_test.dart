@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 import 'dart:io' show File;
+import 'dart:async' show StreamController;
+import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -11,6 +13,8 @@ import 'package:plainsight/core/state/local_storage_stub.dart';
 import 'package:plainsight/core/state/local_storage_io.dart';
 import 'package:plainsight/core/theme/design_system.dart';
 import 'package:plainsight/features/profile/domain/entities/user_profile.dart';
+import 'package:plainsight/features/auth/presentation/notifiers/auth_notifier.dart';
+import '../../features/notifiers_mocks.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -643,6 +647,172 @@ void main() {
         } finally {
           enFile.writeAsStringSync(originalContent);
         }
+      },
+    );
+
+    test('limits getters, setters, and toggleSubscription enforcement', () async {
+      AppStateNotifier.isTesting = true;
+      final appState = AppStateNotifier();
+
+      // 1. Verify limit getters
+      expect(appState.standardLimit, 3);
+      expect(appState.premiumLimit, 10);
+
+      // 2. Verify saveLimits delegates correctly
+      await appState.saveLimits(5, 15);
+      expect(appState.standardLimit, 5);
+      expect(appState.premiumLimit, 15);
+
+      // 3. Verify toggleSubscription limits enforcement
+      // A. Standard user (isSubscribed = false)
+      appState.setMockProfile(
+        UserProfile(
+          uid: 'mock_uid',
+          firstName: 'Standard',
+          lastName: 'User',
+          email: 'std@example.com',
+          role: 'user',
+          isSubscribed: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      // Set standard limit to 1 for easy testing of overflow
+      await appState.saveLimits(1, 10);
+      expect(appState.standardLimit, 1);
+
+      // Verify currently subscribed: 'cellular_antennas' is in the default mock list, so active count is 1.
+      expect(appState.isSubscribed('cellular_antennas'), isTrue);
+
+      // Try subscribing to another one, should throw Exception('LimitReached')
+      expect(
+        () => appState.toggleSubscription('local_market_bonds'),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'description',
+            contains('LimitReached'),
+          ),
+        ),
+      );
+
+      // B. Premium user (isSubscribed = true)
+      appState.setMockProfile(
+        UserProfile(
+          uid: 'mock_uid',
+          firstName: 'Premium',
+          lastName: 'User',
+          email: 'prem@example.com',
+          role: 'user',
+          isSubscribed: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      // Set premium limit to 2
+      await appState.saveLimits(1, 2);
+      expect(appState.premiumLimit, 2);
+
+      // Try subscribing to local_market_bonds, should succeed now
+      await appState.toggleSubscription('local_market_bonds');
+      expect(appState.isSubscribed('local_market_bonds'), isTrue);
+
+      // Now we have 2 active subscriptions ('cellular_antennas' and 'local_market_bonds').
+      // Try subscribing to a third one, should throw LimitReached
+      expect(
+        () => appState.toggleSubscription('car_importers'),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'description',
+            contains('LimitReached'),
+          ),
+        ),
+      );
+
+      // C. Admin user (isAdmin = true)
+      appState.setMockProfile(
+        UserProfile(
+          uid: 'mock_uid',
+          firstName: 'Admin',
+          lastName: 'User',
+          email: 'admin@example.com',
+          role: 'admin',
+          isSubscribed: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      // Admin should bypass limits (allowedLimit = 999) and successfully subscribe to 'car_importers'
+      await appState.toggleSubscription('car_importers');
+      expect(appState.isSubscribed('car_importers'), isTrue);
+
+      appState.dispose();
+    });
+
+    test(
+      'toggleSubscription covers non-testing mode and authNotifier.isAdmin',
+      () async {
+        // 1. Set isTesting = true so when we construct AppStateNotifier, the alertsNotifier gets isTesting: true
+        // and pre-populates subscribedDatasetIds with ['cellular_antennas']
+        AppStateNotifier.isTesting = true;
+        final appState = AppStateNotifier();
+
+        // 2. Set isTesting = false for the method execution
+        AppStateNotifier.isTesting = false;
+
+        // 3. Set up a mock AuthNotifier in non-testing mode, with a stream controller
+        final authStreamController = StreamController<User?>();
+        final mockRepo = FakeUserProfileRepository(
+          UserProfile(
+            uid: 'mock_uid_prod',
+            firstName: 'Prod',
+            lastName: 'User',
+            email: 'prod@example.com',
+            role: 'user',
+            isSubscribed: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final mockAuth = AuthNotifier(
+          isTesting: false,
+          testProfileRepository: mockRepo,
+          testAuthChangesStream: authStreamController.stream,
+        );
+
+        // Reassign authNotifier on appState
+        appState.authNotifier = mockAuth;
+
+        // Set standard limit to 1
+        await appState.saveLimits(1, 10);
+
+        // Verify currently subscribed: 'cellular_antennas' is in the default mock list, active count is 1.
+        expect(appState.isSubscribed('cellular_antennas'), isTrue);
+
+        // Emit authenticated user
+        final fakeUser = FakeUser('mock_uid_prod', 'prod@example.com');
+        authStreamController.add(fakeUser);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // Now toggleSubscription should run under isTesting = false, and evaluate authNotifier.isAdmin
+        expect(
+          () => appState.toggleSubscription('local_market_bonds'),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'description',
+              contains('LimitReached'),
+            ),
+          ),
+        );
+
+        await authStreamController.close();
+        appState.dispose();
+        AppStateNotifier.isTesting = true;
       },
     );
   });
