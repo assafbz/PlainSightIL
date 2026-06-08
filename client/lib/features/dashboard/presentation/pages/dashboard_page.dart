@@ -542,40 +542,34 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: AppTypography.bodyLg(
-                            context,
-                            color: AppColors.textPrimary,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceHigh,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.glassBorder,
+                        width: 1,
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceHigh,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.glassBorder,
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          badge,
-                          style: AppTypography.labelXs(
-                            context,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                    ),
+                    child: Text(
+                      badge,
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.primary,
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: AppTypography.bodyLg(
+                      context,
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
