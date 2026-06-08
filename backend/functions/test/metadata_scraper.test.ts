@@ -320,4 +320,181 @@ describe("scrapeAndSyncDatasetMetadata", () => {
     expect(mockDb.batch).toHaveBeenCalledTimes(4); // 1 for metadata scraper, 3 for broadcast alerts
     expect(mockBatch.set).toHaveBeenCalledTimes(5); // 2 for metadata updates, 3 for alert creations
   });
+
+  it("should translate Spanish theory test question bank to Hebrew in parseRecord", async () => {
+    const packagesResponse = {
+      data: {
+        result: {
+          results: [
+            {
+              id: "80228026-5a7a-4cec-84f0-f2001381ec1f",
+              name: "tqes",
+              title:
+                "Banco de preguntas del examen teórico a tomarse en el Ministerio de Transporte para y renovar licencias de conducción",
+              notes: "El banco de preguntas oficial...",
+              organization: { title: "Ministry of Transport" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(packagesResponse);
+
+    const result = await scrapeAndSyncDatasetMetadata(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+
+    const firstSetCall = mockBatch.set.mock.calls[0];
+    expect(firstSetCall[1].title).toBe("בנק שאלות ותשובות למבחן נהיגה עיוני (ספרדית)");
+    expect(firstSetCall[1].notes).toContain("בספרדית");
+  });
+
+  it("should translate all other language and metadata overrides to Hebrew in parseRecord", async () => {
+    const packagesResponse = {
+      data: {
+        result: {
+          results: [
+            {
+              id: "tqfr-id",
+              name: "tqfr",
+              title: "French Theory",
+              notes: "French notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "tqru-id",
+              name: "tqru",
+              title: "Russian Theory",
+              notes: "Russian notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "tqar-id",
+              name: "tqar",
+              title: "Arabic Theory",
+              notes: "Arabic notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "tqar-a3-id",
+              name: "tqar_a3",
+              title: "Arabic A3 Bicycle",
+              notes: "Arabic A3 notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "tqen-id",
+              name: "tqen",
+              title: "English Theory",
+              notes: "English notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "numbering-id",
+              name: "israel-numbering-plan",
+              title: "Numbering Plan",
+              notes: "Numbering notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "plmn-id",
+              name: "plmn-codes-in-israel",
+              title: "PLMN Codes",
+              notes: "PLMN notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "a3-id",
+              name: "a3",
+              title: "A3 Bicycle",
+              notes: "A3 notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+            {
+              id: "sea-id",
+              name: "presentation-of-sea-level-rise-scenarios",
+              title: "Sea Level",
+              notes: "Sea level notes",
+              organization: { title: "Ministry" },
+              num_resources: 1,
+              metadata_modified: "2026-05-01T12:00:00.000Z",
+              tags: [],
+              resources: [],
+            },
+          ],
+        },
+      },
+    };
+
+    vi.mocked(axios.get).mockResolvedValueOnce(packagesResponse);
+
+    const result = await scrapeAndSyncDatasetMetadata(mockDb);
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(9);
+
+    const calls = mockBatch.set.mock.calls;
+    expect(calls[0][1].title).toBe("בנק שאלות ותשובות למבחן נהיגה עיוני (צרפתית)");
+    expect(calls[1][1].title).toBe("בנק שאלות ותשובות למבחן נהיגה עיוני (רוסית)");
+    expect(calls[2][1].title).toBe("בנק שאלות ותשובות למבחן נהיגה עיוני (ערבית)");
+    expect(calls[3][1].title).toBe("בנק שאלות ותשובות למבחן עיוני לאופניים חשמליים A3 (ערבית)");
+    expect(calls[4][1].title).toBe("בנק שאלות ותשובות למבחן נהיגה עיוני (אנגלית)");
+    expect(calls[5][1].title).toBe("תוכנית מספור הטלפוניה בישראל");
+    expect(calls[6][1].title).toBe("קודי רשת סלולרית (PLMN) בישראל");
+    expect(calls[7][1].title).toBe("בנק שאלות ותשובות למבחן עיוני לאופניים חשמליים A3");
+    expect(calls[8][1].title).toBe("תרחישי עליית מפלס הים בישראל");
+  });
+
+  it("should throw error if base URL protocol is insecure in non-emulator environment", async () => {
+    const originalEnv = process.env.FUNCTIONS_EMULATOR;
+    const originalUrl = process.env.DATA_GOV_IL_BASE_URL;
+    process.env.FUNCTIONS_EMULATOR = "false";
+    process.env.DATA_GOV_IL_BASE_URL = "http://insecure-url.com";
+
+    try {
+      await scrapeAndSyncDatasetMetadata(mockDb);
+      expect.fail("Should have thrown error");
+    } catch (e: any) {
+      expect(e.message).toContain("Insecure base URL protocol");
+    } finally {
+      process.env.FUNCTIONS_EMULATOR = originalEnv;
+      process.env.DATA_GOV_IL_BASE_URL = originalUrl;
+    }
+  });
 });

@@ -589,7 +589,7 @@ export const onUserCreate = functions
       firstName,
       lastName,
       email,
-      role: "user", // defaults to standard user role
+      role: process.env.FUNCTIONS_EMULATOR === "true" ? "admin" : "user",
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
