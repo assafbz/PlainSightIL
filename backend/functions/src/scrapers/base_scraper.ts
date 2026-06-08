@@ -409,7 +409,14 @@ export abstract class BaseScraper<
         const batchSize = options?.batchSize || this.maxBatchSize;
         for (let i = 0; i < parsedRecords.length; i += batchSize) {
           const chunk = parsedRecords.slice(i, i + batchSize);
-          const chunkResult = await this.processChunk(db, targetRef, chunk, isFirstSync, nowStr, options);
+          const chunkResult = await this.processChunk(
+            db,
+            targetRef,
+            chunk,
+            isFirstSync,
+            nowStr,
+            options,
+          );
           processedCount += chunkResult.processedCount;
           changedCount += chunkResult.changedCount;
           createdCount += chunkResult.createdCount;
@@ -447,7 +454,9 @@ export abstract class BaseScraper<
     }
     const deduplicatedChunk = Array.from(uniqueRecordsMap.values());
 
-    const lastSyncTimeStr = this.metadataSnapshot?.exists ? this.metadataSnapshot.data()?.lastUpdated : null;
+    const lastSyncTimeStr = this.metadataSnapshot?.exists
+      ? this.metadataSnapshot.data()?.lastUpdated
+      : null;
     const lastSyncTime = lastSyncTimeStr ? new Date(lastSyncTimeStr).getTime() : 0;
     const forceFullSync = options?.forceFullSync === true;
 
@@ -473,7 +482,10 @@ export abstract class BaseScraper<
     const docRefs = recordsToCheck.map((r) => targetRef.doc(r.id));
 
     // If it's the first sync, we know there are no existing documents, so skip db.getAll
-    const snapshots = ((!isFirstSync || process.env.VITEST === "true") && docRefs.length > 0) ? await db.getAll(...docRefs) : [];
+    const snapshots =
+      (!isFirstSync || process.env.VITEST === "true") && docRefs.length > 0
+        ? await db.getAll(...docRefs)
+        : [];
     const existingMap = new Map<string, admin.firestore.DocumentData>();
 
     for (const snap of snapshots) {
