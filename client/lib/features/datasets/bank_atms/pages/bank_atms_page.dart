@@ -242,6 +242,7 @@ class _BankAtmsScreenState extends State<BankAtmsScreen>
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!mounted) return;
         final goAhead = await showDialog<bool>(
           context: context,
           builder: (context) {

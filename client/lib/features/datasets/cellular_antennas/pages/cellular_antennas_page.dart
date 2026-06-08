@@ -291,6 +291,7 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!mounted) return;
         // Show explanation dialog first
         final goAhead = await showDialog<bool>(
           context: context,
