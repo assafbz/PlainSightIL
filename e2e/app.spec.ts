@@ -15,9 +15,8 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   test.beforeAll(async ({ browser }) => {
     // Extend hook timeout to 3 minutes for cold DDC compilation
     test.setTimeout(180000);
-    // Create browser context with geolocation permissions pre-granted
+    // Create browser context
     const context = await browser.newContext({
-      permissions: ['geolocation'],
       geolocation: { latitude: 32.0853, longitude: 34.7818 },
     });
     // Create page and set console listeners
@@ -124,8 +123,9 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     await recenterBtn.click();
     await expect(page.getByText('Location Access')).toBeVisible({ timeout: 5000 });
 
-    // Grant geolocation permission to simulate user accepting OS/browser prompt
+    // Grant permission before allowing in Flutter dialog to let requestPermission resolve
     await page.context().grantPermissions(['geolocation']);
+    await page.context().setGeolocation({ latitude: 32.0853, longitude: 34.7818 });
 
     // Tap "Allow" to simulate consent
     await page.getByText('Allow').click();
