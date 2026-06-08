@@ -103,6 +103,9 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
   });
 
   test('E2E-ANT-03: GPS Recenter Fallbacks', async () => {
+    // Clear geolocation permissions to simulate initial denied/prompt state
+    await page.context().clearPermissions();
+
     // Locate the GPS Recenter button
     const recenterBtn = page.getByText('Recenter on Location').first();
     await expect(recenterBtn).toBeVisible({ timeout: 10000 });
@@ -120,6 +123,9 @@ test.describe('PlainSightIL End-to-End User Journey Tests', () => {
     // Tap GPS Recenter again
     await recenterBtn.click();
     await expect(page.getByText('Location Access')).toBeVisible({ timeout: 5000 });
+
+    // Grant geolocation permission to simulate user accepting OS/browser prompt
+    await page.context().grantPermissions(['geolocation']);
 
     // Tap "Allow" to simulate consent
     await page.getByText('Allow').click();
