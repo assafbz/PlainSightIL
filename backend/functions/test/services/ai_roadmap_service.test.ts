@@ -162,6 +162,28 @@ describe("AI Roadmap Service Unit Tests", () => {
       expect(review.importance).toBe("Medium");
       expect(review.aiScore).toBe(50);
     });
+
+    it("should apply publisher and notes boost when available", () => {
+      const review = getMockRoadmapReview(
+        "מאגר גנרי לא מוכר",
+        "תיאור ארוך ומפורט של המאגר הציבורי הזה שמכיל מעל חמישים תווים לטובת בדיקה",
+        "משרד הבריאות",
+      );
+      expect(review.importance).toBe("Medium");
+      expect(review.aiScore).toBe(58); // 50 + 5 (publisher) + 3 (notes)
+    });
+
+    it("should correctly identify environmental datasets", () => {
+      const review = getMockRoadmapReview("מאגר מדידות קרינה סלולרית");
+      expect(review.importance).toBe("High");
+      expect(review.aiScore).toBe(88);
+    });
+
+    it("should correctly identify internal administrative/bureaucratic datasets", () => {
+      const review = getMockRoadmapReview("פרוטוקול ישיבות פנימיות");
+      expect(review.importance).toBe("Low");
+      expect(review.aiScore).toBe(25);
+    });
   });
 
   describe("scoreDatasetWithAi service function", () => {
