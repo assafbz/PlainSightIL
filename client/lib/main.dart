@@ -83,13 +83,18 @@ void main() async {
     await Firebase.initializeApp(options: options);
 
     try {
-      await FirebaseAppCheck.instance.activate(
-        providerWeb: ReCaptchaV3Provider(
-          '6Lcw-popAAAAAN1xOQQ3nZ5s3i5j5j5j5j5j5j5j',
-        ),
-        providerAndroid: const AndroidDebugProvider(),
-        providerApple: const AppleDebugProvider(),
-      );
+      if (kIsWeb) {
+        await FirebaseAppCheck.instance.activate(
+          providerWeb: ReCaptchaV3Provider(
+            '6Lcw-popAAAAAN1xOQQ3nZ5s3i5j5j5j5j5j5j5j',
+          ),
+        );
+      } else {
+        await FirebaseAppCheck.instance.activate(
+          providerAndroid: const AndroidDebugProvider(),
+          providerApple: const AppleDebugProvider(),
+        );
+      }
       AppLogger.info('Firebase App Check activated successfully');
     } catch (e, stack) {
       AppLogger.error('Failed to activate Firebase App Check', e, stack);
