@@ -24,6 +24,12 @@ void main() {
           if (methodCall.method == 'isLocationServiceEnabled') {
             return false;
           }
+          if (methodCall.method == 'checkPermission') {
+            return 0; // LocationPermission.denied.index
+          }
+          if (methodCall.method == 'requestPermission') {
+            return 0; // LocationPermission.denied.index
+          }
           return null;
         });
   });
