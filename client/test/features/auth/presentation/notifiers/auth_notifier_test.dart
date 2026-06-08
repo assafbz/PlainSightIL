@@ -323,7 +323,6 @@ void main() {
       );
 
       final fakeAuthResult = FakeGoogleSignInAuthentication(
-        accessToken: 'access_token_123',
         idToken: 'id_token_123',
       );
       final fakeGoogleUser = FakeGoogleSignInAccount(fakeAuthResult);
@@ -381,7 +380,25 @@ class FakeGoogleSignIn extends Fake implements GoogleSignIn {
   FakeGoogleSignIn({this.mockUser});
 
   @override
-  Future<GoogleSignInAccount?> signIn() async => mockUser;
+  Future<void> initialize({
+    String? clientId,
+    String? hostedDomain,
+    String? nonce,
+    String? serverClientId,
+  }) async {}
+
+  @override
+  Future<GoogleSignInAccount> authenticate({
+    List<String> scopeHint = const [],
+  }) async {
+    if (mockUser == null) {
+      throw FirebaseAuthException(
+        code: 'ERROR_ABORTED_BY_USER',
+        message: 'Sign in aborted by user',
+      );
+    }
+    return mockUser!;
+  }
 }
 
 class FakeGoogleSignInAccount extends Fake implements GoogleSignInAccount {
@@ -389,14 +406,12 @@ class FakeGoogleSignInAccount extends Fake implements GoogleSignInAccount {
   FakeGoogleSignInAccount(this.mockAuth);
 
   @override
-  Future<GoogleSignInAuthentication> get authentication async => mockAuth;
+  GoogleSignInAuthentication get authentication => mockAuth;
 }
 
 class FakeGoogleSignInAuthentication extends Fake
     implements GoogleSignInAuthentication {
   @override
-  final String? accessToken;
-  @override
   final String? idToken;
-  FakeGoogleSignInAuthentication({this.accessToken, this.idToken});
+  FakeGoogleSignInAuthentication({this.idToken});
 }
