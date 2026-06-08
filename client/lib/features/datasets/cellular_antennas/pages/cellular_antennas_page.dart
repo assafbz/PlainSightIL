@@ -61,7 +61,6 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
           ? DatasetIds.cellularPermits
           : DatasetIds.cellularAntennas,
     );
-    widget.appState.initAntennaListener();
     widget.appState.initPermitMetadataListener();
     if (widget.initialSelectedId != null) {
       widget.appState.addListener(_handleDeepLink);
@@ -72,7 +71,6 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
   @override
   void dispose() {
     widget.appState.removeListener(_handleDeepLink);
-    widget.appState.cancelAntennaListener();
     widget.appState.cancelPermitMetadataListener();
     _radarController.dispose();
     _searchController.dispose();

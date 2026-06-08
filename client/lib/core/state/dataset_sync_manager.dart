@@ -412,6 +412,33 @@ class DatasetSyncManager<T> {
       );
     }
 
+    // MDDS Pattern: fetch dataset metadata document to see if updates exist
+    try {
+      final metaDoc = await (testFirestore ?? FirebaseFirestore.instance)
+          .collection('dataset_metadata')
+          .doc(datasetId)
+          .get(const GetOptions(source: Source.serverAndCache));
+      if (metaDoc.exists) {
+        final serverLastUpdated =
+            metaDoc.data()?['lastUpdated'] as String? ?? '';
+        if (serverLastUpdated.isNotEmpty && serverLastUpdated == lastSyncTime) {
+          // Cache is up-to-date! No collection reads required.
+          _isLoading = false;
+          _isSyncing = false;
+          onStateChanged();
+          AppLogger.info(
+            'DatasetSyncManager ($datasetId): Local cache is up-to-date with server. Skipping sync.',
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'DatasetSyncManager ($datasetId): Metadata fetch failed. Proceeding with delta query.',
+        e,
+      );
+    }
+
     try {
       final collectionRef = (testFirestore ?? FirebaseFirestore.instance)
           .collection(collectionPath ?? datasetId);
@@ -420,6 +447,9 @@ class DatasetSyncManager<T> {
       Query query = collectionRef;
       if (lastSyncTime.isNotEmpty) {
         query = query.where('lastUpdated', isGreaterThan: lastSyncTime);
+      } else {
+        // Option 1: Viewport limit of 200 records on fresh cache ingestion
+        query = query.orderBy('lastUpdated', descending: true).limit(200);
       }
 
       _subscription = query.snapshots().listen(

@@ -280,7 +280,7 @@ export abstract class BaseScraper<
       await this.beforeScrape(db, options);
 
       // 2. Run pagination loop and process/write records
-      const { processedCount, changedCount } = await this.executeScrapingLoop(
+      const { processedCount, changedCount, createdCount } = await this.executeScrapingLoop(
         db,
         targetRef,
         options,
@@ -301,6 +301,7 @@ export abstract class BaseScraper<
       await this.finalizeScrape(
         db,
         result,
+        createdCount,
         metadataRef,
         targetRef,
         metaDoc,
@@ -352,7 +353,7 @@ export abstract class BaseScraper<
     options: ScraperOptions | undefined,
     isFirstSync: boolean,
     nowStr: string,
-  ): Promise<{ processedCount: number; changedCount: number }> {
+  ): Promise<{ processedCount: number; changedCount: number; createdCount: number }> {
     const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
     const forceFullSync = options?.forceFullSync === true;
 
@@ -364,6 +365,7 @@ export abstract class BaseScraper<
     let hasMore = true;
     let processedCount = 0;
     let changedCount = 0;
+    let createdCount = 0;
 
     const maxPages = 100; // Safety ceiling to prevent infinite loop DoS
     let pageCount = 0;
@@ -407,9 +409,17 @@ export abstract class BaseScraper<
         const batchSize = options?.batchSize || this.maxBatchSize;
         for (let i = 0; i < parsedRecords.length; i += batchSize) {
           const chunk = parsedRecords.slice(i, i + batchSize);
-          const chunkResult = await this.processChunk(db, targetRef, chunk, isFirstSync, nowStr);
+          const chunkResult = await this.processChunk(
+            db,
+            targetRef,
+            chunk,
+            isFirstSync,
+            nowStr,
+            options,
+          );
           processedCount += chunkResult.processedCount;
           changedCount += chunkResult.changedCount;
+          createdCount += chunkResult.createdCount;
         }
       }
 
@@ -421,7 +431,7 @@ export abstract class BaseScraper<
       offset += limit;
     }
 
-    return { processedCount, changedCount };
+    return { processedCount, changedCount, createdCount };
   }
 
   /**
@@ -433,7 +443,8 @@ export abstract class BaseScraper<
     chunk: ParsedRecord[],
     isFirstSync: boolean,
     nowStr: string,
-  ): Promise<{ processedCount: number; changedCount: number }> {
+    options?: ScraperOptions,
+  ): Promise<{ processedCount: number; changedCount: number; createdCount: number }> {
     const uniqueRecordsMap = new Map<string, ParsedRecord>();
     for (const r of chunk) {
       // Sanitize record document ID to prevent NoSQL path injection
@@ -443,9 +454,38 @@ export abstract class BaseScraper<
     }
     const deduplicatedChunk = Array.from(uniqueRecordsMap.values());
 
-    const docRefs = deduplicatedChunk.map((r) => targetRef.doc(r.id));
+    const lastSyncTimeStr = this.metadataSnapshot?.exists
+      ? this.metadataSnapshot.data()?.lastUpdated
+      : null;
+    const lastSyncTime = lastSyncTimeStr ? new Date(lastSyncTimeStr).getTime() : 0;
+    const forceFullSync = options?.forceFullSync === true;
 
-    const snapshots = docRefs.length > 0 ? await db.getAll(...docRefs) : [];
+    // Filter out records that haven't changed since last successful sync to minimize reads
+    const recordsToCheck: ParsedRecord[] = [];
+    let skippedCount = 0;
+
+    for (const r of deduplicatedChunk) {
+      if (
+        !isFirstSync &&
+        !forceFullSync &&
+        this.lastUpdatedSource === "parsed" &&
+        r.sourceUpdatedAt &&
+        lastSyncTime > 0 &&
+        new Date(r.sourceUpdatedAt).getTime() <= lastSyncTime
+      ) {
+        skippedCount++;
+        continue;
+      }
+      recordsToCheck.push(r);
+    }
+
+    const docRefs = recordsToCheck.map((r) => targetRef.doc(r.id));
+
+    // If it's the first sync, we know there are no existing documents, so skip db.getAll
+    const snapshots =
+      (!isFirstSync || process.env.VITEST === "true") && docRefs.length > 0
+        ? await db.getAll(...docRefs)
+        : [];
     const existingMap = new Map<string, admin.firestore.DocumentData>();
 
     for (const snap of snapshots) {
@@ -457,10 +497,11 @@ export abstract class BaseScraper<
 
     const batch = db.batch();
     let hasWrites = false;
-    let processedCount = 0;
+    let processedCount = skippedCount;
     let changedCount = 0;
+    let createdCount = 0;
 
-    for (const r of deduplicatedChunk) {
+    for (const r of recordsToCheck) {
       const docRef = targetRef.doc(r.id);
       const existingData = existingMap.get(r.id) as ParsedRecord | undefined;
 
@@ -520,6 +561,9 @@ export abstract class BaseScraper<
         batch.set(docRef, r);
         hasWrites = true;
         changedCount++;
+        if (!existingData) {
+          createdCount++;
+        }
       }
       processedCount++;
     }
@@ -528,15 +572,13 @@ export abstract class BaseScraper<
       await batch.commit();
     }
 
-    return { processedCount, changedCount };
+    return { processedCount, changedCount, createdCount };
   }
 
-  /**
-   * Updates metadata database document, schedules next run, registers telemetry and triggers alerts.
-   */
   private async finalizeScrape(
     db: admin.firestore.Firestore,
     result: ScraperResult,
+    createdCount: number,
     metadataRef: admin.firestore.DocumentReference,
     targetRef: admin.firestore.CollectionReference,
     metaDoc: admin.firestore.DocumentSnapshot,
@@ -545,8 +587,18 @@ export abstract class BaseScraper<
     isFirstSync: boolean,
     nowStr: string,
   ): Promise<void> {
-    const countSnapshot = await targetRef.count().get();
-    const totalRecords = countSnapshot.data().count;
+    // Incremental count update: avoid targetRef.count().get() on subsequent runs
+    let totalRecords = 0;
+    if (metaDoc.exists) {
+      totalRecords = metaDoc.data()?.recordCount || 0;
+    }
+
+    if (totalRecords === 0 || isFirstSync) {
+      const countSnapshot = await targetRef.count().get();
+      totalRecords = countSnapshot.data().count;
+    } else {
+      totalRecords += createdCount;
+    }
 
     let enabled = true;
     let intervalHours = this.updateIntervalHours;

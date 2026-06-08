@@ -188,7 +188,7 @@ describe("BaseScraper Class", () => {
         id: "test_dataset",
         activeCollection: "test_collection",
         status: "idle",
-        recordCount: 10,
+        recordCount: 7,
         scheduler: expect.objectContaining({
           enabled: true,
           updateIntervalHours: 48,

@@ -53,10 +53,10 @@ describe("Scraper Scheduler Calculations", () => {
     const callArgs = mockSet.mock.calls[0][0];
     expect(callArgs.status).toBe("idle");
     expect(callArgs.scheduler.enabled).toBe(true);
-    expect(callArgs.scheduler.updateIntervalHours).toBe(24);
+    expect(callArgs.scheduler.updateIntervalHours).toBe(168);
 
     const nextRunTime = Date.parse(callArgs.scheduler.nextRun);
-    const expectedTime = beforeTime + 24 * 60 * 60 * 1000;
+    const expectedTime = beforeTime + 168 * 60 * 60 * 1000;
     // Allow small 5-second assertion window
     expect(nextRunTime).toBeGreaterThanOrEqual(expectedTime - 5000);
     expect(nextRunTime).toBeLessThanOrEqual(expectedTime + 5000);

@@ -300,6 +300,8 @@ void main() {
       expect(appState.isLoadingAntennas, isFalse);
       expect(appState.isLoadingPermits, isFalse);
 
+      appState.initAntennaListener();
+
       appState.initAdminMetadataListener();
       appState.initDirectoryListener();
       appState.initLiquidationListener();
@@ -308,6 +310,9 @@ void main() {
       appState.initBankAtmsListener();
       appState.initBondsListener();
       appState.initRecallsListener();
+      appState.initCarImportersListener();
+      appState.initPatentClassificationsListener();
+      appState.initTravelWarningsListener();
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
@@ -434,6 +439,7 @@ void main() {
       AppStateNotifier.testIsFirebaseInitialized = null;
 
       appState.setMockProfile(null);
+      appState.cancelAntennaListener();
       appState.dispose();
     });
 

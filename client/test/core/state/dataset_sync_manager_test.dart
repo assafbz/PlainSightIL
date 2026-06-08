@@ -48,19 +48,55 @@ class FakeFirebaseFirestore implements FirebaseFirestore {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakeDocumentSnapshot implements DocumentSnapshot<Map<String, dynamic>> {
+  final bool _exists;
+  final Map<String, dynamic>? _data;
+  FakeDocumentSnapshot(this._exists, this._data);
+
+  @override
+  bool get exists => _exists;
+
+  @override
+  Map<String, dynamic>? data() => _data;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeDocumentReference implements DocumentReference<Map<String, dynamic>> {
+  final DocumentSnapshot<Map<String, dynamic>> snapshot;
+  FakeDocumentReference(this.snapshot);
+
+  @override
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([
+    GetOptions? options,
+  ]) async {
+    return snapshot;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class FakeCollectionReference
     implements CollectionReference<Map<String, dynamic>> {
   final Stream<QuerySnapshot<Map<String, dynamic>>>? stream;
-  FakeCollectionReference({this.stream});
+  final DocumentReference<Map<String, dynamic>>? docRef;
+  FakeCollectionReference({this.stream, this.docRef});
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #where) {
+    if (invocation.memberName == #where ||
+        invocation.memberName == #orderBy ||
+        invocation.memberName == #limit) {
       return this;
     }
     if (invocation.memberName == #snapshots) {
       return stream ??
           const Stream<QuerySnapshot<Map<String, dynamic>>>.empty();
+    }
+    if (invocation.memberName == #doc) {
+      return docRef ?? FakeDocumentReference(FakeDocumentSnapshot(false, null));
     }
     return super.noSuchMethod(invocation);
   }
@@ -666,6 +702,54 @@ void main() {
 
       manager.dispose();
     });
+
+    test(
+      'should skip synchronization when local cache is up-to-date with server metadata',
+      () async {
+        final box = await Hive.openLazyBox<dynamic>('dataset_cache_$datasetId');
+        await box.put('1', {
+          'id': '1',
+          'lastUpdated': '2026-06-05T00:00:00Z',
+          'val': 'A',
+        });
+        await box.put('__sorted_keys__', ['1']);
+
+        final mockSnapshot = FakeDocumentSnapshot(true, {
+          'lastUpdated': '2026-06-05T00:00:00Z',
+        });
+        final mockDocRef = FakeDocumentReference(mockSnapshot);
+        final fakeCollection = FakeCollectionReference(docRef: mockDocRef);
+        final mockFirestore = FakeFirebaseFirestore((path) => fakeCollection);
+
+        bool stateChanged = false;
+        final manager = DatasetSyncManager<TestRecord>(
+          datasetId: datasetId,
+          fromMap: TestRecord.fromMap,
+          toMap: (r) => r.toMap(),
+          getRecordId: (r) => r.id,
+          getRecordLastUpdated: (r) => r.lastUpdated,
+          onStateChanged: () {
+            stateChanged = true;
+          },
+        );
+
+        AppStateNotifier.testIsFirebaseInitialized = true;
+
+        await manager.initialize(
+          isTesting: false,
+          testFirestore: mockFirestore,
+          forceProductionAsync: true,
+        );
+
+        await waitForCondition(() => !manager.isLoading);
+        expect(manager.isSyncing, isFalse);
+        expect(manager.records.length, 1);
+        expect(manager.records.first.val, 'A');
+        expect(stateChanged, isTrue);
+
+        manager.dispose();
+      },
+    );
 
     test('covers remaining uncovered branches for coverage quality gate', () async {
       // 1. Cover line 29: isWebOverride

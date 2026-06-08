@@ -306,21 +306,10 @@ class AppStateNotifier extends ChangeNotifier {
     }
   }
 
-  // Legacy initialization method for backwards compatibility
+  // Scoped initialization method for Cellular Antennas screen
   void initPermitMetadataListener() {
     antennasNotifier.initAntennaListener();
     permitsNotifier.initPermitMetadataListener();
-    telemetryNotifier.initAdminMetadataListener(isAdmin: authNotifier.isAdmin);
-    telemetryNotifier.initDirectoryListener();
-    liquidationNotifier.initLiquidationListener();
-    doctorsNotifier.initDoctorsListener();
-    bankAtmsNotifier.initBankAtmsListener();
-    patentClassificationsNotifier.initPatentClassificationsListener();
-    travelWarningsNotifier.initTravelWarningsListener();
-    vehicleRecallsNotifier.initRecallsListener();
-    carImportersNotifier.initCarImportersListener();
-    bondsNotifier.initBondsListener();
-    alertsNotifier.initAlertsListener(authNotifier.currentUser?.uid);
   }
 
   void initAdminMetadataListener() {
@@ -332,8 +321,10 @@ class AppStateNotifier extends ChangeNotifier {
 
   void initDirectoryListener() => telemetryNotifier.initDirectoryListener();
 
-  void cancelPermitMetadataListener() =>
-      permitsNotifier.cancelPermitMetadataListener();
+  void cancelPermitMetadataListener() {
+    antennasNotifier.cancelAntennaListener();
+    permitsNotifier.cancelPermitMetadataListener();
+  }
 
   void initLiquidationListener() =>
       liquidationNotifier.initLiquidationListener();
