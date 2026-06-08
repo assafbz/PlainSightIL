@@ -247,5 +247,21 @@
   "search_roadmap_hint": "חפש במפת הדרכים...",
   "sort_by": "מיין לפי:",
   "composite": "ציון משולב",
-  "re_analyze_now_label": "נתח מחדש עם AI"
+  "re_analyze_now_label": "נתח מחדש עם AI",
+  "settings_tab": "הגדרות",
+  "limits_config_title": "הגדרת מגבלת התראות",
+  "standard_limit_label": "מגבלה למשתמש רגיל",
+  "premium_limit_label": "מגבלה למשתמש מנוי",
+  "save_limits_btn": "שמור מגבלות",
+  "limits_save_success": "הגדרות המגבלות עודכנו בהצלחה",
+  "limits_save_error": "עדכון הגדרות המגבלות נכשל",
+  "upgrade_premium_title": "תוכנית פרימיום",
+  "upgrade_premium_desc": "קבל התראות ללא הגבלה וגישה ליכולות החיפוש החכם מבוסס AI.",
+  "subscribed_badge": "מנוי פעיל",
+  "subscribe_btn": "הירשם ב-₪19 לחודש",
+  "unsubscribe_btn": "בטל מנוי",
+  "limits_exceeded_title": "הגעת למגבלה",
+  "limits_exceeded_desc": "משתמשים רגילים מוגבלים ל-3 הרשמות. שדרג לפרימיום כדי להוסיף עוד!",
+  "ai_locked_title": "תכונת פרימיום",
+  "ai_locked_desc": "נדרש מנוי בתשלום כדי לפתוח את החיפוש הסמנטי באיי. שדרג כעת!"
 }

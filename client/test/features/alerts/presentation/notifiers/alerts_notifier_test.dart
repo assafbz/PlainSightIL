@@ -629,6 +629,14 @@ class FakeDocRef implements DocumentReference<Map<String, dynamic>> {
     if (throwOnOps) {
       throw Exception('Simulated doc operation failure');
     }
+    if (invocation.memberName == #snapshots) {
+      if (docId == 'limits') {
+        return Stream.value(
+          FakeDocumentSnapshot(true, {'standardLimit': 3, 'premiumLimit': 10}),
+        );
+      }
+      return Stream.value(FakeDocumentSnapshot(false, null));
+    }
     if (invocation.memberName == #set) {
       final data = invocation.positionalArguments[0] as Map<String, dynamic>;
       setDocs.add(data);
@@ -693,6 +701,22 @@ class FakeQueryDocSnap implements QueryDocumentSnapshot<Map<String, dynamic>> {
 
   @override
   Map<String, dynamic> data() => _data;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeDocumentSnapshot implements DocumentSnapshot<Map<String, dynamic>> {
+  final bool _exists;
+  final Map<String, dynamic>? _data;
+
+  FakeDocumentSnapshot(this._exists, this._data);
+
+  @override
+  bool get exists => _exists;
+
+  @override
+  Map<String, dynamic>? data() => _data;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

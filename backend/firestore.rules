@@ -87,7 +87,8 @@ service cloud.firestore {
                     && request.resource.data.lastName is string
                     && request.resource.data.lastName.size() <= 50
                     && request.resource.data.updatedAt is timestamp
-                    && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt']);
+                    && (request.resource.data.isSubscribed == null || request.resource.data.isSubscribed == false)
+                    && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt', 'isSubscribed']);
       allow update: if request.auth != null && request.auth.uid == userId
                     && request.resource.data.email == resource.data.email
                     && request.resource.data.role == resource.data.role
@@ -98,20 +99,28 @@ service cloud.firestore {
                     && request.resource.data.lastName is string
                     && request.resource.data.lastName.size() <= 50
                     && request.resource.data.updatedAt is timestamp
-                    && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt']);
+                    && (request.resource.data.isSubscribed == null || request.resource.data.isSubscribed is bool)
+                    && request.resource.data.keys().hasOnly(['uid', 'firstName', 'lastName', 'email', 'role', 'createdAt', 'updatedAt', 'isSubscribed']);
       allow delete: if false; // Deletion is managed by administrative cleanup systems only
-
+ 
       match /alerts/{alertId} {
         allow read, update, delete: if request.auth != null && request.auth.uid == userId;
         allow create: if false; // Only written via Cloud Functions Admin SDK
       }
     }
-
+ 
     match /subscriptions/{subscriptionId} {
       allow read, write: if request.auth != null && (
         (resource == null && request.resource.data.userId == request.auth.uid) ||
         (resource != null && resource.data.userId == request.auth.uid)
       );
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null 
+                    && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /system_health/{document} {

@@ -17,9 +17,16 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   final TextEditingController _searchController = TextEditingController();
+  late final TextEditingController _standardLimitController;
+  late final TextEditingController _premiumLimitController;
+  bool _limitsInitialized = false;
+  bool _isSavingLimits = false;
+  final _settingsFormKey = GlobalKey<FormState>();
+
   String _searchQuery = '';
   String _statusFilter = 'all'; // 'all', 'idle', 'syncing', 'error'
-  int _activeSubTab = 0; // 0 for Datasets, 1 for Roadmap, 2 for Telemetry
+  int _activeSubTab =
+      0; // 0 for Datasets, 1 for Roadmap, 2 for Telemetry, 3 for Settings
   String _roadmapSortBy =
       'composite'; // 'composite', 'aiScore', 'votes', 'name'
   final Set<String> _analyzingDatasetIds = {};
@@ -30,6 +37,8 @@ class _AdminPageState extends State<AdminPage> {
   @override
   void initState() {
     super.initState();
+    _standardLimitController = TextEditingController();
+    _premiumLimitController = TextEditingController();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim();
@@ -43,6 +52,8 @@ class _AdminPageState extends State<AdminPage> {
   void dispose() {
     widget.appState.cancelAdminMetadataListener();
     _searchController.dispose();
+    _standardLimitController.dispose();
+    _premiumLimitController.dispose();
     super.dispose();
   }
 
@@ -436,7 +447,9 @@ class _AdminPageState extends State<AdminPage> {
                             )
                           : _activeSubTab == 1
                           ? _buildRoadmapView(context)
-                          : _buildTelemetryView(context),
+                          : _activeSubTab == 2
+                          ? _buildTelemetryView(context)
+                          : _buildSettingsView(context),
                     ),
                   ],
                 ),
@@ -1220,9 +1233,6 @@ class _AdminPageState extends State<AdminPage> {
                     _activeSubTab = 2;
                   });
                 },
-                borderRadius: const BorderRadius.horizontal(
-                  right: Radius.circular(15),
-                ),
                 child: Container(
                   alignment: Alignment.center,
                   decoration: _activeSubTab == 2
@@ -1240,6 +1250,40 @@ class _AdminPageState extends State<AdminPage> {
                     style: AppTypography.bodySm(
                       context,
                       color: _activeSubTab == 2
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _activeSubTab = 3;
+                  });
+                },
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(15),
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: _activeSubTab == 3
+                      ? BoxDecoration(
+                          color: AppColors.primary.withAlpha(40),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        )
+                      : null,
+                  child: Text(
+                    widget.appState.translate('settings_tab'),
+                    style: AppTypography.bodySm(
+                      context,
+                      color: _activeSubTab == 3
                           ? AppColors.primary
                           : AppColors.textSecondary,
                     ).copyWith(fontWeight: FontWeight.bold),
@@ -2371,6 +2415,224 @@ class _AdminPageState extends State<AdminPage> {
       if (mounted) {
         setState(() {
           _analyzingDatasetIds.remove(datasetId);
+        });
+      }
+    }
+  }
+
+  Widget _buildSettingsView(BuildContext context) {
+    if (!_limitsInitialized && widget.appState.standardLimit > 0) {
+      _standardLimitController.text = widget.appState.standardLimit.toString();
+      _premiumLimitController.text = widget.appState.premiumLimit.toString();
+      _limitsInitialized = true;
+    }
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Form(
+            key: _settingsFormKey,
+            child: GlassmorphicCard(
+              borderRadius: 24.0,
+              startBorderColor: AppColors.primary,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.appState.translate('limits_config_title'),
+                      style: AppTypography.headlineLg(
+                        context,
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      widget.appState.translate('standard_limit_label'),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _standardLimitController,
+                      keyboardType: TextInputType.number,
+                      style: AppTypography.bodyLg(
+                        context,
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppColors.surfaceLow,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.glassBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.danger),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.danger,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorStyle: AppTypography.bodySm(
+                          context,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Required';
+                        }
+                        final val = int.tryParse(value.trim());
+                        if (val == null || val < 0) {
+                          return 'Must be a non-negative integer';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      widget.appState.translate('premium_limit_label'),
+                      style: AppTypography.labelXs(
+                        context,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _premiumLimitController,
+                      keyboardType: TextInputType.number,
+                      style: AppTypography.bodyLg(
+                        context,
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppColors.surfaceLow,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.glassBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.danger),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.danger,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorStyle: AppTypography.bodySm(
+                          context,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Required';
+                        }
+                        final val = int.tryParse(value.trim());
+                        if (val == null || val < 0) {
+                          return 'Must be a non-negative integer';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: _isSavingLimits
+                          ? const Center(child: CircularProgressIndicator())
+                          : ElevatedButton(
+                              onPressed: _handleSaveLimits,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.onPrimary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                widget.appState.translate('save_limits_btn'),
+                                style: AppTypography.bodyLg(
+                                  context,
+                                  color: AppColors.onPrimary,
+                                ).copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSaveLimits() async {
+    if (!_settingsFormKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      _isSavingLimits = true;
+    });
+    try {
+      final std = int.parse(_standardLimitController.text.trim());
+      final prem = int.parse(_premiumLimitController.text.trim());
+      await widget.appState.saveLimits(std, prem);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.appState.translate('limits_save_success')),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.appState.translate('limits_save_error')),
+            backgroundColor: AppColors.danger,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingLimits = false;
         });
       }
     }

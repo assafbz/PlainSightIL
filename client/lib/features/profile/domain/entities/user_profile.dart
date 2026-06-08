@@ -20,6 +20,9 @@ class UserProfile {
   /// User's authorization role (e.g. 'user', 'admin').
   final String role;
 
+  /// Whether the user has an active paid subscription.
+  final bool isSubscribed;
+
   /// Timestamp when the user profile was created.
   final DateTime createdAt;
 
@@ -33,6 +36,7 @@ class UserProfile {
     required this.lastName,
     required this.email,
     required this.role,
+    this.isSubscribed = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -44,6 +48,7 @@ class UserProfile {
     String? lastName,
     String? email,
     String? role,
+    bool? isSubscribed,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -53,6 +58,7 @@ class UserProfile {
       lastName: lastName ?? this.lastName,
       email: email ?? this.email,
       role: role ?? this.role,
+      isSubscribed: isSubscribed ?? this.isSubscribed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -67,6 +73,7 @@ class UserProfile {
         other.lastName == lastName &&
         other.email == email &&
         other.role == role &&
+        other.isSubscribed == isSubscribed &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -79,6 +86,7 @@ class UserProfile {
       lastName,
       email,
       role,
+      isSubscribed,
       createdAt,
       updatedAt,
     );

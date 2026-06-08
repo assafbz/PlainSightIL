@@ -49,6 +49,7 @@ class UserProfileRemoteDataSourceImpl implements UserProfileRemoteDataSource {
         final Map<String, dynamic> updateData = {
           'firstName': model.firstName,
           'lastName': model.lastName,
+          'isSubscribed': model.isSubscribed,
           'updatedAt': FieldValue.serverTimestamp(),
         };
         await docRef.update(updateData);
@@ -59,6 +60,7 @@ class UserProfileRemoteDataSourceImpl implements UserProfileRemoteDataSource {
           'lastName': model.lastName,
           'email': model.email,
           'role': 'user',
+          'isSubscribed': model.isSubscribed,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         };

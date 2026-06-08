@@ -477,8 +477,23 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
                           ? AppColors.primary
                           : AppColors.textSecondary,
                     ),
-                    onPressed: () =>
-                        appState.toggleSubscription(currentDatasetId),
+                    onPressed: () async {
+                      try {
+                        await appState.toggleSubscription(currentDatasetId);
+                      } catch (e) {
+                        if (context.mounted &&
+                            e.toString().contains('LimitReached')) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                appState.translate('limits_exceeded_desc'),
+                              ),
+                              backgroundColor: AppColors.danger,
+                            ),
+                          );
+                        }
+                      }
+                    },
                   ),
                   IconButton(
                     icon: Icon(

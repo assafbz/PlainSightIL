@@ -590,6 +590,7 @@ export const onUserCreate = functions
       lastName,
       email,
       role: process.env.FUNCTIONS_EMULATOR === "true" ? "admin" : "user",
+      isSubscribed: false,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
@@ -663,7 +664,28 @@ export const aiSemanticSearch = functions
 
     const token = authHeader.split("Bearer ")[1];
     try {
-      await admin.auth().verifyIdToken(token);
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const uid = decodedToken.uid;
+
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (!userDoc.exists) {
+        logger.warn(`Rejected aiSemanticSearch request: user ${uid} document not found.`);
+        res.status(403).json({
+          error: "Forbidden",
+          message: "User profile not found in database.",
+        });
+        return;
+      }
+
+      const userData = userDoc.data();
+      if (!userData || !userData.isSubscribed) {
+        logger.warn(`Rejected aiSemanticSearch request: user ${uid} does not have an active subscription.`);
+        res.status(403).json({
+          error: "Forbidden",
+          message: "Active paid subscription is required to access AI search.",
+        });
+        return;
+      }
     } catch (error) {
       logger.error("Rejected aiSemanticSearch request: invalid ID token.", error);
       res.status(401).json({

@@ -414,13 +414,40 @@ class AppStateNotifier extends ChangeNotifier {
     updateIntervalHours: updateIntervalHours,
   );
 
+  int get standardLimit => alertsNotifier.standardLimit;
+  int get premiumLimit => alertsNotifier.premiumLimit;
+
+  Future<void> saveLimits(int standardLimit, int premiumLimit) =>
+      alertsNotifier.saveLimits(standardLimit, premiumLimit);
+
   // Delegated Methods for AlertsNotifier
   bool isSubscribed(String datasetId) => alertsNotifier.isSubscribed(datasetId);
-  Future<void> toggleSubscription(String datasetId) =>
-      alertsNotifier.toggleSubscription(
-        datasetId,
-        authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
-      );
+  Future<void> toggleSubscription(String datasetId) async {
+    final uid = authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : '');
+    if (uid.isEmpty) return;
+
+    final isSubbed = alertsNotifier.isSubscribed(datasetId);
+    if (!isSubbed) {
+      // User is trying to subscribe. Check limits!
+      final profile = authNotifier.userProfile;
+      final bool isPremiumUser = profile?.isSubscribed ?? false;
+      final bool isSystemAdmin = authNotifier.isAdmin;
+
+      final activeSubCount = alertsNotifier.subscribedDatasetIds.length;
+      final allowedLimit = isSystemAdmin
+          ? 999
+          : (isPremiumUser
+                ? alertsNotifier.premiumLimit
+                : alertsNotifier.standardLimit);
+
+      if (activeSubCount >= allowedLimit) {
+        throw Exception('LimitReached');
+      }
+    }
+
+    await alertsNotifier.toggleSubscription(datasetId, uid);
+  }
+
   Future<void> markAlertAsRead(String alertId) => alertsNotifier.markAsRead(
     alertId,
     authNotifier.currentUser?.uid ?? (isTesting ? 'mock_uid' : ''),
@@ -769,6 +796,25 @@ class AppStateNotifier extends ChangeNotifier {
       'alerts_sign_in_title': 'Stay Updated',
       'alerts_sign_in_desc':
           'Sign in to subscribe to open datasets and receive notifications when new records are ingested.',
+      'settings_tab': 'Settings',
+      'limits_config_title': 'Alert Limits Configuration',
+      'standard_limit_label': 'Standard User Limit',
+      'premium_limit_label': 'Subscribed User Limit',
+      'save_limits_btn': 'Save Limits',
+      'limits_save_success': 'Limits settings updated successfully',
+      'limits_save_error': 'Failed to update limits settings',
+      'upgrade_premium_title': 'Premium Plan',
+      'upgrade_premium_desc':
+          'Unlock unlimited alerts and advanced AI search capabilities.',
+      'subscribed_badge': 'Active Subscription',
+      'subscribe_btn': 'Subscribe for ₪19/mo',
+      'unsubscribe_btn': 'Cancel Subscription',
+      'limits_exceeded_title': 'Limit Reached',
+      'limits_exceeded_desc':
+          'Standard users are limited to 3 subscriptions. Upgrade to Premium for more!',
+      'ai_locked_title': 'Premium Feature',
+      'ai_locked_desc':
+          'Paid subscription is required to unlock AI Semantic Search. Upgrade now!',
     },
     'he': {
       'app_title': 'בגובה העיניים',
@@ -1031,6 +1077,25 @@ class AppStateNotifier extends ChangeNotifier {
       'alerts_sign_in_title': 'הישאר מעודכן',
       'alerts_sign_in_desc':
           'התחבר כדי להירשם לעדכונים ממאגרי המידע ולקבל התראות ברגע שנקלטות רשומות חדשות.',
+      'settings_tab': 'הגדרות',
+      'limits_config_title': 'הגדרת מגבלת התראות',
+      'standard_limit_label': 'מגבלה למשתמש רגיל',
+      'premium_limit_label': 'מגבלה למשתמש מנוי',
+      'save_limits_btn': 'שמור מגבלות',
+      'limits_save_success': 'הגדרות המגבלות עודכנו בהצלחה',
+      'limits_save_error': 'עדכון הגדרות המגבלות נכשל',
+      'upgrade_premium_title': 'תוכנית פרימיום',
+      'upgrade_premium_desc':
+          'קבל התראות ללא הגבלה וגישה ליכולות החיפוש החכם מבוסס AI.',
+      'subscribed_badge': 'מנוי פעיל',
+      'subscribe_btn': 'הירשם ב-₪19 לחודש',
+      'unsubscribe_btn': 'בטל מנוי',
+      'limits_exceeded_title': 'הגעת למגבלה',
+      'limits_exceeded_desc':
+          'משתמשים רגילים מוגבלים ל-3 הרשמות. שדרג לפרימיום כדי להוסיף עוד!',
+      'ai_locked_title': 'תכונת פרימיום',
+      'ai_locked_desc':
+          'נדרש מנוי בתשלום כדי לפתוח את החיפוש הסמנטי באיי. שדרג כעת!',
     },
   };
 

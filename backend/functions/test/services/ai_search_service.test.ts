@@ -18,6 +18,7 @@ const {
       name: "vehicle_recalls",
       title: "קריאות לתיקון",
       isSupported: true,
+      isSubscribed: true,
     }),
   });
   const dbLimitGet = vi.fn().mockResolvedValue({

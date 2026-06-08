@@ -10,6 +10,7 @@ class UserProfileModel extends UserProfile {
     required super.lastName,
     required super.email,
     required super.role,
+    super.isSubscribed = false,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -43,6 +44,7 @@ class UserProfileModel extends UserProfile {
       lastName: map['lastName'] as String? ?? '',
       email: map['email'] as String? ?? '',
       role: map['role'] as String? ?? 'user',
+      isSubscribed: map['isSubscribed'] as bool? ?? false,
       createdAt: _parseDateTime(map['createdAt']),
       updatedAt: _parseDateTime(map['updatedAt']),
     );
@@ -56,6 +58,7 @@ class UserProfileModel extends UserProfile {
       'lastName': lastName,
       'email': email,
       'role': role,
+      'isSubscribed': isSubscribed,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -69,6 +72,7 @@ class UserProfileModel extends UserProfile {
       lastName: entity.lastName,
       email: entity.email,
       role: entity.role,
+      isSubscribed: entity.isSubscribed,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     );
