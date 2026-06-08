@@ -288,62 +288,60 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
   }
 
   Future<void> _recenterOnUserLocation() async {
-    // Show explanation dialog first
-    final goAhead = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final isRtl = Directionality.of(context) == TextDirection.rtl;
-        return AlertDialog(
-          backgroundColor: AppColors.surfaceLow,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            isRtl ? 'גישה למיקום' : 'Location Access',
-            style: AppTypography.headlineMd(context),
-          ),
-          content: Text(
-            isRtl
-                ? 'PlainSightIL זקוקה לגישה למיקום המכשיר שלך כדי להציג אנטנות ואישורים סביבך על המפה.'
-                : 'PlainSightIL needs access to your device location to display cellular antennas and permits around you on the map.',
-            style: AppTypography.bodySm(context),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(
-                isRtl ? 'ביטול' : 'Cancel',
-                style: AppTypography.bodySm(
-                  context,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(
-                isRtl ? 'אישור' : 'Allow',
-                style: AppTypography.bodySm(context, color: AppColors.primary),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (goAhead != true) {
-      _fallbackToTelAviv();
-      return;
-    }
-
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled.');
-      }
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        // Show explanation dialog first
+        final goAhead = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            final isRtl = Directionality.of(context) == TextDirection.rtl;
+            return AlertDialog(
+              backgroundColor: AppColors.surfaceLow,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                isRtl ? 'גישה למיקום' : 'Location Access',
+                style: AppTypography.headlineMd(context),
+              ),
+              content: Text(
+                isRtl
+                    ? 'PlainSightIL זקוקה לגישה למיקום המכשיר שלך כדי להציג אנטנות ואישורים סביבך על המפה.'
+                    : 'PlainSightIL needs access to your device location to display cellular antennas and permits around you on the map.',
+                style: AppTypography.bodySm(context),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(
+                    isRtl ? 'ביטול' : 'Cancel',
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(
+                    isRtl ? 'אישור' : 'Allow',
+                    style: AppTypography.bodySm(
+                      context,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (goAhead != true) {
+          _fallbackToTelAviv();
+          return;
+        }
+
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           throw Exception('Location permissions are denied.');
@@ -352,6 +350,11 @@ class _CellularAntennasScreenState extends State<CellularAntennasScreen>
 
       if (permission == LocationPermission.deniedForever) {
         throw Exception('Location permissions are permanently denied.');
+      }
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled.');
       }
 
       final position = await Geolocator.getCurrentPosition(
