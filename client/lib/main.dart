@@ -29,7 +29,8 @@ void main() async {
 
     if (kIsWeb) {
       final host = Uri.base.host;
-      final isLocal = host == 'localhost' ||
+      final isLocal =
+          host == 'localhost' ||
           host == '127.0.0.1' ||
           host.startsWith('192.168.') ||
           host.startsWith('10.') ||
@@ -54,12 +55,20 @@ void main() async {
               storageBucket: config['storageBucket'] as String?,
               measurementId: config['measurementId'] as String?,
             );
-            AppLogger.info('Successfully fetched dynamic Firebase configuration from hosting');
+            AppLogger.info(
+              'Successfully fetched dynamic Firebase configuration from hosting',
+            );
           } else {
-            AppLogger.error('Failed to load dynamic Firebase configuration: HTTP ${response.statusCode}');
+            AppLogger.error(
+              'Failed to load dynamic Firebase configuration: HTTP ${response.statusCode}',
+            );
           }
         } catch (e, stack) {
-          AppLogger.error('Error fetching dynamic Firebase configuration from hosting', e, stack);
+          AppLogger.error(
+            'Error fetching dynamic Firebase configuration from hosting',
+            e,
+            stack,
+          );
         }
       }
     }
@@ -67,7 +76,8 @@ void main() async {
     AppStateNotifier.useEmulator = useEmulator;
     AppStateNotifier.environment = environment;
 
-    final options = dynamicOptions ??
+    final options =
+        dynamicOptions ??
         ((environment == 'dev') ? devFirebaseOptions : localFirebaseOptions);
     await Firebase.initializeApp(options: options);
 
