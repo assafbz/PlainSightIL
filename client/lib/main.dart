@@ -11,6 +11,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +81,19 @@ void main() async {
         dynamicOptions ??
         ((environment == 'dev') ? devFirebaseOptions : localFirebaseOptions);
     await Firebase.initializeApp(options: options);
+
+    try {
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(
+          '6Lcw-popAAAAAN1xOQQ3nZ5s3i5j5j5j5j5j5j5j',
+        ),
+        androidProvider: AndroidProvider.debug,
+        appleProvider: AppleProvider.debug,
+      );
+      AppLogger.info('Firebase App Check activated successfully');
+    } catch (e, stack) {
+      AppLogger.error('Failed to activate Firebase App Check', e, stack);
+    }
 
     if (useEmulator) {
       final String host = kIsWeb

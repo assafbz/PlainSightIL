@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainsight/core/utils/app_logger.dart';
 import 'package:plainsight/features/directory/data/models/dataset_metadata_model.dart';
@@ -86,6 +87,9 @@ class TelemetryNotifier extends ChangeNotifier {
   @visibleForTesting
   FirebaseAuth? testAuth;
 
+  @visibleForTesting
+  FirebaseAppCheck? testAppCheck;
+
   /// Checks if Firebase is initialized.
   bool get isFirebaseInitialized {
     if (AppStateNotifier.testIsFirebaseInitialized != null) {
@@ -95,6 +99,16 @@ class TelemetryNotifier extends ChangeNotifier {
       return Firebase.apps.isNotEmpty;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<String?> _getAppCheckToken() async {
+    if (!isFirebaseInitialized && testAppCheck == null) return null;
+    try {
+      final appCheck = testAppCheck ?? FirebaseAppCheck.instance;
+      return await appCheck.getToken();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -110,6 +124,7 @@ class TelemetryNotifier extends ChangeNotifier {
     this.httpClient,
     this.testFirestore,
     this.testAuth,
+    this.testAppCheck,
   });
 
   /// Initialize real-time streams on dataset metadata.
@@ -758,11 +773,17 @@ class TelemetryNotifier extends ChangeNotifier {
     }
 
     try {
+      final appCheckToken = await _getAppCheckToken();
       final url = Uri.parse('$functionsBaseUrl/manualApiHealthCheck');
+      final Map<String, String> headers = {
+        if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
+      };
       if (httpClient != null) {
-        await httpClient!.get(url);
+        await httpClient!.get(url, headers: headers);
       } else {
-        await http.get(url).timeout(const Duration(seconds: 15));
+        await http
+            .get(url, headers: headers)
+            .timeout(const Duration(seconds: 15));
       }
     } catch (e) {
       AppLogger.error('Failed to trigger API health check', e);
@@ -908,6 +929,7 @@ class TelemetryNotifier extends ChangeNotifier {
         throw Exception('Unknown dataset ID: $datasetId');
       }
 
+      final appCheckToken = await _getAppCheckToken();
       final url = Uri.parse('$functionsBaseUrl/$functionName');
       final response = httpClient != null
           ? await httpClient!.post(
@@ -915,6 +937,7 @@ class TelemetryNotifier extends ChangeNotifier {
               headers: {
                 'Content-Type': 'application/json',
                 if (token != null) 'Authorization': 'Bearer $token',
+                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
               },
             )
           : await http.post(
@@ -922,6 +945,7 @@ class TelemetryNotifier extends ChangeNotifier {
               headers: {
                 'Content-Type': 'application/json',
                 if (token != null) 'Authorization': 'Bearer $token',
+                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
               },
             );
 
@@ -991,6 +1015,7 @@ class TelemetryNotifier extends ChangeNotifier {
         } catch (_) {}
       }
 
+      final appCheckToken = await _getAppCheckToken();
       final url = Uri.parse('$functionsBaseUrl/manualAnalyzeDataset');
       final response = httpClient != null
           ? await httpClient!.post(
@@ -998,6 +1023,7 @@ class TelemetryNotifier extends ChangeNotifier {
               headers: {
                 'Content-Type': 'application/json',
                 if (token != null) 'Authorization': 'Bearer $token',
+                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
               },
               body: jsonEncode({'datasetId': datasetId}),
             )
@@ -1006,6 +1032,7 @@ class TelemetryNotifier extends ChangeNotifier {
               headers: {
                 'Content-Type': 'application/json',
                 if (token != null) 'Authorization': 'Bearer $token',
+                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
               },
               body: jsonEncode({'datasetId': datasetId}),
             );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainsight/core/state/app_state.dart';
@@ -16,6 +17,7 @@ class AiSearchNotifier extends ChangeNotifier {
   final AppStateNotifier appState;
   final http.Client? _client;
   final FirebaseAuth? _auth;
+  final FirebaseAppCheck? _appCheck;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -26,15 +28,38 @@ class AiSearchNotifier extends ChangeNotifier {
     required this.appState,
     http.Client? client,
     FirebaseAuth? auth,
+    FirebaseAppCheck? appCheck,
   }) : _client = client,
-       _auth = auth;
+       _auth = auth,
+       _appCheck = appCheck;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   AiSearchResultModel? get searchResult => _searchResult;
   List<String> get history => _history;
 
-  /// Loads search history from local SharedPreferences.
+  Future<String?> _getAppCheckToken() async {
+    if (!appState.isFirebaseInitialized && _appCheck == null) return null;
+    try {
+      final appCheck = _appCheck ?? FirebaseAppCheck.instance;
+      final String? tokenString = await appCheck.getToken();
+      return tokenString;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _getAuthToken() async {
+    if (!appState.isFirebaseInitialized) return null;
+    try {
+      final auth = _auth ?? FirebaseAuth.instance;
+      final String? tokenString = await auth.currentUser?.getIdToken();
+      return tokenString;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> loadHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -121,16 +146,8 @@ class AiSearchNotifier extends ChangeNotifier {
     try {
       await _addToHistory(trimmed);
 
-      String? token;
-      if (appState.isFirebaseInitialized) {
-        try {
-          final auth = _auth ?? FirebaseAuth.instance;
-          final currentUser = auth.currentUser;
-          if (currentUser != null) {
-            token = await currentUser.getIdToken();
-          }
-        } catch (_) {}
-      }
+      final String? appCheckToken = await _getAppCheckToken();
+      final String? token = await _getAuthToken();
 
       final String functionUrl =
           '${appState.telemetryNotifier.functionsBaseUrl}/aiSemanticSearch';
@@ -140,6 +157,7 @@ class AiSearchNotifier extends ChangeNotifier {
               headers: {
                 'Content-Type': 'application/json',
                 if (token != null) 'Authorization': 'Bearer $token',
+                if (appCheckToken != null) 'X-Firebase-AppCheck': appCheckToken,
               },
               body: jsonEncode({'query': trimmed, 'lang': appState.locale}),
             )
@@ -149,6 +167,8 @@ class AiSearchNotifier extends ChangeNotifier {
                   headers: {
                     'Content-Type': 'application/json',
                     if (token != null) 'Authorization': 'Bearer $token',
+                    if (appCheckToken != null)
+                      'X-Firebase-AppCheck': appCheckToken,
                   },
                   body: jsonEncode({'query': trimmed, 'lang': appState.locale}),
                 )

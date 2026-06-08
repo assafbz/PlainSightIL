@@ -166,6 +166,7 @@ export const manualApiHealthCheck = functions
   .https.onRequest(async (req, res) => {
     logger.info("manualApiHealthCheck HTTPS trigger invoked");
     if (handleCors(req, res)) return;
+    if (!(await validateAppCheck(req, res, "manualApiHealthCheck"))) return;
     try {
       const result = await checkAndLogApiReachability(db);
       res.status(200).json(result);
@@ -351,6 +352,44 @@ export const runScraperPubSub = functions
   });
 
 /**
+ * Helper to validate Firebase App Check token.
+ * Returns true if valid (or if bypassed in emulator), false otherwise.
+ * If invalid, sends the error response.
+ */
+async function validateAppCheck(
+  req: functions.https.Request,
+  res: functions.Response,
+  functionName: string,
+): Promise<boolean> {
+  if (process.env.FUNCTIONS_EMULATOR === "true") {
+    logger.info(`Bypassing App Check token validation for ${functionName} (emulator mode).`);
+    return true;
+  }
+
+  const appCheckToken = req.headers["x-firebase-appcheck"] as string;
+  if (!appCheckToken) {
+    logger.warn(`Rejected ${functionName} request: missing App Check token.`);
+    res.status(401).json({
+      error: "Unauthorized",
+      message: "Missing App Check token.",
+    });
+    return false;
+  }
+
+  try {
+    await admin.appCheck().verifyToken(appCheckToken);
+    return true;
+  } catch (error) {
+    logger.error(`Rejected ${functionName} request: invalid App Check token.`, error);
+    res.status(401).json({
+      error: "Unauthorized",
+      message: "Invalid App Check token.",
+    });
+    return false;
+  }
+}
+
+/**
  * Helper to validate if the incoming request is an authenticated POST request made by an admin.
  * Returns the decoded token if valid, otherwise sends an error response and returns null.
  */
@@ -363,6 +402,11 @@ async function validateAdminRequest(
   if (process.env.FUNCTIONS_EMULATOR === "true" && req.method === "GET") {
     functions.logger.info("Bypassing admin check for emulator seeding via GET request.");
     return { uid: "emulator-seeder" };
+  }
+
+  // Enforce Firebase App Check token
+  if (!(await validateAppCheck(req, res, "Admin Request"))) {
+    return null;
   }
 
   // 1. Enforce POST request method
@@ -626,30 +670,8 @@ export const aiSemanticSearch = functions
       return;
     }
 
-    // 2. Validate Firebase App Check token (only if not running in emulator)
-    if (process.env.FUNCTIONS_EMULATOR !== "true") {
-      const appCheckToken = req.headers["x-firebase-appcheck"] as string;
-      if (!appCheckToken) {
-        logger.warn("Rejected aiSemanticSearch request: missing App Check token.");
-        res.status(401).json({
-          error: "Unauthorized",
-          message: "Missing App Check token.",
-        });
-        return;
-      }
-      try {
-        await admin.appCheck().verifyToken(appCheckToken);
-      } catch (error) {
-        logger.error("Rejected aiSemanticSearch request: invalid App Check token.", error);
-        res.status(401).json({
-          error: "Unauthorized",
-          message: "Invalid App Check token.",
-        });
-        return;
-      }
-    } else {
-      logger.info("Bypassing App Check token validation (emulator mode).");
-    }
+    // 2. Validate Firebase App Check token
+    if (!(await validateAppCheck(req, res, "aiSemanticSearch"))) return;
 
     // 3. Validate user authentication (Bearer token)
     const authHeader = req.headers.authorization;

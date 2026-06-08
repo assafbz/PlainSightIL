@@ -7,7 +7,19 @@ import 'package:plainsight/core/state/app_state.dart';
 import 'package:plainsight/features/admin/presentation/notifiers/telemetry_notifier.dart';
 import 'package:plainsight/core/constants/dataset_ids.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import '../../../notifiers_mocks.dart';
+
+class FakeFirebaseAppCheck implements FirebaseAppCheck {
+  final String mockToken;
+  FakeFirebaseAppCheck({this.mockToken = 'mock-appcheck-token'});
+
+  @override
+  Future<String?> getToken([bool? forceRefresh]) async => mockToken;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class MockHttpClientLocal extends http.BaseClient {
   final Future<http.Response> Function(http.BaseRequest request) sendHandler;
@@ -107,6 +119,10 @@ void main() {
         final mockClient = MockHttpClientLocal((request) async {
           expect(request.method, equals('POST'));
           expect(request.url.path, endsWith('/manualSyncBankAtms'));
+          expect(
+            request.headers['X-Firebase-AppCheck'],
+            equals('mock-appcheck-token'),
+          );
           return http.Response(
             jsonEncode({
               'success': true,
@@ -120,6 +136,7 @@ void main() {
         final notifier = TelemetryNotifier(
           isTesting: false,
           httpClient: mockClient,
+          testAppCheck: FakeFirebaseAppCheck(),
         );
 
         final result = await notifier.triggerManualSync(DatasetIds.bankAtms);
@@ -144,6 +161,7 @@ void main() {
       final notifier = TelemetryNotifier(
         isTesting: false,
         httpClient: mockClient,
+        testAppCheck: FakeFirebaseAppCheck(),
       );
 
       final result = await notifier.triggerManualSync(DatasetIds.bankAtms);
@@ -159,6 +177,10 @@ void main() {
         final mockClient = MockHttpClientLocal((request) async {
           expect(request.method, equals('GET'));
           expect(request.url.path, endsWith('/manualApiHealthCheck'));
+          expect(
+            request.headers['X-Firebase-AppCheck'],
+            equals('mock-appcheck-token'),
+          );
           getCalled = true;
           return http.Response('', 200);
         });
@@ -166,6 +188,7 @@ void main() {
         final notifier = TelemetryNotifier(
           isTesting: false,
           httpClient: mockClient,
+          testAppCheck: FakeFirebaseAppCheck(),
         );
 
         await notifier.triggerApiHealthCheck();
@@ -310,6 +333,10 @@ void main() {
 
       final httpClient = FakeHttpClient(
         onGet: (url, {headers}) {
+          expect(
+            headers?['X-Firebase-AppCheck'],
+            equals('mock-appcheck-token'),
+          );
           if (url.path.contains('manualApiHealthCheck')) {
             pingCalled = true;
             return http.Response('{"status":"reachable"}', 200);
@@ -317,6 +344,10 @@ void main() {
           return http.Response('{}', 404);
         },
         onPost: (url, {body, headers}) {
+          expect(
+            headers?['X-Firebase-AppCheck'],
+            equals('mock-appcheck-token'),
+          );
           if (url.path.contains('manualSyncAntennas')) {
             syncCalled = true;
             return http.Response(
@@ -339,6 +370,7 @@ void main() {
       final notifier = TelemetryNotifier(
         isTesting: false,
         httpClient: httpClient,
+        testAppCheck: FakeFirebaseAppCheck(),
       );
 
       expect(notifier.isCheckingApiHealth, isFalse);
