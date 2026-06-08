@@ -679,7 +679,9 @@ export const aiSemanticSearch = functions
 
       const userData = userDoc.data();
       if (!userData || !userData.isSubscribed) {
-        logger.warn(`Rejected aiSemanticSearch request: user ${uid} does not have an active subscription.`);
+        logger.warn(
+          `Rejected aiSemanticSearch request: user ${uid} does not have an active subscription.`,
+        );
         res.status(403).json({
           error: "Forbidden",
           message: "Active paid subscription is required to access AI search.",

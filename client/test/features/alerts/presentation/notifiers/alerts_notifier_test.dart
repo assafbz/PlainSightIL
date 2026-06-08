@@ -21,7 +21,25 @@ void main() {
 
       expect(alertsNotifier.isSubscribed('cellular_antennas'), true);
       expect(alertsNotifier.isSubscribed('local_market_bonds'), false);
+
+      expect(alertsNotifier.standardLimit, 3);
+      expect(alertsNotifier.premiumLimit, 10);
     });
+
+    test(
+      'saveLimits in testing mode updates limits and notifies listeners',
+      () async {
+        var listenerCalled = false;
+        alertsNotifier.addListener(() {
+          listenerCalled = true;
+        });
+
+        await alertsNotifier.saveLimits(5, 15);
+        expect(alertsNotifier.standardLimit, 5);
+        expect(alertsNotifier.premiumLimit, 15);
+        expect(listenerCalled, isTrue);
+      },
+    );
 
     test(
       'toggleSubscription adds or removes subscription and notifies listeners',
@@ -132,6 +150,7 @@ void main() {
       alertsController.close();
       AppStateNotifier.isTesting = true;
       AppStateNotifier.testIsFirebaseInitialized = null;
+      FakeDocRef.limitsStreamOverride = null;
     });
 
     test('initAlertsListener handles empty user ID', () {
@@ -540,6 +559,65 @@ void main() {
         throwsException,
       );
     });
+
+    test('saveLimits in production mode sets document in Firestore', () async {
+      late CollectionReference<Map<String, dynamic>> Function(String)
+      colBuilder;
+      colBuilder = (path) {
+        return FakeCollectionRef(path, collectionBuilder: colBuilder);
+      };
+
+      final mockFirestore = FakeFirestore(collectionBuilder: colBuilder);
+      final notifier = AlertsNotifier(
+        isTesting: false,
+        firestore: mockFirestore,
+      );
+
+      await notifier.saveLimits(6, 12);
+      expect(FakeDocRef.setDocs.length, 1);
+      expect(FakeDocRef.setDocs.first['standardLimit'], 6);
+      expect(FakeDocRef.setDocs.first['premiumLimit'], 12);
+    });
+
+    test('saveLimits in production mode handles Firestore errors', () async {
+      FakeDocRef.throwOnOps = true;
+      final mockFirestore = FakeFirestore(
+        collectionBuilder: (path) => FakeCollectionRef(path),
+      );
+      final notifier = AlertsNotifier(
+        isTesting: false,
+        firestore: mockFirestore,
+      );
+
+      expect(() => notifier.saveLimits(6, 12), throwsException);
+    });
+
+    test(
+      'initAlertsListener handles stream error on limits settings',
+      () async {
+        final controller =
+            StreamController<
+              DocumentSnapshot<Map<String, dynamic>>
+            >.broadcast();
+        FakeDocRef.limitsStreamOverride = controller.stream;
+
+        final mockFirestore = FakeFirestore(
+          collectionBuilder: (path) => FakeCollectionRef(path),
+        );
+        final notifier = AlertsNotifier(
+          isTesting: false,
+          firestore: mockFirestore,
+        );
+
+        notifier.initAlertsListener('user_123');
+
+        controller.addError(Exception('Simulated limits stream error'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        await controller.close();
+        FakeDocRef.limitsStreamOverride = null;
+      },
+    );
   });
 }
 
@@ -610,6 +688,7 @@ class FakeDocRef implements DocumentReference<Map<String, dynamic>> {
   static final List<String> deletedDocs = [];
   static final List<Map<Object, Object?>> updatedDocs = [];
   static bool throwOnOps = false;
+  static Stream<DocumentSnapshot<Map<String, dynamic>>>? limitsStreamOverride;
 
   FakeDocRef(this.docId, {this.collectionBuilder});
 
@@ -631,6 +710,9 @@ class FakeDocRef implements DocumentReference<Map<String, dynamic>> {
     }
     if (invocation.memberName == #snapshots) {
       if (docId == 'limits') {
+        if (limitsStreamOverride != null) {
+          return limitsStreamOverride!;
+        }
         return Stream.value(
           FakeDocumentSnapshot(true, {'standardLimit': 3, 'premiumLimit': 10}),
         );

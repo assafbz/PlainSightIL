@@ -57,7 +57,7 @@ class AppStateNotifier extends ChangeNotifier {
   bool _isDarkMode = true;
 
   // Composed Scoped Notifiers
-  late final AuthNotifier authNotifier;
+  late AuthNotifier authNotifier;
   late final AntennasNotifier antennasNotifier;
   late final PermitsNotifier permitsNotifier;
   late final LiquidationNotifier liquidationNotifier;
@@ -431,7 +431,9 @@ class AppStateNotifier extends ChangeNotifier {
       // User is trying to subscribe. Check limits!
       final profile = authNotifier.userProfile;
       final bool isPremiumUser = profile?.isSubscribed ?? false;
-      final bool isSystemAdmin = authNotifier.isAdmin;
+      final bool isSystemAdmin = isTesting
+          ? (profile?.role == 'admin')
+          : authNotifier.isAdmin;
 
       final activeSubCount = alertsNotifier.subscribedDatasetIds.length;
       final allowedLimit = isSystemAdmin
