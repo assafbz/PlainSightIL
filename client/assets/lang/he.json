@@ -230,5 +230,22 @@
   "subscribe_tooltip": "הרשמה לעדכונים",
   "unsubscribe_tooltip": "ביטול הרשמה לעדכונים",
   "alerts_sign_in_title": "הישאר מעודכן",
-  "alerts_sign_in_desc": "התחבר כדי להירשם לעדכונים ממאגרי המידע ולקבל התראות ברגע שנקלטות רשומות חדשות."
+  "alerts_sign_in_desc": "התחבר כדי להירשם לעדכונים ממאגרי המידע ולקבל התראות ברגע שנקלטות רשומות חדשות.",
+  "roadmap_tab": "מפת דרכים",
+  "ai_importance_label": "חשיבות לפי AI: ",
+  "ai_monetization_label": "נכונות לתשלום: ",
+  "ai_score_label": "ציון AI: ",
+  "composite_score_label": "ציון משולב: ",
+  "importance_reasoning_label": "הסבר ה-AI: ",
+  "analyze_now_label": "נתח באמצעות AI",
+  "analyzing_label": "מנתח...",
+  "votes_count_label": "הצבעות משתמשים: ",
+  "sort_composite": "ציון משולב",
+  "sort_ai_score": "ציון AI",
+  "sort_votes": "הצבעות",
+  "sort_name": "שם",
+  "search_roadmap_hint": "חפש במפת הדרכים...",
+  "sort_by": "מיין לפי:",
+  "composite": "ציון משולב",
+  "re_analyze_now_label": "נתח מחדש עם AI"
 }

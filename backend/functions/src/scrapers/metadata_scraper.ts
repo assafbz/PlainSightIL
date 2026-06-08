@@ -132,10 +132,50 @@ export class MetadataScraper extends BaseScraper<CKANPackage, DatasetMetadata> {
 
     const name = (raw.name ?? "").trim();
     let title = raw.title.trim();
+    let notes = sanitizeNotes(raw.notes);
+
     if (id === DATASET_IDS.COMPANIES_LIQUIDATION) {
       title = "חברות בפירוק";
     }
-    const notes = sanitizeNotes(raw.notes);
+
+    if (name === "tqes") {
+      title = "בנק שאלות ותשובות למבחן נהיגה עיוני (ספרדית)";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב (תיאוריה) בספרדית.";
+    } else if (name === "tqfr") {
+      title = "בנק שאלות ותשובות למבחן נהיגה עיוני (צרפתית)";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב (תיאוריה) בצרפתית.";
+    } else if (name === "tqru") {
+      title = "בנק שאלות ותשובות למבחן נהיגה עיוני (רוסית)";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב (תיאוריה) ברוסית.";
+    } else if (name === "tqar") {
+      title = "בנק שאלות ותשובות למבחן נהיגה עיוני (ערבית)";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב (תיאוריה) בערבית.";
+    } else if (name === "tqar_a3") {
+      title = "בנק שאלות ותשובות למבחן עיוני לאופניים חשמליים A3 (ערבית)";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב המיועד לרוכבי אופניים חשמליים (A3) בערבית.";
+    } else if (name === "tqen") {
+      title = "בנק שאלות ותשובות למבחן נהיגה עיוני (אנגלית)";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב (תיאוריה) באנגלית.";
+    } else if (name === "israel-numbering-plan") {
+      title = "תוכנית מספור הטלפוניה בישראל";
+      notes = "תוכנית המספור הרשמית של משרד התקשורת לשירותי טלפוניה וסלולר בישראל.";
+    } else if (name === "plmn-codes-in-israel") {
+      title = "קודי רשת סלולרית (PLMN) בישראל";
+      notes = "רשימת קודי רשת סלולרית יבשתיים (PLMN) שהוקצו למפעילי תקשורת בישראל.";
+    } else if (name === "a3") {
+      title = "בנק שאלות ותשובות למבחן עיוני לאופניים חשמליים A3";
+      notes =
+        "בנק השאלות והתשובות הרשמי של משרד התחבורה למבחן הנהיגה העיוני הממוחשב המיועד לרוכבי אופניים חשמליים (A3).";
+    } else if (name === "presentation-of-sea-level-rise-scenarios") {
+      title = "תרחישי עליית מפלס הים בישראל";
+      notes = "מצגות ותרחישים של עליית מפלס הים והשפעתה על חופי ישראל.";
+    }
     const publisher = (raw.organization?.title ?? "לא ידוע").trim();
     const resourceCount = raw.num_resources ?? 0;
     const sourceCreatedAt =

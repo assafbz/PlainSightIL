@@ -1809,7 +1809,6 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Widget _buildRoadmapView(BuildContext context) {
-    final isHeb = widget.appState.locale == 'he';
     final allRecords = widget.appState.directoryRecords;
     final requestsMap = widget.appState.datasetRequests;
 
@@ -1916,7 +1915,7 @@ class _AdminPageState extends State<AdminPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isHeb ? 'מיין לפי:' : 'Sort by:',
+                    widget.appState.translate('sort_by'),
                     style: AppTypography.bodySm(
                       context,
                       color: AppColors.textSecondary,
@@ -2089,7 +2088,7 @@ class _AdminPageState extends State<AdminPage> {
                             ),
                           ),
                           Text(
-                            isHeb ? 'ציון משולב' : 'Composite',
+                            widget.appState.translate('composite'),
                             style: TextStyle(
                               fontSize: 8,
                               fontWeight: FontWeight.w500,
@@ -2126,7 +2125,14 @@ class _AdminPageState extends State<AdminPage> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${widget.appState.translate('votes_count_label')}$votes',
+                          widget.appState.translate('votes_count_label'),
+                          style: AppTypography.bodySm(
+                            context,
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '$votes',
                           style: AppTypography.bodySm(
                             context,
                             color: AppColors.textSecondary,
@@ -2146,7 +2152,14 @@ class _AdminPageState extends State<AdminPage> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${widget.appState.translate('ai_score_label')}$aiScore',
+                            widget.appState.translate('ai_score_label'),
+                            style: AppTypography.bodySm(
+                              context,
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '$aiScore',
                             style: AppTypography.bodySm(
                               context,
                               color: AppColors.textSecondary,
@@ -2280,11 +2293,11 @@ class _AdminPageState extends State<AdminPage> {
                   label: Text(
                     isAnalyzing
                         ? widget.appState.translate('analyzing_label')
-                        : (aiScore > 0
-                              ? (isHeb
-                                    ? 'נתח מחדש עם AI'
-                                    : 'Re-analyze with AI')
-                              : widget.appState.translate('analyze_now_label')),
+                        : widget.appState.translate(
+                            aiScore > 0
+                                ? 're_analyze_now_label'
+                                : 'analyze_now_label',
+                          ),
                     style: AppTypography.labelXs(
                       context,
                       color: isAnalyzing
