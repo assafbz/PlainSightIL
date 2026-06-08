@@ -230,5 +230,22 @@
   "subscribe_tooltip": "Subscribe to updates",
   "unsubscribe_tooltip": "Unsubscribe from updates",
   "alerts_sign_in_title": "Stay Updated",
-  "alerts_sign_in_desc": "Sign in to subscribe to open datasets and receive notifications when new records are ingested."
+  "alerts_sign_in_desc": "Sign in to subscribe to open datasets and receive notifications when new records are ingested.",
+  "roadmap_tab": "Roadmap",
+  "ai_importance_label": "AI Importance: ",
+  "ai_monetization_label": "Willingness to Pay: ",
+  "ai_score_label": "AI Score: ",
+  "composite_score_label": "Composite Score: ",
+  "importance_reasoning_label": "AI Reasoning: ",
+  "analyze_now_label": "Analyze with AI",
+  "analyzing_label": "Analyzing...",
+  "votes_count_label": "User Votes: ",
+  "sort_composite": "Composite Score",
+  "sort_ai_score": "AI Score",
+  "sort_votes": "Votes",
+  "sort_name": "Name",
+  "search_roadmap_hint": "Search roadmap datasets...",
+  "sort_by": "Sort by:",
+  "composite": "Composite",
+  "re_analyze_now_label": "Re-analyze with AI"
 }

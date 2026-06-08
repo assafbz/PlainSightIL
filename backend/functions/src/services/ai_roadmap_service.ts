@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 import { AppLogger as logger } from "../utils/logger";
 
@@ -166,12 +167,12 @@ Return ONLY valid JSON matching the schema.`;
     datasetId,
     datasetTitle: title,
     requestCount: requestCount || 0,
-    lastRequestedAt: requestData?.lastRequestedAt || admin.firestore.FieldValue.serverTimestamp(),
+    lastRequestedAt: requestData?.lastRequestedAt || FieldValue.serverTimestamp(),
     aiScore: review.aiScore,
     aiImportance: review.importance,
     aiImportanceReasoning: review.importanceReasoning,
     aiMonetization: review.paymentWillingness,
-    aiReviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+    aiReviewedAt: FieldValue.serverTimestamp(),
     compositeScore,
   };
 
