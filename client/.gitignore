@@ -49,3 +49,6 @@ app.*.map.json
 *.jks
 key.properties
 
+# Firebase configuration files
+google-services.json
+GoogleService-Info.plist
